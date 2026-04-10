@@ -1,135 +1,252 @@
-<!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Semua Ujian — Admin ExamSafe</title>
-  <link rel="stylesheet" href="../css/style.css">
-</head>
-<body>
-  <nav class="navbar">
-    <div class="navbar-brand">🎓 Exam<span>Safe</span> <span style="font-size:0.75rem;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:50px;margin-left:8px">ADMIN</span></div>
-    <div class="navbar-nav">
-      <div class="nav-user">
-        <div class="nav-avatar" style="background:var(--accent)">A</div>
-        <span>Administrator</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Semua Ujian — Admin ExamSafe</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button
+          class="hamburger-btn"
+          id="hamburgerBtn"
+          aria-label="Toggle menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <div class="navbar-brand">
+          🎓 Exam<span>Safe</span>
+          <span
+            style="
+              font-size: 0.75rem;
+              background: rgba(255, 255, 255, 0.2);
+              padding: 2px 8px;
+              border-radius: 50px;
+              margin-left: 8px;
+            "
+            >ADMIN</span
+          >
+        </div>
       </div>
-      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
+      <div class="navbar-nav">
+        <div class="nav-user">
+          <div class="nav-avatar" style="background: var(--accent)">A</div>
+          <span>Administrator</span>
+        </div>
+        <a
+          href="../index.html"
+          class="btn btn-sm btn-outline"
+          style="color: #fff; border-color: rgba(255, 255, 255, 0.4)"
+          >Keluar</a
+        >
+      </div>
+    </nav>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-avatar-section">
+          <div
+            class="sidebar-avatar"
+            id="sidebarAvatar"
+            style="background: var(--accent)"
+          >
+            A
+          </div>
+          <div class="sidebar-avatar-name" id="sidebarAvatarName">
+            Administrator
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+          </li>
+          <li>
+            <a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a>
+          </li>
+          <li>
+            <a href="students.html"
+              ><span class="icon">👨‍🎓</span> Kelola Siswa</a
+            >
+          </li>
+          <li>
+            <a href="exams.html" class="active"
+              ><span class="icon">📝</span> Semua Ujian</a
+            >
+          </li>
+          <li>
+            <a href="reports.html"><span class="icon">📊</span> Laporan</a>
+          </li>
+          <li>
+            <a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a>
+          </li>
+          <li>
+            <a href="security-logs.html"
+              ><span class="icon">🔒</span> Log Keamanan</a
+            >
+          </li>
+        </ul>
+      </aside>
+
+      <main class="main-content">
+        <div class="page-header">
+          <div>
+            <div class="page-title">📝 Semua Ujian</div>
+            <div class="page-subtitle">Daftar seluruh ujian di sekolah</div>
+          </div>
+          <div style="display: flex; gap: 10px">
+            <input
+              type="text"
+              id="examSearch"
+              class="form-control"
+              placeholder="Cari nama ujian, guru, atau kelas..."
+              onkeyup="filterExams()"
+              style="width: 320px"
+            />
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>Nama Ujian</th>
+                  <th>Guru</th>
+                  <th>Kelas</th>
+                  <th>Tanggal Ujian</th>
+                  <th>Kode</th>
+                  <th>Status</th>
+                </tr>
+              </thead>
+              <tbody id="exam-list">
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 20px">
+                    Memuat data ujian...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
     </div>
-  </nav>
 
-  <div class="layout">
-    <aside class="sidebar">
-      <ul class="sidebar-menu">
-        <li><a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a></li>
-        <li><a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a></li>
-        <li><a href="students.html"><span class="icon">👨‍🎓</span> Kelola Siswa</a></li>
-        <li><a href="exams.html" class="active"><span class="icon">📝</span> Semua Ujian</a></li>
-        <li><a href="reports.html"><span class="icon">📊</span> Laporan</a></li>
-        <li><a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a></li>
-        <li><a href="security-logs.html"><span class="icon">🔒</span> Log Keamanan</a></li>
-      </ul>
-    </aside>
+    <script>
+      let allExams = [];
 
-    <main class="main-content">
-      <div class="page-header">
-        <div>
-          <div class="page-title">📝 Semua Ujian</div>
-          <div class="page-subtitle">Daftar seluruh ujian di sekolah</div>
-        </div>
-        <div style="display: flex; gap: 10px;">
-          <input type="text" id="examSearch" class="form-control" placeholder="Cari nama ujian, guru, atau kelas..." onkeyup="filterExams()" style="width: 320px;">
-        </div>
-      </div>
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchExams();
+        fetchAdminProfile();
+      });
 
-      <div class="card">
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Nama Ujian</th>
-                <th>Guru</th>
-                <th>Kelas</th>
-                <th>Tanggal Ujian</th>
-                <th>Kode</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="exam-list">
-              <tr><td colspan="6" style="text-align:center;padding:20px">Memuat data ujian...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-  </div>
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
 
-  <script>
-    let allExams = [];
+      hamburgerBtn.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-open");
+        sidebarOverlay.classList.toggle("sidebar-overlay-visible");
+      });
 
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchExams();
-      fetchAdminProfile();
-    });
+      sidebarOverlay.addEventListener("click", () => {
+        sidebar.classList.remove("sidebar-open");
+        sidebarOverlay.classList.remove("sidebar-overlay-visible");
+      });
 
-    async function fetchAdminProfile() {
-      try {
-        const response = await fetch('../php/admin_api.php?action=get_admin_profile');
-        const data = await response.json();
-        if (data.success) {
-          document.querySelector('.nav-user span').textContent = data.user.full_name;
-          document.querySelector('.nav-avatar').textContent = data.user.full_name.charAt(0).toUpperCase();
-        }
-      } catch (e) {}
-    }
-
-    async function fetchExams() {
-      try {
-        const response = await fetch('../php/admin_api.php?action=get_all_exams');
-        const data = await response.json();
-        
-        if (data.success) {
-          allExams = data.exams;
-          renderExams(allExams);
-        }
-      } catch (error) {
-        console.error('Error fetching exams:', error);
-      }
-    }
-
-    function renderExams(exams) {
-      const tbody = document.getElementById('exam-list');
-      if (exams.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center;padding:20px">Belum ada ujian atau tidak ditemukan.</td></tr>';
-        return;
+      async function fetchAdminProfile() {
+        try {
+          const response = await fetch(
+            "../php/admin_api.php?action=get_admin_profile"
+          );
+          const data = await response.json();
+          if (data.success) {
+            document.querySelector(".nav-user span").textContent =
+              data.user.full_name;
+            document.querySelector(".nav-avatar").textContent =
+              data.user.full_name.charAt(0).toUpperCase();
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+            const sidebarAvatarName =
+              document.getElementById("sidebarAvatarName");
+            if (sidebarAvatar)
+              sidebarAvatar.textContent = data.user.full_name
+                .charAt(0)
+                .toUpperCase();
+            if (sidebarAvatarName)
+              sidebarAvatarName.textContent = data.user.full_name;
+          }
+        } catch (e) {}
       }
 
-      tbody.innerHTML = exams.map((e, i) => `
+      async function fetchExams() {
+        try {
+          const response = await fetch(
+            "../php/admin_api.php?action=get_all_exams"
+          );
+          const data = await response.json();
+
+          if (data.success) {
+            allExams = data.exams;
+            renderExams(allExams);
+          }
+        } catch (error) {
+          console.error("Error fetching exams:", error);
+        }
+      }
+
+      function renderExams(exams) {
+        const tbody = document.getElementById("exam-list");
+        if (exams.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="6" style="text-align:center;padding:20px">Belum ada ujian atau tidak ditemukan.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = exams
+          .map(
+            (e, i) => `
         <tr>
           <td><b>${e.name}</b></td>
           <td>${e.teacher_name}</td>
           <td>${e.class}</td>
-          <td>${new Date(e.start_time).toLocaleString('id-ID', {day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit'})}</td>
+          <td>${new Date(e.start_time).toLocaleString("id-ID", {
+            day: "2-digit",
+            month: "short",
+            year: "numeric",
+            hour: "2-digit",
+            minute: "2-digit",
+          })}</td>
           <td><code>${e.exam_code}</code></td>
           <td>
-            <span class="badge ${e.status === 'active' ? 'badge-success' : (e.status === 'ended' ? 'badge-danger' : 'badge-warning')}">
+            <span class="badge ${
+              e.status === "active"
+                ? "badge-success"
+                : e.status === "ended"
+                ? "badge-danger"
+                : "badge-warning"
+            }">
               ${e.status.charAt(0).toUpperCase() + e.status.slice(1)}
             </span>
           </td>
         </tr>
-      `).join('');
-    }
+      `
+          )
+          .join("");
+      }
 
-    function filterExams() {
-      const query = document.getElementById('examSearch').value.toLowerCase();
-      const filtered = allExams.filter(e => 
-        e.name.toLowerCase().includes(query) || 
-        e.teacher_name.toLowerCase().includes(query) || 
-        e.class.toLowerCase().includes(query)
-      );
-      renderExams(filtered);
-    }
-  </script>
-  <script src="/exam-system/js/ui.js"></script>
-</body>
+      function filterExams() {
+        const query = document.getElementById("examSearch").value.toLowerCase();
+        const filtered = allExams.filter(
+          (e) =>
+            e.name.toLowerCase().includes(query) ||
+            e.teacher_name.toLowerCase().includes(query) ||
+            e.class.toLowerCase().includes(query)
+        );
+        renderExams(filtered);
+      }
+    </script>
+    <script src="/exam-system/js/ui.js"></script>
+  </body>
 </html>

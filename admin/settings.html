@@ -1,254 +1,457 @@
-<!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pengaturan Sistem — ExamSafe Admin</title>
-  <link rel="stylesheet" href="../css/style.css">
-  <style>
-    .settings-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
-    .item-list { margin-top: 16px; border: 1px solid #e2e8f0; border-radius: 12px; overflow: hidden; }
-    .item-row { display: flex; align-items: center; justify-content: space-between; padding: 12px 16px; border-bottom: 1px solid #e2e8f0; background: #fff; }
-    .item-row:last-child { border-bottom: none; }
-    .item-name { font-weight: 600; color: var(--primary); }
-    .item-actions { display: flex; gap: 8px; }
-    .empty-msg { padding: 20px; text-align: center; color: #64748b; font-style: italic; font-size: 0.9rem; }
-  </style>
-</head>
-<body>
-  <nav class="navbar">
-    <div class="navbar-brand">🎓 Exam<span>Safe</span> <span style="font-size:0.75rem;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:50px;margin-left:8px">ADMIN</span></div>
-    <div class="navbar-nav">
-      <div class="nav-user">
-        <div class="nav-avatar" style="background:var(--accent)">A</div>
-        <span>Administrator</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pengaturan Sistem — ExamSafe Admin</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      .settings-grid {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 24px;
+      }
+      .item-list {
+        margin-top: 16px;
+        border: 1px solid #e2e8f0;
+        border-radius: 12px;
+        overflow: hidden;
+      }
+      .item-row {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        background: #fff;
+      }
+      .item-row:last-child {
+        border-bottom: none;
+      }
+      .item-name {
+        font-weight: 600;
+        color: var(--primary);
+      }
+      .item-actions {
+        display: flex;
+        gap: 8px;
+      }
+      .empty-msg {
+        padding: 20px;
+        text-align: center;
+        color: #64748b;
+        font-style: italic;
+        font-size: 0.9rem;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button
+          class="hamburger-btn"
+          id="hamburgerBtn"
+          aria-label="Toggle menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <div class="navbar-brand">
+          🎓 Exam<span>Safe</span>
+          <span
+            style="
+              font-size: 0.75rem;
+              background: rgba(255, 255, 255, 0.2);
+              padding: 2px 8px;
+              border-radius: 50px;
+              margin-left: 8px;
+            "
+            >ADMIN</span
+          >
+        </div>
       </div>
-      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
+      <div class="navbar-nav">
+        <div class="nav-user">
+          <div class="nav-avatar" style="background: var(--accent)">A</div>
+          <span>Administrator</span>
+        </div>
+        <a
+          href="../index.html"
+          class="btn btn-sm btn-outline"
+          style="color: #fff; border-color: rgba(255, 255, 255, 0.4)"
+          >Keluar</a
+        >
+      </div>
+    </nav>
+
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-avatar-section">
+          <div
+            class="sidebar-avatar"
+            id="sidebarAvatar"
+            style="background: var(--accent)"
+          >
+            A
+          </div>
+          <div class="sidebar-avatar-name" id="sidebarAvatarName">
+            Administrator
+          </div>
+        </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+          </li>
+          <li>
+            <a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a>
+          </li>
+          <li>
+            <a href="students.html"
+              ><span class="icon">👨‍🎓</span> Kelola Siswa</a
+            >
+          </li>
+          <li>
+            <a href="exams.html"><span class="icon">📝</span> Semua Ujian</a>
+          </li>
+          <li>
+            <a href="reports.html"><span class="icon">📊</span> Laporan</a>
+          </li>
+          <li>
+            <a href="settings.html" class="active"
+              ><span class="icon">⚙️</span> Pengaturan</a
+            >
+          </li>
+          <li>
+            <a href="security-logs.html"
+              ><span class="icon">🔒</span> Log Keamanan</a
+            >
+          </li>
+        </ul>
+      </aside>
+
+      <main class="main-content">
+        <div class="page-header">
+          <div>
+            <div class="page-title">⚙️ Pengaturan Sistem</div>
+            <div class="page-subtitle">
+              Kelola data master kelas dan mata pelajaran
+            </div>
+          </div>
+        </div>
+
+        <div class="settings-grid">
+          <div class="card">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+              "
+            >
+              <h3 style="font-size: 1.1rem; color: var(--primary)">
+                🏫 Daftar Kelas
+              </h3>
+              <button class="btn btn-primary btn-sm" onclick="promptAddClass()">
+                + Tambah Kelas
+              </button>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b">
+              Kelas yang ditambahkan di sini akan muncul pada pilihan
+              pendaftaran siswa dan pembuatan ujian.
+            </p>
+
+            <div class="item-list" id="class-list">
+              <div class="empty-msg">Memuat data...</div>
+            </div>
+          </div>
+
+          <div class="card">
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                margin-bottom: 16px;
+              "
+            >
+              <h3 style="font-size: 1.1rem; color: var(--primary)">
+                📚 Mata Pelajaran
+              </h3>
+              <button
+                class="btn btn-primary btn-sm"
+                onclick="promptAddSubject()"
+              >
+                + Tambah Mapel
+              </button>
+            </div>
+            <p style="font-size: 0.85rem; color: #64748b">
+              Mata pelajaran yang ditambahkan akan muncul pada pilihan
+              pendaftaran guru dan pembuatan ujian.
+            </p>
+
+            <div class="item-list" id="subject-list">
+              <div class="empty-msg">Memuat data...</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-class">
+          <div class="modal" style="max-width: 400px">
+            <div class="modal-header">
+              <div class="modal-title">Tambah Kelas Baru</div>
+              <button class="modal-close" onclick="closeModals()">✕</button>
+            </div>
+            <div style="padding: 20px">
+              <div class="form-group">
+                <label>Nama Kelas</label>
+                <input
+                  type="text"
+                  id="new-class-name"
+                  class="form-control"
+                  placeholder="Contoh: XII IPA 1"
+                />
+              </div>
+              <button class="btn btn-primary btn-block" onclick="addClass()">
+                Simpan Kelas
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <div class="modal-overlay" id="modal-subject">
+          <div class="modal" style="max-width: 400px">
+            <div class="modal-header">
+              <div class="modal-title">Tambah Mata Pelajaran</div>
+              <button class="modal-close" onclick="closeModals()">✕</button>
+            </div>
+            <div style="padding: 20px">
+              <div class="form-group">
+                <label>Nama Mata Pelajaran</label>
+                <input
+                  type="text"
+                  id="new-subject-name"
+                  class="form-control"
+                  placeholder="Contoh: Fisika Kuantum"
+                />
+              </div>
+              <div class="form-group">
+                <label>Kategori Mapel</label>
+                <select id="new-subject-category" class="form-control">
+                  <option value="Umum">Umum</option>
+                  <option value="IPA">IPA</option>
+                  <option value="IPS">IPS</option>
+                </select>
+              </div>
+              <button class="btn btn-primary btn-block" onclick="addSubject()">
+                Simpan Mapel
+              </button>
+            </div>
+          </div>
+        </div>
+      </main>
     </div>
-  </nav>
 
-  <div class="layout">
-    <aside class="sidebar">
-      <ul class="sidebar-menu">
-        <li><a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a></li>
-        <li><a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a></li>
-        <li><a href="students.html"><span class="icon">👨‍🎓</span> Kelola Siswa</a></li>
-        <li><a href="exams.html"><span class="icon">📝</span> Semua Ujian</a></li>
-        <li><a href="reports.html"><span class="icon">📊</span> Laporan</a></li>
-        <li><a href="settings.html" class="active"><span class="icon">⚙️</span> Pengaturan</a></li>
-        <li><a href="security-logs.html"><span class="icon">🔒</span> Log Keamanan</a></li>
-      </ul>
-    </aside>
+    <script>
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchClasses();
+        fetchSubjects();
+        fetchAdminProfile();
+      });
 
-    <main class="main-content">
-      <div class="page-header">
-        <div>
-          <div class="page-title">⚙️ Pengaturan Sistem</div>
-          <div class="page-subtitle">Kelola data master kelas dan mata pelajaran</div>
-        </div>
-      </div>
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
 
-      <div class="settings-grid">
-        <!-- KELOLA KELAS -->
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
-            <h3 style="font-size:1.1rem; color:var(--primary)">🏫 Daftar Kelas</h3>
-            <button class="btn btn-primary btn-sm" onclick="promptAddClass()">+ Tambah Kelas</button>
-          </div>
-          <p style="font-size:0.85rem; color:#64748b">Kelas yang ditambahkan di sini akan muncul pada pilihan pendaftaran siswa dan pembuatan ujian.</p>
-          
-          <div class="item-list" id="class-list">
-            <div class="empty-msg">Memuat data...</div>
-          </div>
-        </div>
+      hamburgerBtn.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-open");
+        sidebarOverlay.classList.toggle("sidebar-overlay-visible");
+      });
 
-        <!-- KELOLA MATA PELAJARAN -->
-        <div class="card">
-          <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:16px">
-            <h3 style="font-size:1.1rem; color:var(--primary)">📚 Mata Pelajaran</h3>
-            <button class="btn btn-primary btn-sm" onclick="promptAddSubject()">+ Tambah Mapel</button>
-          </div>
-          <p style="font-size:0.85rem; color:#64748b">Mata pelajaran yang ditambahkan akan muncul pada pilihan pendaftaran guru dan pembuatan ujian.</p>
-          
-          <div class="item-list" id="subject-list">
-            <div class="empty-msg">Memuat data...</div>
-          </div>
-        </div>
-      </div>
+      sidebarOverlay.addEventListener("click", () => {
+        sidebar.classList.remove("sidebar-open");
+        sidebarOverlay.classList.remove("sidebar-overlay-visible");
+      });
 
-      <!-- MODAL ADD CLASS -->
-      <div class="modal-overlay" id="modal-class">
-        <div class="modal" style="max-width:400px">
-          <div class="modal-header">
-            <div class="modal-title">Tambah Kelas Baru</div>
-            <button class="modal-close" onclick="closeModals()">✕</button>
-          </div>
-          <div style="padding:20px">
-            <div class="form-group">
-              <label>Nama Kelas</label>
-              <input type="text" id="new-class-name" class="form-control" placeholder="Contoh: XII IPA 1">
-            </div>
-            <button class="btn btn-primary btn-block" onclick="addClass()">Simpan Kelas</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- MODAL ADD SUBJECT -->
-      <div class="modal-overlay" id="modal-subject">
-        <div class="modal" style="max-width:400px">
-          <div class="modal-header">
-            <div class="modal-title">Tambah Mata Pelajaran</div>
-            <button class="modal-close" onclick="closeModals()">✕</button>
-          </div>
-          <div style="padding:20px">
-            <div class="form-group">
-              <label>Nama Mata Pelajaran</label>
-              <input type="text" id="new-subject-name" class="form-control" placeholder="Contoh: Fisika Kuantum">
-            </div>
-            <div class="form-group">
-              <label>Kategori Mapel</label>
-              <select id="new-subject-category" class="form-control">
-                <option value="Umum">Umum</option>
-                <option value="IPA">IPA</option>
-                <option value="IPS">IPS</option>
-              </select>
-            </div>
-            <button class="btn btn-primary btn-block" onclick="addSubject()">Simpan Mapel</button>
-          </div>
-        </div>
-      </div>
-
-    </main>
-  </div>
-
-  <script>
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchClasses();
-      fetchSubjects();
-      fetchAdminProfile();
-    });
-
-    async function fetchAdminProfile() {
-      try {
-        const response = await fetch('../php/admin_api.php?action=get_admin_profile');
-        const data = await response.json();
-        if (data.success) {
-          document.querySelector('.nav-user span').textContent = data.user.full_name;
-          document.querySelector('.nav-avatar').textContent = data.user.full_name.charAt(0).toUpperCase();
-        }
-      } catch (e) {}
-    }
-
-    async function fetchClasses() {
-      try {
-        const res = await fetch('../php/admin_api.php?action=get_classes');
-        const data = await res.json();
-        const container = document.getElementById('class-list');
-        
-        if (data.success) {
-          if (data.classes.length === 0) {
-            container.innerHTML = '<div class="empty-msg">Belum ada kelas.</div>';
-            return;
+      async function fetchAdminProfile() {
+        try {
+          const response = await fetch(
+            "../php/admin_api.php?action=get_admin_profile"
+          );
+          const data = await response.json();
+          if (data.success) {
+            document.querySelector(".nav-user span").textContent =
+              data.user.full_name;
+            document.querySelector(".nav-avatar").textContent =
+              data.user.full_name.charAt(0).toUpperCase();
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+            const sidebarAvatarName =
+              document.getElementById("sidebarAvatarName");
+            if (sidebarAvatar)
+              sidebarAvatar.textContent = data.user.full_name
+                .charAt(0)
+                .toUpperCase();
+            if (sidebarAvatarName)
+              sidebarAvatarName.textContent = data.user.full_name;
           }
-          container.innerHTML = data.classes.map(c => `
+        } catch (e) {}
+      }
+
+      async function fetchClasses() {
+        try {
+          const res = await fetch("../php/admin_api.php?action=get_classes");
+          const data = await res.json();
+          const container = document.getElementById("class-list");
+
+          if (data.success) {
+            if (data.classes.length === 0) {
+              container.innerHTML =
+                '<div class="empty-msg">Belum ada kelas.</div>';
+              return;
+            }
+            container.innerHTML = data.classes
+              .map(
+                (c) => `
             <div class="item-row">
               <span class="item-name">${c.name}</span>
               <div class="item-actions">
                 <button class="btn btn-sm btn-danger" onclick="deleteClass(${c.id}, '${c.name}')">🗑️</button>
               </div>
             </div>
-          `).join('');
-        }
-      } catch (e) { console.error(e); }
-    }
-
-    async function fetchSubjects() {
-      try {
-        const res = await fetch('../php/admin_api.php?action=get_subjects');
-        const data = await res.json();
-        const container = document.getElementById('subject-list');
-        
-        if (data.success) {
-          if (data.subjects.length === 0) {
-            container.innerHTML = '<div class="empty-msg">Belum ada mata pelajaran.</div>';
-            return;
+          `
+              )
+              .join("");
           }
-          container.innerHTML = data.subjects.map(s => `
+        } catch (e) {
+          console.error(e);
+        }
+      }
+
+      async function fetchSubjects() {
+        try {
+          const res = await fetch("../php/admin_api.php?action=get_subjects");
+          const data = await res.json();
+          const container = document.getElementById("subject-list");
+
+          if (data.success) {
+            if (data.subjects.length === 0) {
+              container.innerHTML =
+                '<div class="empty-msg">Belum ada mata pelajaran.</div>';
+              return;
+            }
+            container.innerHTML = data.subjects
+              .map(
+                (s) => `
             <div class="item-row">
               <div>
                 <span class="item-name">${s.name}</span>
-                <span class="badge ${s.category === 'Umum' ? 'badge-info' : (s.category === 'IPA' ? 'badge-success' : 'badge-warning')}" style="font-size:0.7rem; margin-left:8px">${s.category}</span>
+                <span class="badge ${
+                  s.category === "Umum"
+                    ? "badge-info"
+                    : s.category === "IPA"
+                    ? "badge-success"
+                    : "badge-warning"
+                }" style="font-size:0.7rem; margin-left:8px">${
+                  s.category
+                }</span>
               </div>
               <div class="item-actions">
-                <button class="btn btn-sm btn-danger" onclick="deleteSubject(${s.id}, '${s.name}')">🗑️</button>
+                <button class="btn btn-sm btn-danger" onclick="deleteSubject(${
+                  s.id
+                }, '${s.name}')">🗑️</button>
               </div>
             </div>
-          `).join('');
+          `
+              )
+              .join("");
+          }
+        } catch (e) {
+          console.error(e);
         }
-      } catch (e) { console.error(e); }
-    }
+      }
 
-    function promptAddClass() { document.getElementById('modal-class').classList.add('active'); }
-    function promptAddSubject() { document.getElementById('modal-subject').classList.add('active'); }
-    function closeModals() { document.querySelectorAll('.modal-overlay').forEach(m => m.classList.remove('active')); }
+      function promptAddClass() {
+        document.getElementById("modal-class").classList.add("active");
+      }
+      function promptAddSubject() {
+        document.getElementById("modal-subject").classList.add("active");
+      }
+      function closeModals() {
+        document
+          .querySelectorAll(".modal-overlay")
+          .forEach((m) => m.classList.remove("active"));
+      }
 
-    async function addClass() {
-      const name = document.getElementById('new-class-name').value;
-      if (!name) return alert('Nama kelas wajib diisi');
-      
-      const res = await fetch('../php/admin_api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add_class', name: name })
-      });
-      const data = await res.json();
-      if (data.success) {
-        closeModals();
-        document.getElementById('new-class-name').value = '';
-        fetchClasses();
-      } else { alert(data.message); }
-    }
+      async function addClass() {
+        const name = document.getElementById("new-class-name").value;
+        if (!name) return alert("Nama kelas wajib diisi");
 
-    async function addSubject() {
-      const name = document.getElementById('new-subject-name').value;
-      const category = document.getElementById('new-subject-category').value;
-      if (!name) return alert('Nama mapel wajib diisi');
-      
-      const res = await fetch('../php/admin_api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'add_subject', name: name, category: category })
-      });
-      const data = await res.json();
-      if (data.success) {
-        closeModals();
-        document.getElementById('new-subject-name').value = '';
-        fetchSubjects();
-      } else { alert(data.message); }
-    }
+        const res = await fetch("../php/admin_api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "add_class", name: name }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeModals();
+          document.getElementById("new-class-name").value = "";
+          fetchClasses();
+        } else {
+          alert(data.message);
+        }
+      }
 
-    async function deleteClass(id, name) {
-      if (!confirm(`Hapus kelas ${name}? Siswa yang terdaftar di kelas ini mungkin akan mengalami masalah akses.`)) return;
-      const res = await fetch('../php/admin_api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_class', id: id })
-      });
-      const data = await res.json();
-      if (data.success) fetchClasses();
-    }
+      async function addSubject() {
+        const name = document.getElementById("new-subject-name").value;
+        const category = document.getElementById("new-subject-category").value;
+        if (!name) return alert("Nama mapel wajib diisi");
 
-    async function deleteSubject(id, name) {
-      if (!confirm(`Hapus mata pelajaran ${name}?`)) return;
-      const res = await fetch('../php/admin_api.php', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'delete_subject', id: id })
-      });
-      const data = await res.json();
-      if (data.success) fetchSubjects();
-    }
-  </script>
-  <script src="/exam-system/js/ui.js"></script>
-</body>
+        const res = await fetch("../php/admin_api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            action: "add_subject",
+            name: name,
+            category: category,
+          }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          closeModals();
+          document.getElementById("new-subject-name").value = "";
+          fetchSubjects();
+        } else {
+          alert(data.message);
+        }
+      }
+
+      async function deleteClass(id, name) {
+        if (
+          !confirm(
+            `Hapus kelas ${name}? Siswa yang terdaftar di kelas ini mungkin akan mengalami masalah akses.`
+          )
+        )
+          return;
+        const res = await fetch("../php/admin_api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete_class", id: id }),
+        });
+        const data = await res.json();
+        if (data.success) fetchClasses();
+      }
+
+      async function deleteSubject(id, name) {
+        if (!confirm(`Hapus mata pelajaran ${name}?`)) return;
+        const res = await fetch("../php/admin_api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "delete_subject", id: id }),
+        });
+        const data = await res.json();
+        if (data.success) fetchSubjects();
+      }
+    </script>
+    <script src="/exam-system/js/ui.js"></script>
+  </body>
 </html>

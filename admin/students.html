@@ -1,25 +1,72 @@
-<!DOCTYPE html>
 <html lang="id">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kelola Siswa — Admin ExamSafe</title>
     <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .modal-content {
+        background: white;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 500px;
+        max-width: 95vw;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        max-height: 90vh;
+        overflow-y: auto;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+      }
+      .close {
+        cursor: pointer;
+        font-size: 24px;
+      }
+      .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar">
-      <div class="navbar-brand">
-        🎓 Exam<span>Safe</span>
-        <span
-          style="
-            font-size: 0.75rem;
-            background: rgba(255, 255, 255, 0.2);
-            padding: 2px 8px;
-            border-radius: 50px;
-            margin-left: 8px;
-          "
-          >ADMIN</span
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button
+          class="hamburger-btn"
+          id="hamburgerBtn"
+          aria-label="Toggle menu"
         >
+          <span></span><span></span><span></span>
+        </button>
+        <div class="navbar-brand">
+          🎓 Exam<span>Safe</span>
+          <span
+            style="
+              font-size: 0.75rem;
+              background: rgba(255, 255, 255, 0.2);
+              padding: 2px 8px;
+              border-radius: 50px;
+              margin-left: 8px;
+            "
+            >ADMIN</span
+          >
+        </div>
       </div>
       <div class="navbar-nav">
         <div class="nav-user">
@@ -35,8 +82,22 @@
       </div>
     </nav>
 
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="layout">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-avatar-section">
+          <div
+            class="sidebar-avatar"
+            id="sidebarAvatar"
+            style="background: var(--accent)"
+          >
+            A
+          </div>
+          <div class="sidebar-avatar-name" id="sidebarAvatarName">
+            Administrator
+          </div>
+        </div>
         <ul class="sidebar-menu">
           <li>
             <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
@@ -114,7 +175,6 @@
       </main>
     </div>
 
-    <!-- Modal Tambah/Edit Siswa -->
     <div id="studentModal" class="modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -157,7 +217,6 @@
             <label>Kelas</label>
             <select id="class" class="form-control" required>
               <option value="">-- Pilih Kelas --</option>
-              <!-- Dynamic -->
             </select>
           </div>
           <div class="form-group">
@@ -185,43 +244,6 @@
       </div>
     </div>
 
-    <style>
-      .modal {
-        display: none;
-        position: fixed;
-        z-index: 1000;
-        left: 0;
-        top: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-      }
-      .modal-content {
-        background: white;
-        margin: 5% auto;
-        padding: 20px;
-        border-radius: 8px;
-        width: 500px;
-        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-      }
-      .modal-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        border-bottom: 1px solid #eee;
-        margin-bottom: 15px;
-        padding-bottom: 10px;
-      }
-      .close {
-        cursor: pointer;
-        font-size: 24px;
-      }
-      .btn-sm {
-        padding: 5px 10px;
-        font-size: 12px;
-      }
-    </style>
-
     <script>
       let allStudents = [];
 
@@ -229,6 +251,20 @@
         fetchStudents();
         fetchClasses();
         fetchAdminProfile();
+      });
+
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+      hamburgerBtn.addEventListener("click", () => {
+        sidebar.classList.toggle("sidebar-open");
+        sidebarOverlay.classList.toggle("sidebar-overlay-visible");
+      });
+
+      sidebarOverlay.addEventListener("click", () => {
+        sidebar.classList.remove("sidebar-open");
+        sidebarOverlay.classList.remove("sidebar-overlay-visible");
       });
 
       async function fetchAdminProfile() {
@@ -242,6 +278,15 @@
               data.user.full_name;
             document.querySelector(".nav-avatar").textContent =
               data.user.full_name.charAt(0).toUpperCase();
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+            const sidebarAvatarName =
+              document.getElementById("sidebarAvatarName");
+            if (sidebarAvatar)
+              sidebarAvatar.textContent = data.user.full_name
+                .charAt(0)
+                .toUpperCase();
+            if (sidebarAvatarName)
+              sidebarAvatarName.textContent = data.user.full_name;
           }
         } catch (e) {}
       }
@@ -272,7 +317,6 @@
             "../php/admin_api.php?action=get_all_students"
           );
           const data = await response.json();
-
           const tbody = document.getElementById("student-list");
           if (data.success) {
             allStudents = data.students;
@@ -284,25 +328,24 @@
             tbody.innerHTML = data.students
               .map(
                 (s, i) => `
-            <tr>
-              <td>${i + 1}</td>
-              <td><b>${escapeHtml(s.full_name)}</b></td>
-              <td>${escapeHtml(s.nisn)}</td>
-              <td>${escapeHtml(s.username || "-")}</td>
-              <td>${escapeHtml(s.class)}</td>
-              <td><span class="badge ${
-                s.is_active == 1 ? "badge-success" : "badge-danger"
-              }">${s.is_active == 1 ? "Aktif" : "Nonaktif"}</span></td>
-              <td>
-                <button class="btn btn-sm btn-outline" onclick="editStudent(${
-                  s.id
-                })">Edit</button>
-                <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${
-                  s.id
-                })">Hapus</button>
-              </td>
-            </tr>
-          `
+              <tr>
+                <td>${i + 1}</td>
+                <td><b>${escapeHtml(s.full_name)}</b></td>
+                <td>${escapeHtml(s.nisn)}</td>
+                <td>${escapeHtml(s.username || "-")}</td>
+                <td>${escapeHtml(s.class)}</td>
+                <td><span class="badge ${
+                  s.is_active == 1 ? "badge-success" : "badge-danger"
+                }">${s.is_active == 1 ? "Aktif" : "Nonaktif"}</span></td>
+                <td>
+                  <button class="btn btn-sm btn-outline" onclick="editStudent(${
+                    s.id
+                  })">Edit</button>
+                  <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${
+                    s.id
+                  })">Hapus</button>
+                </td>
+              </tr>`
               )
               .join("");
           }
@@ -315,25 +358,14 @@
         const modal = document.getElementById("studentModal");
         const form = document.getElementById("studentForm");
         modal.style.display = "block";
-
         if (id) {
           const student = allStudents.find((item) => item.id == id);
-
-          if (!student) {
-            console.error("Student not found with id:", id);
-            alert("Data siswa tidak ditemukan. Silakan refresh halaman.");
-            closeModal();
-            return;
-          }
-
           document.getElementById("modalTitle").textContent = "Edit Data Siswa";
           document.getElementById("studentId").value = student.id;
           document.getElementById("fullName").value = student.full_name || "";
           document.getElementById("nisn").value = student.nisn || "";
           document.getElementById("username").value = student.username || "";
           document.getElementById("class").value = student.class || "";
-          document.getElementById("passLabel").textContent =
-            "Password Baru (Kosongkan jika tidak berubah)";
           document.getElementById("password").value = "";
           document.getElementById("password").required = false;
         } else {
@@ -341,14 +373,6 @@
             "Tambah Siswa Baru";
           form.reset();
           document.getElementById("studentId").value = "";
-          document.getElementById("fullName").value = "";
-          document.getElementById("nisn").value = "";
-          document.getElementById("username").value = "";
-          document.getElementById("class").value = "";
-          document.getElementById("password").value = "";
-          document.getElementById("passLabel").textContent =
-            "Password (Default: siswa123)";
-          document.getElementById("password").required = false;
         }
       }
 
@@ -359,10 +383,8 @@
       async function saveStudent(e) {
         e.preventDefault();
         const id = document.getElementById("studentId").value;
-        const action = id ? "update_student" : "add_student";
-
         const payload = {
-          action: action,
+          action: id ? "update_student" : "add_student",
           id: id || undefined,
           full_name: document.getElementById("fullName").value,
           nisn: document.getElementById("nisn").value,
@@ -370,11 +392,6 @@
           class: document.getElementById("class").value,
           password: document.getElementById("password").value || undefined,
         };
-
-        Object.keys(payload).forEach(
-          (key) => payload[key] === undefined && delete payload[key]
-        );
-
         try {
           const response = await fetch("../php/admin_api.php", {
             method: "POST",
@@ -390,19 +407,12 @@
             alert("Error: " + data.message);
           }
         } catch (err) {
-          console.error("Save error:", err);
           alert("Terjadi kesalahan saat menyimpan data.");
         }
       }
 
       async function deleteStudent(id) {
-        if (
-          !confirm(
-            "Apakah Anda yakin ingin menghapus siswa ini? Seluruh data nilai siswa ini akan ikut terhapus."
-          )
-        )
-          return;
-
+        if (!confirm("Apakah Anda yakin ingin menghapus siswa ini?")) return;
         try {
           const response = await fetch("../php/admin_api.php", {
             method: "POST",
@@ -417,19 +427,11 @@
             alert("Error: " + data.message);
           }
         } catch (err) {
-          console.error("Delete error:", err);
           alert("Terjadi kesalahan saat menghapus data.");
         }
       }
 
       function editStudent(id) {
-        if (!allStudents || allStudents.length === 0) {
-          alert("Data siswa masih dimuat. Silakan tunggu sebentar.");
-          fetchStudents().then(() => {
-            openModal(id);
-          });
-          return;
-        }
         openModal(id);
       }
 
@@ -438,43 +440,33 @@
           .getElementById("studentSearch")
           .value.toLowerCase();
         const tbody = document.getElementById("student-list");
-
         const filtered = allStudents.filter(
           (s) =>
             s.full_name.toLowerCase().includes(query) ||
             s.nisn.toLowerCase().includes(query) ||
-            s.class.toLowerCase().includes(query) ||
-            (s.username && s.username.toLowerCase().includes(query))
+            s.class.toLowerCase().includes(query)
         );
-
-        if (filtered.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="7" style="text-align:center;padding:20px">Data tidak ditemukan.</td></tr>';
-          return;
-        }
-
         tbody.innerHTML = filtered
           .map(
             (s, i) => `
-        <tr>
-          <td>${i + 1}</td>
-          <td><b>${escapeHtml(s.full_name)}</b></td>
-          <td>${escapeHtml(s.nisn)}</td>
-          <td>${escapeHtml(s.username || "-")}</td>
-          <td>${escapeHtml(s.class)}</td>
-          <td><span class="badge ${
-            s.is_active == 1 ? "badge-success" : "badge-danger"
-          }">${s.is_active == 1 ? "Aktif" : "Nonaktif"}</span></td>
-          <td>
-            <button class="btn btn-sm btn-outline" onclick="editStudent(${
-              s.id
-            })">Edit</button>
-            <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${
-              s.id
-            })">Hapus</button>
-          </td>
-        </tr>
-      `
+          <tr>
+            <td>${i + 1}</td>
+            <td><b>${escapeHtml(s.full_name)}</b></td>
+            <td>${escapeHtml(s.nisn)}</td>
+            <td>${escapeHtml(s.username || "-")}</td>
+            <td>${escapeHtml(s.class)}</td>
+            <td><span class="badge ${
+              s.is_active == 1 ? "badge-success" : "badge-danger"
+            }">${s.is_active == 1 ? "Aktif" : "Nonaktif"}</span></td>
+            <td>
+              <button class="btn btn-sm btn-outline" onclick="editStudent(${
+                s.id
+              })">Edit</button>
+              <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${
+                s.id
+              })">Hapus</button>
+            </td>
+          </tr>`
           )
           .join("");
       }
