@@ -1,681 +1,1380 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Buat Ujian — ExamSafe</title>
-  <link rel="stylesheet" href="../css/style.css">
-  <style>
-    .question-builder {
-      background: #fff;
-      border-radius: 14px;
-      padding: 24px;
-      margin-bottom: 16px;
-      box-shadow: 0 4px 16px rgba(26,60,110,0.07);
-      border-left: 4px solid var(--primary-light);
-      position: relative;
-    }
-    .question-builder .q-header {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      margin-bottom: 16px;
-    }
-    .q-number { font-size: 0.82rem; font-weight: 700; color: var(--primary-light); text-transform: uppercase; letter-spacing: 1px; }
-    .option-row { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; }
-    .option-row input[type="text"] { flex: 1; }
-    .option-row input[type="radio"] { width: 18px; height: 18px; accent-color: var(--success); }
-    .option-label { font-size: 0.85rem; font-weight: 600; color: #64748b; width: 20px; }
-    .correct-label { font-size: 0.78rem; color: var(--success); font-weight: 600; }
-    .add-option-btn { background: none; border: 2px dashed #cbd5e1; color: #94a3b8; padding: 8px; border-radius: 8px; cursor: pointer; font-size: 0.85rem; width: 100%; margin-top: 4px; transition: all 0.2s; font-family: 'Poppins', sans-serif; }
-    .add-option-btn:hover { border-color: var(--primary-light); color: var(--primary-light); }
-    .drag-handle { cursor: grab; color: #94a3b8; font-size: 1.2rem; padding: 4px; }
-    .type-selector { display: flex; gap: 8px; }
-    .type-btn { padding: 6px 14px; border-radius: 8px; border: 2px solid #e2e8f0; background: #f8fafc; cursor: pointer; font-size: 0.82rem; font-weight: 600; color: #64748b; font-family: 'Poppins', sans-serif; transition: all 0.2s; }
-    .type-btn.active { border-color: var(--primary-light); background: #eff6ff; color: var(--primary); }
-    .upload-area { border: 2px dashed #cbd5e1; border-radius: 10px; padding: 24px; text-align: center; cursor: pointer; transition: all 0.2s; }
-    .upload-area:hover { border-color: var(--primary-light); background: #eff6ff; }
-    .upload-area input { display: none; }
-    .step-indicator { display: flex; gap: 0; margin-bottom: 32px; }
-    .step { flex: 1; text-align: center; padding: 12px; font-size: 0.85rem; font-weight: 600; color: #94a3b8; border-bottom: 3px solid #e2e8f0; cursor: pointer; }
-    .step.active { color: var(--primary); border-bottom-color: var(--primary); }
-    .step.done { color: var(--success); border-bottom-color: var(--success); }
-    .step-content { display: none; }
-    .step-content.active { display: block; }
-    .page-row { display: flex; gap: 24px; align-items: flex-start; }
-    .questions-container { flex: 1; }
-    .sticky-sidebar { 
-      position: sticky; 
-      top: 80px; 
-      width: 280px; 
-      background: #fff; 
-      border-radius: 14px; 
-      padding: 20px; 
-      box-shadow: 0 4px 16px rgba(26,60,110,0.07); 
-      border: 1px solid #e2e8f0;
-    }
-    .sticky-add-btns {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-    .sticky-add-btns button {
-      text-align: left;
-      justify-content: flex-start;
-      padding: 12px 16px;
-      font-weight: 600;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Buat Ujian — ExamSafe</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      .question-builder {
+        background: #fff;
+        border-radius: 14px;
+        padding: 24px;
+        margin-bottom: 16px;
+        box-shadow: 0 4px 16px rgba(26, 60, 110, 0.07);
+        border-left: 4px solid var(--primary-light);
+        position: relative;
+      }
+      .question-builder .q-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 16px;
+      }
+      .q-number {
+        font-size: 0.82rem;
+        font-weight: 700;
+        color: var(--primary-light);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+      }
+      .option-row {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        margin-bottom: 10px;
+      }
+      .option-row input[type="text"] {
+        flex: 1;
+      }
+      .option-row input[type="radio"] {
+        width: 18px;
+        height: 18px;
+        accent-color: var(--success);
+      }
+      .option-label {
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #64748b;
+        width: 20px;
+      }
+      .correct-label {
+        font-size: 0.78rem;
+        color: var(--success);
+        font-weight: 600;
+      }
+      .add-option-btn {
+        background: none;
+        border: 2px dashed #cbd5e1;
+        color: #94a3b8;
+        padding: 8px;
+        border-radius: 8px;
+        cursor: pointer;
+        font-size: 0.85rem;
+        width: 100%;
+        margin-top: 4px;
+        transition: all 0.2s;
+        font-family: "Poppins", sans-serif;
+      }
+      .add-option-btn:hover {
+        border-color: var(--primary-light);
+        color: var(--primary-light);
+      }
+      .drag-handle {
+        cursor: grab;
+        color: #94a3b8;
+        font-size: 1.2rem;
+        padding: 4px;
+      }
+      .type-selector {
+        display: flex;
+        gap: 8px;
+      }
+      .type-btn {
+        padding: 6px 14px;
+        border-radius: 8px;
+        border: 2px solid #e2e8f0;
+        background: #f8fafc;
+        cursor: pointer;
+        font-size: 0.82rem;
+        font-weight: 600;
+        color: #64748b;
+        font-family: "Poppins", sans-serif;
+        transition: all 0.2s;
+      }
+      .type-btn.active {
+        border-color: var(--primary-light);
+        background: #eff6ff;
+        color: var(--primary);
+      }
+      .upload-area {
+        border: 2px dashed #cbd5e1;
+        border-radius: 10px;
+        padding: 24px;
+        text-align: center;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .upload-area:hover {
+        border-color: var(--primary-light);
+        background: #eff6ff;
+      }
+      .upload-area input {
+        display: none;
+      }
+      .step-indicator {
+        display: flex;
+        gap: 0;
+        margin-bottom: 32px;
+      }
+      .step {
+        flex: 1;
+        text-align: center;
+        padding: 12px;
+        font-size: 0.85rem;
+        font-weight: 600;
+        color: #94a3b8;
+        border-bottom: 3px solid #e2e8f0;
+        cursor: pointer;
+      }
+      .step.active {
+        color: var(--primary);
+        border-bottom-color: var(--primary);
+      }
+      .step.done {
+        color: var(--success);
+        border-bottom-color: var(--success);
+      }
+      .step-content {
+        display: none;
+      }
+      .step-content.active {
+        display: block;
+      }
+      .page-row {
+        display: flex;
+        gap: 24px;
+        align-items: flex-start;
+      }
+      .questions-container {
+        flex: 1;
+      }
+      .sticky-sidebar {
+        position: sticky;
+        top: 80px;
+        width: 280px;
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px;
+        box-shadow: 0 4px 16px rgba(26, 60, 110, 0.07);
+        border: 1px solid #e2e8f0;
+      }
+      .sticky-add-btns {
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .sticky-add-btns button {
+        text-align: left;
+        justify-content: flex-start;
+        padding: 12px 16px;
+        font-weight: 600;
+      }
 
-    /* Floating Action Button for Mobile */
-    .fab-container {
-      display: none;
-      position: fixed;
-      bottom: 24px;
-      right: 24px;
-      z-index: 100;
-    }
-    
-    @media(max-width: 992px) {
-      .page-row { flex-direction: column; }
-      .sticky-sidebar { position: static; width: 100%; margin-bottom: 20px; }
-      .sticky-add-btns { flex-direction: row; flex-wrap: wrap; }
-      .sticky-add-btns button { flex: 1; min-width: 140px; }
-    }
+      /* Floating Action Button for Mobile */
+      .fab-container {
+        display: none;
+        position: fixed;
+        bottom: 24px;
+        right: 24px;
+        z-index: 100;
+      }
 
-    .opt-image-preview { 
-      max-height: 50px; 
-      max-width: 50px; 
-      object-fit: cover; 
-      border-radius: 4px; 
-      border: 1px solid #e2e8f0; 
-    }
-    .opt-image-preview-wrap { 
-      display: flex; 
-      align-items: center; 
-      gap: 5px; 
-    }
-    .preview-q-text { font-size: 1.05rem; font-weight: 500; margin-bottom: 15px; color: #1e293b; }
-    .preview-opt-list { list-style: none; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-    .preview-opt-item { 
-      padding: 10px 15px; 
-      background: #fff; 
-      border: 1px solid #e2e8f0; 
-      border-radius: 8px; 
-      font-size: 0.9rem;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .preview-opt-item.correct { background: #d1fae5; border-color: #10b981; color: #065f46; font-weight: 600; }
-  </style>
-</head>
-<body>
-  <nav class="navbar">
-    <div class="navbar-brand">🎓 Exam<span>Safe</span></div>
-    <div class="navbar-nav">
-      <a href="dashboard.html" class="nav-link">Dashboard</a>
-      <a href="create-exam.html" class="nav-link active">Buat Ujian</a>
-      <a href="question-bank.html" class="nav-link">Bank Soal</a>
-      <a href="results.html" class="nav-link">Hasil Ujian</a>
-      <div class="nav-user">
-        <div class="nav-avatar">G</div>
-        <span>Pak Budi</span>
-      </div>
-      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
-    </div>
-  </nav>
+      @media (max-width: 992px) {
+        .page-row {
+          flex-direction: column;
+        }
+        .sticky-sidebar {
+          position: static;
+          width: 100%;
+          margin-bottom: 20px;
+        }
+        .sticky-add-btns {
+          flex-direction: row;
+          flex-wrap: wrap;
+        }
+        .sticky-add-btns button {
+          flex: 1;
+          min-width: 140px;
+        }
+      }
 
-  <div class="layout">
-    <aside class="sidebar">
-      <ul class="sidebar-menu">
-        <li><a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a></li>
-        <li><a href="create-exam.html" class="active"><span class="icon">➕</span> Buat Ujian Baru</a></li>
-        <li><a href="question-bank.html"><span class="icon">📚</span> Bank Soal</a></li>
-        <li><a href="results.html"><span class="icon">📊</span> Hasil Ujian</a></li>
-        <li><a href="students.html"><span class="icon">👥</span> Data Siswa</a></li>
-        <li><a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a></li>
-      </ul>
-    </aside>
-
-    <main class="main-content">
-      <div class="page-header">
-        <div>
-          <div class="page-title">➕ Buat Ujian Baru</div>
-          <div class="page-subtitle">Isi informasi ujian dan tambahkan soal</div>
+      .opt-image-preview {
+        max-height: 50px;
+        max-width: 50px;
+        object-fit: cover;
+        border-radius: 4px;
+        border: 1px solid #e2e8f0;
+      }
+      .opt-image-preview-wrap {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+      }
+      .preview-q-text {
+        font-size: 1.05rem;
+        font-weight: 500;
+        margin-bottom: 15px;
+        color: #1e293b;
+      }
+      .preview-opt-list {
+        list-style: none;
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+      .preview-opt-item {
+        padding: 10px 15px;
+        background: #fff;
+        border: 1px solid #e2e8f0;
+        border-radius: 8px;
+        font-size: 0.9rem;
+        display: flex;
+        align-items: center;
+        gap: 10px;
+      }
+      .preview-opt-item.correct {
+        background: #d1fae5;
+        border-color: #10b981;
+        color: #065f46;
+        font-weight: 600;
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="navbar-brand">🎓 Exam<span>Safe</span></div>
+      <div class="navbar-nav">
+        <a href="dashboard.html" class="nav-link">Dashboard</a>
+        <a href="create-exam.html" class="nav-link active">Buat Ujian</a>
+        <a href="question-bank.html" class="nav-link">Bank Soal</a>
+        <a href="results.html" class="nav-link">Hasil Ujian</a>
+        <div class="nav-user">
+          <div class="nav-avatar">G</div>
+          <span>Pak Budi</span>
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-outline" onclick="saveDraft()">💾 Simpan Draft</button>
-          <button class="btn btn-success" onclick="publishExam()">🚀 Publikasikan</button>
-        </div>
+        <a
+          href="../index.html"
+          class="btn btn-sm btn-outline"
+          style="color: #fff; border-color: rgba(255, 255, 255, 0.4)"
+          >Keluar</a
+        >
       </div>
+    </nav>
 
-      <!-- Step Indicator -->
-      <div class="step-indicator">
-        <div class="step active" id="step-1-tab" data-step="1">1. Info Ujian</div>
-        <div class="step" id="step-2-tab" data-step="2">2. Soal Ujian</div>
-        <div class="step" id="step-3-tab" data-step="3">3. Pengaturan</div>
-        <div class="step" id="step-4-tab" data-step="4">4. Preview</div>
-      </div>
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="sidebar-menu">
+          <li>
+            <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+          </li>
+          <li>
+            <a href="create-exam.html" class="active"
+              ><span class="icon">➕</span> Buat Ujian Baru</a
+            >
+          </li>
+          <li>
+            <a href="question-bank.html"
+              ><span class="icon">📚</span> Bank Soal</a
+            >
+          </li>
+          <li>
+            <a href="results.html"><span class="icon">📊</span> Hasil Ujian</a>
+          </li>
+          <li>
+            <a href="students.html"><span class="icon">👥</span> Data Siswa</a>
+          </li>
+          <li>
+            <a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a>
+          </li>
+        </ul>
+      </aside>
 
-      <!-- STEP 1: Info Ujian -->
-      <div class="step-content active" id="step-1">
-        <div class="card">
-          <div class="page-title" style="font-size:1.1rem;margin-bottom:20px">📋 Informasi Ujian</div>
-          <div class="form-group">
-            <label>Nama Ujian *</label>
-            <input type="text" class="form-control" id="exam-name" placeholder="Contoh: Matematika — Bab 5: Integral" value="Matematika — Bab 5: Integral">
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Target Jenjang *</label>
-              <select class="form-control" id="exam-class">
-                <option value="Kelas X">Kelas X</option>
-                <option value="Kelas XI">Kelas XI</option>
-                <option value="Kelas XII">Kelas XII</option>
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Kategori Mapel *</label>
-              <select class="form-control" id="exam-category" onchange="filterSubjects()">
-                <option value="Umum">Mapel Umum</option>
-                <option value="IPA">Mapel Pilihan (IPA)</option>
-                <option value="IPS">Mapel Pilihan (IPS)</option>
-              </select>
+      <main class="main-content">
+        <div class="page-header">
+          <div>
+            <div class="page-title">➕ Buat Ujian Baru</div>
+            <div class="page-subtitle">
+              Isi informasi ujian dan tambahkan soal
             </div>
           </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Mata Pelajaran *</label>
-              <select class="form-control" id="exam-subject">
-                <!-- Dynamic -->
-              </select>
-            </div>
-            <div class="form-group">
-              <label>Tanggal Ujian *</label>
-              <input type="date" class="form-control" id="exam-date">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Waktu Mulai *</label>
-              <input type="time" class="form-control" id="exam-start" value="08:00">
-            </div>
-            <div class="form-group">
-              <label>Durasi (Menit) *</label>
-              <input type="number" class="form-control" id="exam-duration" value="90" min="10" max="300">
-            </div>
-          </div>
-          <div class="form-row">
-            <div class="form-group">
-              <label>Jumlah Soal Ditampilkan</label>
-              <input type="number" class="form-control" id="exam-qcount" value="40" min="1" max="100">
-            </div>
-            <div class="form-group">
-              <!-- placeholder for grid alignment if needed -->
-            </div>
-          </div>
-          <div class="form-group">
-            <label>Deskripsi / Petunjuk Ujian</label>
-            <textarea class="form-control" id="exam-desc" rows="3" placeholder="Petunjuk pengerjaan ujian untuk siswa...">Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</textarea>
-          </div>
-          <div class="form-group">
-            <label>Kode Ujian (otomatis)</label>
-            <div style="display:flex;gap:8px">
-              <input type="text" class="form-control" id="exam-code" value="UJIAN2024" readonly style="background:#f1f5f9;font-weight:700;letter-spacing:2px">
-              <button class="btn btn-outline" id="generate-code-btn">🔄 Generate</button>
-            </div>
-          </div>
-          <div style="text-align:right;margin-top:8px">
-            <button class="btn btn-primary" id="go-step-2" onclick="goStep(2)">Lanjut: Tambah Soal →</button>
-          </div>
-        </div>
-      </div>
-
-      <!-- STEP 2: Soal -->
-      <div class="step-content" id="step-2">
-        <div class="page-row">
-          <!-- Main Area -->
-          <div class="questions-container">
-            <div style="margin-bottom:20px; display:flex; justify-content:space-between; align-items:center">
-              <div>
-                <div class="page-title" style="font-size:1.1rem">📝 Soal Ujian</div>
-                <div class="page-subtitle" id="q-count-label">0 soal ditambahkan</div>
-              </div>
-              <p style="font-size:0.8rem; color:#94a3b8; font-weight:500">Soal terbaru akan muncul di paling atas</p>
-            </div>
-
-            <div id="questions-builder"></div>
-
-            <div style="text-align:center;padding:48px 32px;background:#f8fafc;border-radius:14px;border:2px dashed #cbd5e1" id="empty-state">
-              <div style="font-size:3.5rem;margin-bottom:16px">✍️</div>
-              <h3 style="margin-bottom:8px; color:#1e293b">Mulai membuat soal!</h3>
-              <p style="color:#64748b;font-weight:400;max-width:300px;margin:0 auto">Pilih tipe soal di panel kanan untuk menambahkan soal baru ke ujian ini.</p>
-            </div>
-
-            <div style="display:flex;justify-content:space-between;margin-top:20px">
-              <button class="btn btn-outline" onclick="goStep(1)">← Kembali</button>
-              <button class="btn btn-primary" onclick="goStep(3)">Lanjut: Pengaturan →</button>
-            </div>
-          </div>
-
-          <!-- Sticky Panel -->
-          <aside class="sticky-sidebar">
-            <div style="font-weight:700; color:#1e293b; margin-bottom:16px; font-size:0.95rem; display:flex; align-items:center; gap:8px">
-              <span>➕ Tambah Soal Baru</span>
-            </div>
-            <div class="sticky-add-btns">
-              <button class="btn btn-primary btn-sm" onclick="addQuestion('multiple')"><span style="margin-right:8px">🔘</span> Pilihan Ganda</button>
-              <button class="btn btn-info btn-sm" onclick="addQuestion('checkbox')"><span style="margin-right:8px">☑️</span> PG Kompleks</button>
-              <button class="btn btn-secondary btn-sm" onclick="addQuestion('essay')"><span style="margin-right:8px">📝</span> Esai / Uraian</button>
-              <button class="btn btn-outline btn-sm" onclick="addQuestion('truefalse')" style="color:var(--success); border-color:#d1fae5; background:#f0fdf4"><span style="margin-right:8px">✔️</span> Benar/Salah</button>
-            </div>
-            
-            <hr class="divider" style="margin:20px 0">
-
-            <div style="font-weight:700; color:#1e293b; margin-bottom:12px; font-size:0.95rem; display:flex; align-items:center; gap:8px">
-              <span>📚 Bank Soal</span>
-            </div>
-            <button class="btn btn-outline btn-sm" onclick="openBankSoalModal()" style="width:100%; text-align:left; justify-content:flex-start; border-color:var(--primary-light); color:var(--primary-light); background:#eff6ff">
-              <span style="margin-right:8px">📋</span> Ambil dari Bank Soal
+          <div style="display: flex; gap: 8px">
+            <button class="btn btn-outline" onclick="saveDraft()">
+              💾 Simpan Draft
             </button>
-            
-            <hr class="divider" style="margin:20px 0">
-            
-            <div style="background:#f1f5f9; padding:15px; border-radius:10px;">
-              <div style="font-size:0.75rem; color:#64748b; font-weight:700; text-transform:uppercase; margin-bottom:10px">Tips Penggunaan:</div>
-              <ul style="padding:0 0 0 15px; margin:0; font-size:0.8rem; color:#475569; display:flex; flex-direction:column; gap:8px">
-                <li>Gunakan <b>Duplikat</b> untuk membuat soal serupa.</li>
-                <li>Soal baru selalu muncul di <b>paling atas</b> untuk mempermudah fokus.</li>
-                <li>Gambar soal bisa lebih dari satu (multiple upload).</li>
-              </ul>
-            </div>
-          </aside>
+            <button class="btn btn-success" onclick="publishExam()">
+              🚀 Publikasikan
+            </button>
+          </div>
         </div>
-      </div>
 
-      <!-- STEP 3: Pengaturan -->
-      <div class="step-content" id="step-3">
-        <div class="card">
-          <div class="page-title" style="font-size:1.1rem;margin-bottom:20px">⚙️ Pengaturan Keamanan & Ujian</div>
-
-          <div class="form-group">
-            <label>Pengacakan Soal</label>
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Acak urutan soal untuk setiap siswa
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Acak urutan pilihan jawaban
-              </label>
-            </div>
+        <!-- Step Indicator -->
+        <div class="step-indicator">
+          <div class="step active" id="step-1-tab" data-step="1">
+            1. Info Ujian
           </div>
+          <div class="step" id="step-2-tab" data-step="2">2. Soal Ujian</div>
+          <div class="step" id="step-3-tab" data-step="3">3. Pengaturan</div>
+          <div class="step" id="step-4-tab" data-step="4">4. Preview</div>
+        </div>
 
-          <hr class="divider">
-
-          <div class="form-group">
-            <label>Fitur Keamanan Anti-Menyontek</label>
-            <div style="display:flex;flex-direction:column;gap:10px;margin-top:8px">
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Wajib mode layar penuh (fullscreen)
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Blokir keyboard shortcut (Ctrl+T, Ctrl+N, dll.)
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Blokir copy-paste
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Deteksi perpindahan tab/jendela
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Notifikasi pengawas jika ada pelanggaran
-              </label>
-              <label style="display:flex;align-items:center;gap:10px;cursor:pointer;text-transform:none;font-size:0.92rem;font-weight:400;color:var(--text)">
-                <input type="checkbox" checked style="width:18px;height:18px;accent-color:var(--primary)">
-                Hentikan ujian otomatis setelah 3 pelanggaran
-              </label>
-            </div>
-          </div>
-
-          <hr class="divider">
-
-          <div class="form-row">
-            <div class="form-group">
-              <label>Nilai Kelulusan (KKM)</label>
-              <input type="number" class="form-control" value="75" min="0" max="100">
+        <!-- STEP 1: Info Ujian -->
+        <div class="step-content active" id="step-1">
+          <div class="card">
+            <div
+              class="page-title"
+              style="font-size: 1.1rem; margin-bottom: 20px"
+            >
+              📋 Informasi Ujian
             </div>
             <div class="form-group">
-              <label>Maks. Pelanggaran</label>
-              <input type="number" class="form-control" value="3" min="1" max="10">
+              <label>Nama Ujian *</label>
+              <input
+                type="text"
+                class="form-control"
+                id="exam-name"
+                placeholder="Contoh: Matematika — Bab 5: Integral"
+                value="Matematika — Bab 5: Integral"
+              />
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Target Jenjang *</label>
+                <select class="form-control" id="exam-class">
+                  <option value="Kelas X">Kelas X</option>
+                  <option value="Kelas XI">Kelas XI</option>
+                  <option value="Kelas XII">Kelas XII</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Kategori Mapel *</label>
+                <select
+                  class="form-control"
+                  id="exam-category"
+                  onchange="filterSubjects()"
+                >
+                  <option value="Umum">Mapel Umum</option>
+                  <option value="IPA">Mapel Pilihan (IPA)</option>
+                  <option value="IPS">Mapel Pilihan (IPS)</option>
+                </select>
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Mata Pelajaran *</label>
+                <select class="form-control" id="exam-subject">
+                  <!-- Dynamic -->
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Tanggal Ujian *</label>
+                <input type="date" class="form-control" id="exam-date" />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Waktu Mulai *</label>
+                <input
+                  type="time"
+                  class="form-control"
+                  id="exam-start"
+                  value="08:00"
+                />
+              </div>
+              <div class="form-group">
+                <label>Durasi (Menit) *</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="exam-duration"
+                  value="90"
+                  min="10"
+                  max="300"
+                />
+              </div>
+            </div>
+            <div class="form-row">
+              <div class="form-group">
+                <label>Jumlah Soal Ditampilkan</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  id="exam-qcount"
+                  value="40"
+                  min="1"
+                  max="100"
+                />
+              </div>
+              <div class="form-group">
+                <!-- placeholder for grid alignment if needed -->
+              </div>
+            </div>
+            <div class="form-group">
+              <label>Deskripsi / Petunjuk Ujian</label>
+              <textarea
+                class="form-control"
+                id="exam-desc"
+                rows="3"
+                placeholder="Petunjuk pengerjaan ujian untuk siswa..."
+              >
+Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</textarea
+              >
+            </div>
+            <div class="form-group">
+              <label>Kode Ujian (otomatis)</label>
+              <div style="display: flex; gap: 8px">
+                <input
+                  type="text"
+                  class="form-control"
+                  id="exam-code"
+                  value="UJIAN2024"
+                  readonly
+                  style="
+                    background: #f1f5f9;
+                    font-weight: 700;
+                    letter-spacing: 2px;
+                  "
+                />
+                <button class="btn btn-outline" id="generate-code-btn">
+                  🔄 Generate
+                </button>
+              </div>
+            </div>
+            <div style="text-align: right; margin-top: 8px">
+              <button
+                class="btn btn-primary"
+                id="go-step-2"
+                onclick="goStep(2)"
+              >
+                Lanjut: Tambah Soal →
+              </button>
             </div>
           </div>
+        </div>
 
-          <div class="form-group">
-            <label>Tampilkan Hasil Setelah Ujian</label>
-            <select class="form-control" id="show-results-setting">
-              <option value="direct_submit">Langsung setelah submit</option>
-              <option value="after_all_students">Setelah semua siswa selesai</option>
-              <option value="manual_by_teacher">Manual oleh guru</option>
-              <option value="never">Jangan tampilkan</option>
-            </select>
-          </div>
+        <!-- STEP 2: Soal -->
+        <div class="step-content" id="step-2">
+          <div class="page-row">
+            <!-- Main Area -->
+            <div class="questions-container">
+              <div
+                style="
+                  margin-bottom: 20px;
+                  display: flex;
+                  justify-content: space-between;
+                  align-items: center;
+                "
+              >
+                <div>
+                  <div class="page-title" style="font-size: 1.1rem">
+                    📝 Soal Ujian
+                  </div>
+                  <div class="page-subtitle" id="q-count-label">
+                    0 soal ditambahkan
+                  </div>
+                </div>
+                <p style="font-size: 0.8rem; color: #94a3b8; font-weight: 500">
+                  Soal terbaru akan muncul di paling atas
+                </p>
+              </div>
 
-          <div style="display:flex;justify-content:space-between;margin-top:8px">
-            <button class="btn btn-outline" onclick="goStep(2)">← Kembali</button>
-            <button class="btn btn-primary" onclick="goStep(4)">Lanjut: Preview →</button>
+              <div id="questions-builder"></div>
+
+              <div
+                style="
+                  text-align: center;
+                  padding: 48px 32px;
+                  background: #f8fafc;
+                  border-radius: 14px;
+                  border: 2px dashed #cbd5e1;
+                "
+                id="empty-state"
+              >
+                <div style="font-size: 3.5rem; margin-bottom: 16px">✍️</div>
+                <h3 style="margin-bottom: 8px; color: #1e293b">
+                  Mulai membuat soal!
+                </h3>
+                <p
+                  style="
+                    color: #64748b;
+                    font-weight: 400;
+                    max-width: 300px;
+                    margin: 0 auto;
+                  "
+                >
+                  Pilih tipe soal di panel kanan untuk menambahkan soal baru ke
+                  ujian ini.
+                </p>
+              </div>
+
+              <div
+                style="
+                  display: flex;
+                  justify-content: space-between;
+                  margin-top: 20px;
+                "
+              >
+                <button class="btn btn-outline" onclick="goStep(1)">
+                  ← Kembali
+                </button>
+                <button class="btn btn-primary" onclick="goStep(3)">
+                  Lanjut: Pengaturan →
+                </button>
+              </div>
+            </div>
+
+            <!-- Sticky Panel -->
+            <aside class="sticky-sidebar">
+              <div
+                style="
+                  font-weight: 700;
+                  color: #1e293b;
+                  margin-bottom: 16px;
+                  font-size: 0.95rem;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
+                <span>➕ Tambah Soal Baru</span>
+              </div>
+              <div class="sticky-add-btns">
+                <button
+                  class="btn btn-primary btn-sm"
+                  onclick="addQuestion('multiple')"
+                >
+                  <span style="margin-right: 8px">🔘</span> Pilihan Ganda
+                </button>
+                <button
+                  class="btn btn-info btn-sm"
+                  onclick="addQuestion('checkbox')"
+                >
+                  <span style="margin-right: 8px">☑️</span> PG Kompleks
+                </button>
+                <button
+                  class="btn btn-secondary btn-sm"
+                  onclick="addQuestion('essay')"
+                >
+                  <span style="margin-right: 8px">📝</span> Esai / Uraian
+                </button>
+                <button
+                  class="btn btn-outline btn-sm"
+                  onclick="addQuestion('truefalse')"
+                  style="
+                    color: var(--success);
+                    border-color: #d1fae5;
+                    background: #f0fdf4;
+                  "
+                >
+                  <span style="margin-right: 8px">✔️</span> Benar/Salah
+                </button>
+              </div>
+
+              <hr class="divider" style="margin: 20px 0" />
+
+              <div
+                style="
+                  font-weight: 700;
+                  color: #1e293b;
+                  margin-bottom: 12px;
+                  font-size: 0.95rem;
+                  display: flex;
+                  align-items: center;
+                  gap: 8px;
+                "
+              >
+                <span>📚 Bank Soal</span>
+              </div>
+              <button
+                class="btn btn-outline btn-sm"
+                onclick="openBankSoalModal()"
+                style="
+                  width: 100%;
+                  text-align: left;
+                  justify-content: flex-start;
+                  border-color: var(--primary-light);
+                  color: var(--primary-light);
+                  background: #eff6ff;
+                "
+              >
+                <span style="margin-right: 8px">📋</span> Ambil dari Bank Soal
+              </button>
+
+              <hr class="divider" style="margin: 20px 0" />
+
+              <div
+                style="background: #f1f5f9; padding: 15px; border-radius: 10px"
+              >
+                <div
+                  style="
+                    font-size: 0.75rem;
+                    color: #64748b;
+                    font-weight: 700;
+                    text-transform: uppercase;
+                    margin-bottom: 10px;
+                  "
+                >
+                  Tips Penggunaan:
+                </div>
+                <ul
+                  style="
+                    padding: 0 0 0 15px;
+                    margin: 0;
+                    font-size: 0.8rem;
+                    color: #475569;
+                    display: flex;
+                    flex-direction: column;
+                    gap: 8px;
+                  "
+                >
+                  <li>Gunakan <b>Duplikat</b> untuk membuat soal serupa.</li>
+                  <li>
+                    Soal baru selalu muncul di <b>paling atas</b> untuk
+                    mempermudah fokus.
+                  </li>
+                  <li>Gambar soal bisa lebih dari satu (multiple upload).</li>
+                </ul>
+              </div>
+            </aside>
           </div>
         </div>
-      </div>
 
-      <!-- STEP 4: Preview -->
-      <div class="step-content" id="step-4">
-        <div class="card">
-          <div class="page-title" style="font-size:1.1rem;margin-bottom:20px">👁️ Preview Ujian</div>
-          <div id="preview-content"></div>
-          <div style="display:flex;justify-content:space-between;margin-top:20px">
-            <button class="btn btn-outline" onclick="goStep(3)">← Kembali</button>
-            <div style="display:flex;gap:8px">
-              <button class="btn btn-outline" onclick="saveDraft()">💾 Simpan Draft</button>
-              <button class="btn btn-success" onclick="publishExam()">🚀 Publikasikan Ujian</button>
+        <!-- STEP 3: Pengaturan -->
+        <div class="step-content" id="step-3">
+          <div class="card">
+            <div
+              class="page-title"
+              style="font-size: 1.1rem; margin-bottom: 20px"
+            >
+              ⚙️ Pengaturan Keamanan & Ujian
+            </div>
+
+            <div class="form-group">
+              <label>Pengacakan Soal</label>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                  margin-top: 8px;
+                "
+              >
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Acak urutan soal untuk setiap siswa
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Acak urutan pilihan jawaban
+                </label>
+              </div>
+            </div>
+
+            <hr class="divider" />
+
+            <div class="form-group">
+              <label>Fitur Keamanan Anti-Menyontek</label>
+              <div
+                style="
+                  display: flex;
+                  flex-direction: column;
+                  gap: 10px;
+                  margin-top: 8px;
+                "
+              >
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Wajib mode layar penuh (fullscreen)
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Blokir keyboard shortcut (Ctrl+T, Ctrl+N, dll.)
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Blokir copy-paste
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Deteksi perpindahan tab/jendela
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Notifikasi pengawas jika ada pelanggaran
+                </label>
+                <label
+                  style="
+                    display: flex;
+                    align-items: center;
+                    gap: 10px;
+                    cursor: pointer;
+                    text-transform: none;
+                    font-size: 0.92rem;
+                    font-weight: 400;
+                    color: var(--text);
+                  "
+                >
+                  <input
+                    type="checkbox"
+                    checked
+                    style="
+                      width: 18px;
+                      height: 18px;
+                      accent-color: var(--primary);
+                    "
+                  />
+                  Hentikan ujian otomatis setelah 3 pelanggaran
+                </label>
+              </div>
+            </div>
+
+            <hr class="divider" />
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nilai Kelulusan (KKM)</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  value="75"
+                  min="0"
+                  max="100"
+                />
+              </div>
+              <div class="form-group">
+                <label>Maks. Pelanggaran</label>
+                <input
+                  type="number"
+                  class="form-control"
+                  value="3"
+                  min="1"
+                  max="10"
+                />
+              </div>
+            </div>
+
+            <div class="form-group">
+              <label>Tampilkan Hasil Setelah Ujian</label>
+              <select class="form-control" id="show-results-setting">
+                <option value="direct_submit">Langsung setelah submit</option>
+                <option value="after_all_students">
+                  Setelah semua siswa selesai
+                </option>
+                <option value="manual_by_teacher">Manual oleh guru</option>
+                <option value="never">Jangan tampilkan</option>
+              </select>
+            </div>
+
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-top: 8px;
+              "
+            >
+              <button class="btn btn-outline" onclick="goStep(2)">
+                ← Kembali
+              </button>
+              <button class="btn btn-primary" onclick="goStep(4)">
+                Lanjut: Preview →
+              </button>
             </div>
           </div>
         </div>
-      </div>
-    </main>
-  </div>
 
-  <!-- Modal: Bank Soal -->
-  <div id="bankSoalModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; background:rgba(0,0,0,0.5); z-index:1000; align-items:center; justify-content:center;">
-    <div style="background:#fff; border-radius:14px; width:90%; max-width:800px; padding:24px; max-height:85vh; overflow-y:auto;">
-      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:20px;">
-        <h2 style="color:var(--primary); font-size:1.3rem;">📚 Ambil dari Bank Soal</h2>
-        <button style="background:none; border:none; font-size:1.5rem; cursor:pointer; color:#64748b;" onclick="closeBankSoalModal()">×</button>
-      </div>
-
-      <div style="margin-bottom:16px; display:flex; gap:12px;">
-        <input type="text" id="bankSearchInput" class="form-control" placeholder="Cari soal..." onkeyup="searchBankQuestions()" style="flex:1">
-        <select id="bankCategoryFilter" class="form-control" onchange="searchBankQuestions()" style="min-width:200px;">
-          <option value="">Semua Kategori</option>
-          <option value="Matematika">Matematika</option>
-          <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-          <option value="Bahasa Inggris">Bahasa Inggris</option>
-          <option value="Fisika">Fisika</option>
-          <option value="IPA">IPA</option>
-          <option value="IPS">IPS</option>
-          <option value="Lainnya">Lainnya</option>
-        </select>
-      </div>
-
-      <div id="bankQuestionsList" style="max-height:500px; overflow-y:auto;">
-        <div style="text-align:center; color:#94a3b8; padding:32px;">
-          <p>Memuat soal...</p>
+        <!-- STEP 4: Preview -->
+        <div class="step-content" id="step-4">
+          <div class="card">
+            <div
+              class="page-title"
+              style="font-size: 1.1rem; margin-bottom: 20px"
+            >
+              👁️ Preview Ujian
+            </div>
+            <div id="preview-content"></div>
+            <div
+              style="
+                display: flex;
+                justify-content: space-between;
+                margin-top: 20px;
+              "
+            >
+              <button class="btn btn-outline" onclick="goStep(3)">
+                ← Kembali
+              </button>
+              <div style="display: flex; gap: 8px">
+                <button class="btn btn-outline" onclick="saveDraft()">
+                  💾 Simpan Draft
+                </button>
+                <button class="btn btn-success" onclick="publishExam()">
+                  🚀 Publikasikan Ujian
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
-      </div>
+      </main>
+    </div>
 
-      <div style="display:flex; gap:12px; justify-content:flex-end; margin-top:20px;">
-        <button class="btn btn-outline" onclick="closeBankSoalModal()">Batal</button>
+    <!-- Modal: Bank Soal -->
+    <div
+      id="bankSoalModal"
+      style="
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      "
+    >
+      <div
+        style="
+          background: #fff;
+          border-radius: 14px;
+          width: 90%;
+          max-width: 800px;
+          padding: 24px;
+          max-height: 85vh;
+          overflow-y: auto;
+        "
+      >
+        <div
+          style="
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+          "
+        >
+          <h2 style="color: var(--primary); font-size: 1.3rem">
+            📚 Ambil dari Bank Soal
+          </h2>
+          <button
+            style="
+              background: none;
+              border: none;
+              font-size: 1.5rem;
+              cursor: pointer;
+              color: #64748b;
+            "
+            onclick="closeBankSoalModal()"
+          >
+            ×
+          </button>
+        </div>
+
+        <div style="margin-bottom: 16px; display: flex; gap: 12px">
+          <input
+            type="text"
+            id="bankSearchInput"
+            class="form-control"
+            placeholder="Cari soal..."
+            onkeyup="searchBankQuestions()"
+            style="flex: 1"
+          />
+          <select
+            id="bankCategoryFilter"
+            class="form-control"
+            onchange="searchBankQuestions()"
+            style="min-width: 200px"
+          >
+            <option value="">Semua Kategori</option>
+            <option value="Matematika">Matematika</option>
+            <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+            <option value="Bahasa Inggris">Bahasa Inggris</option>
+            <option value="Fisika">Fisika</option>
+            <option value="IPA">IPA</option>
+            <option value="IPS">IPS</option>
+            <option value="Lainnya">Lainnya</option>
+          </select>
+        </div>
+
+        <div id="bankQuestionsList" style="max-height: 500px; overflow-y: auto">
+          <div style="text-align: center; color: #94a3b8; padding: 32px">
+            <p>Memuat soal...</p>
+          </div>
+        </div>
+
+        <div
+          style="
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 20px;
+          "
+        >
+          <button class="btn btn-outline" onclick="closeBankSoalModal()">
+            Batal
+          </button>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    let questionCount = 0;
-    let questions = [];
-    let allSubjects = [];
-    let bankQuestions = [];
+    <script>
+      let questionCount = 0;
+      let questions = [];
+      let allSubjects = [];
+      let bankQuestions = [];
 
-    function generateCode() {
-      const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-      let code = '';
-      for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
-      document.getElementById('exam-code').value = code;
-    }
+      function generateCode() {
+        const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+        let code = "";
+        for (let i = 0; i < 8; i++)
+          code += chars[Math.floor(Math.random() * chars.length)];
+        document.getElementById("exam-code").value = code;
+      }
 
-    // Fetch dynamic options
-    async function fetchOptions() {
-      console.log('=== FETCH OPTIONS START ===');
-      try {
-        // Fetch Subjects
-        console.log('Step 1: Fetching subjects...');
-        const response = await fetch('../php/exam_api.php?action=get_subjects', {
-          credentials: 'include'
-        });
-        console.log('Step 1.1: Response received, status:', response.status);
-        
-        // Read as text first to handle errors
-        const textData = await response.text();
-        console.log('Step 1.1b: Response text (first 300 chars):', textData.substring(0, 300));
-        
-        let data;
+      // Fetch dynamic options
+      async function fetchOptions() {
+        console.log("=== FETCH OPTIONS START ===");
         try {
-          data = JSON.parse(textData);
-          console.log('Step 1.2: JSON parsed:', data);
-        } catch (parseError) {
-          console.error('❌ JSON Parse error for subjects:', parseError.message);
-          console.error('Response was:', textData);
-          return; // Stop execution
-        }
-        
-        if (data.success) {
-          console.log('✅ Subjects success, items:', data.subjects.length);
-          allSubjects = data.subjects;
-          filterSubjects();
-        } else {
-          console.error('❌ Subjects failed:', data.message);
-        }
+          // Fetch Subjects
+          console.log("Step 1: Fetching subjects...");
+          const response = await fetch(
+            "../php/exam_api.php?action=get_subjects",
+            {
+              credentials: "include",
+            }
+          );
+          console.log("Step 1.1: Response received, status:", response.status);
 
-        // Fetch Profile
-        console.log('Step 2: Fetching profile...');
-        const profileRes = await fetch('../php/exam_api.php?action=get_profile', {
-          credentials: 'include'
-        });
-        console.log('Step 2.1: Profile response received, status:', profileRes.status);
-        
-        const profileText = await profileRes.text();
-        console.log('Step 2.1b: Profile text (first 300 chars):', profileText.substring(0, 300));
-        
-        let profileData;
-        try {
-          profileData = JSON.parse(profileText);
-          console.log('Step 2.2: Profile JSON parsed:', profileData);
-        } catch (parseError) {
-          console.error('❌ JSON Parse error for profile:', parseError.message);
-          console.error('Response was:', profileText);
-          return; // Stop execution
-        }
-        
-        if (profileData.success) {
-          const user = profileData.user;
-          console.log('✅ Profile success, user:', user);
-          const fullNameWithGelar = user.full_name + (user.gelar ? ', ' + user.gelar : '');
-          console.log('Step 2.3: fullNameWithGelar =', fullNameWithGelar);
-          
-          // Update Navbar - dengan multiple attempts
-          console.log('Step 2.4: Finding navbar elements...');
-          
-          // TRY METHOD 1: querySelector with fallback
-          let navSpan = document.querySelector('.nav-user span');
-          console.log('  - Method 1 (querySelector): navSpan found:', !!navSpan);
-          
-          if (!navSpan) {
-            // TRY METHOD 2: getElementByClassName + manual selector
-            console.log('  - Method 1 failed, trying Method 2...');
-            const navUserDiv = document.querySelector('.nav-user');
-            if (navUserDiv) {
-              navSpan = navUserDiv.querySelector('span');
-              console.log('  - Method 2 (nested querySelector): navSpan found:', !!navSpan);
-            }
+          // Read as text first to handle errors
+          const textData = await response.text();
+          console.log(
+            "Step 1.1b: Response text (first 300 chars):",
+            textData.substring(0, 300)
+          );
+
+          let data;
+          try {
+            data = JSON.parse(textData);
+            console.log("Step 1.2: JSON parsed:", data);
+          } catch (parseError) {
+            console.error(
+              "❌ JSON Parse error for subjects:",
+              parseError.message
+            );
+            console.error("Response was:", textData);
+            return; // Stop execution
           }
-          
-          if (!navSpan) {
-            // TRY METHOD 3: get all spans and filter
-            console.log('  - Method 2 failed, trying Method 3...');
-            const allSpans = document.querySelectorAll('.nav-user span');
-            console.log('  - Found', allSpans.length, 'span(s) in .nav-user');
-            if (allSpans.length > 0) {
-              navSpan = allSpans[0];
-              console.log('  - Method 3: Using first span');
-            }
-          }
-          
-          let navAvatar = document.querySelector('.nav-avatar');
-          console.log('  - navAvatar found:', !!navAvatar, navAvatar ? 'current="' + navAvatar.textContent + '"' : 'NULL');
-          
-          // UPDATE AVATAR
-          if (navAvatar) {
-            const avatarChar = user.full_name.charAt(0).toUpperCase();
-            console.log('Step 2.5: Setting navAvatar.textContent to:', avatarChar);
-            navAvatar.textContent = avatarChar;
-            console.log('Step 2.6: VERIFIED navAvatar.textContent =', navAvatar.textContent);
-          }
-          
-          // UPDATE SPAN TEXT
-          if (navSpan) {
-            console.log('Step 2.7: Setting navSpan.textContent to:', fullNameWithGelar);
-            navSpan.textContent = fullNameWithGelar;
-            console.log('Step 2.8: IMMEDIATE CHECK navSpan.textContent =', navSpan.textContent);
-            
-            // VERIFY after small delay
-            setTimeout(() => {
-              console.log('Step 2.9: DELAYED CHECK (100ms) navSpan.textContent =', navSpan.textContent);
-              if (navSpan.textContent !== fullNameWithGelar) {
-                console.warn('⚠️ WARNING: Text was changed! Attempting to set again...');
-                navSpan.textContent = fullNameWithGelar;
-                console.log('Step 2.10: RETRY SET navSpan.textContent =', navSpan.textContent);
-              }
-            }, 100);
-            
-            console.log('✅ Span update attempt complete');
+
+          if (data.success) {
+            console.log("✅ Subjects success, items:", data.subjects.length);
+            allSubjects = data.subjects;
+            filterSubjects();
           } else {
-            console.error('❌ CRITICAL: navSpan element not found after all methods!');
+            console.error("❌ Subjects failed:", data.message);
           }
-        } else {
-          console.error('❌ Profile failed:', profileData.message);
+
+          // Fetch Profile
+          console.log("Step 2: Fetching profile...");
+          const profileRes = await fetch(
+            "../php/exam_api.php?action=get_profile",
+            {
+              credentials: "include",
+            }
+          );
+          console.log(
+            "Step 2.1: Profile response received, status:",
+            profileRes.status
+          );
+
+          const profileText = await profileRes.text();
+          console.log(
+            "Step 2.1b: Profile text (first 300 chars):",
+            profileText.substring(0, 300)
+          );
+
+          let profileData;
+          try {
+            profileData = JSON.parse(profileText);
+            console.log("Step 2.2: Profile JSON parsed:", profileData);
+          } catch (parseError) {
+            console.error(
+              "❌ JSON Parse error for profile:",
+              parseError.message
+            );
+            console.error("Response was:", profileText);
+            return; // Stop execution
+          }
+
+          if (profileData.success) {
+            const user = profileData.user;
+            console.log("✅ Profile success, user:", user);
+            const fullNameWithGelar =
+              user.full_name + (user.gelar ? ", " + user.gelar : "");
+            console.log("Step 2.3: fullNameWithGelar =", fullNameWithGelar);
+
+            // Update Navbar - dengan multiple attempts
+            console.log("Step 2.4: Finding navbar elements...");
+
+            // TRY METHOD 1: querySelector with fallback
+            let navSpan = document.querySelector(".nav-user span");
+            console.log(
+              "  - Method 1 (querySelector): navSpan found:",
+              !!navSpan
+            );
+
+            if (!navSpan) {
+              // TRY METHOD 2: getElementByClassName + manual selector
+              console.log("  - Method 1 failed, trying Method 2...");
+              const navUserDiv = document.querySelector(".nav-user");
+              if (navUserDiv) {
+                navSpan = navUserDiv.querySelector("span");
+                console.log(
+                  "  - Method 2 (nested querySelector): navSpan found:",
+                  !!navSpan
+                );
+              }
+            }
+
+            if (!navSpan) {
+              // TRY METHOD 3: get all spans and filter
+              console.log("  - Method 2 failed, trying Method 3...");
+              const allSpans = document.querySelectorAll(".nav-user span");
+              console.log("  - Found", allSpans.length, "span(s) in .nav-user");
+              if (allSpans.length > 0) {
+                navSpan = allSpans[0];
+                console.log("  - Method 3: Using first span");
+              }
+            }
+
+            let navAvatar = document.querySelector(".nav-avatar");
+            console.log(
+              "  - navAvatar found:",
+              !!navAvatar,
+              navAvatar ? 'current="' + navAvatar.textContent + '"' : "NULL"
+            );
+
+            // UPDATE AVATAR
+            if (navAvatar) {
+              const avatarChar = user.full_name.charAt(0).toUpperCase();
+              console.log(
+                "Step 2.5: Setting navAvatar.textContent to:",
+                avatarChar
+              );
+              navAvatar.textContent = avatarChar;
+              console.log(
+                "Step 2.6: VERIFIED navAvatar.textContent =",
+                navAvatar.textContent
+              );
+            }
+
+            // UPDATE SPAN TEXT
+            if (navSpan) {
+              console.log(
+                "Step 2.7: Setting navSpan.textContent to:",
+                fullNameWithGelar
+              );
+              navSpan.textContent = fullNameWithGelar;
+              console.log(
+                "Step 2.8: IMMEDIATE CHECK navSpan.textContent =",
+                navSpan.textContent
+              );
+
+              // VERIFY after small delay
+              setTimeout(() => {
+                console.log(
+                  "Step 2.9: DELAYED CHECK (100ms) navSpan.textContent =",
+                  navSpan.textContent
+                );
+                if (navSpan.textContent !== fullNameWithGelar) {
+                  console.warn(
+                    "⚠️ WARNING: Text was changed! Attempting to set again..."
+                  );
+                  navSpan.textContent = fullNameWithGelar;
+                  console.log(
+                    "Step 2.10: RETRY SET navSpan.textContent =",
+                    navSpan.textContent
+                  );
+                }
+              }, 100);
+
+              console.log("✅ Span update attempt complete");
+            } else {
+              console.error(
+                "❌ CRITICAL: navSpan element not found after all methods!"
+              );
+            }
+          } else {
+            console.error("❌ Profile failed:", profileData.message);
+          }
+        } catch (e) {
+          console.error("❌ EXCEPTION in fetchOptions:", e);
+          console.error("Exception message:", e.message);
+          console.error("Stack:", e.stack);
         }
-      } catch (e) { 
-        console.error('❌ EXCEPTION in fetchOptions:', e);
-        console.error('Exception message:', e.message);
-        console.error('Stack:', e.stack);
-      }
-      console.log('=== FETCH OPTIONS END ===\n');
-    }
-
-    function filterSubjects() {
-      const catEl = document.getElementById('exam-category');
-      const select = document.getElementById('exam-subject');
-      if (!catEl || !select) {
-        console.warn('filterSubjects: required elements not present yet');
-        return;
-      }
-      const category = catEl.value;
-      const filtered = allSubjects.filter(s => s.category === category);
-
-      select.innerHTML = filtered.map(s => `<option value="${s.name}">${s.name}</option>`).join('');
-      if (filtered.length === 0) {
-        select.innerHTML = '<option value="">Tidak ada mapel di kategori ini</option>';
-      }
-    }
-
-    // Initialize when DOM is ready
-    document.addEventListener('DOMContentLoaded', () => {
-      console.log('🚀 CREATE-EXAM.HTML DOMContentLoaded fired at', new Date().toISOString());
-      
-      // Set today's date
-      console.log('Setting exam date...');
-      const dateEl = document.getElementById('exam-date');
-      if (dateEl) {
-        dateEl.valueAsDate = new Date();
-        console.log('✅ Exam date set');
+        console.log("=== FETCH OPTIONS END ===\n");
       }
 
-      // Attach event listener for generate code button
-      console.log('Attaching generate code listener...');
-      const codeBtn = document.getElementById('generate-code-btn');
-      if (codeBtn) {
-        codeBtn.addEventListener('click', generateCode);
-        console.log('✅ Generate code listener attached');
+      function filterSubjects() {
+        const catEl = document.getElementById("exam-category");
+        const select = document.getElementById("exam-subject");
+        if (!catEl || !select) {
+          console.warn("filterSubjects: required elements not present yet");
+          return;
+        }
+        const category = catEl.value;
+        const filtered = allSubjects.filter((s) => s.category === category);
+
+        select.innerHTML = filtered
+          .map((s) => `<option value="${s.name}">${s.name}</option>`)
+          .join("");
+        if (filtered.length === 0) {
+          select.innerHTML =
+            '<option value="">Tidak ada mapel di kategori ini</option>';
+        }
       }
 
-      // Filter subjects dropdown by category change
-      console.log('Attaching category change listener...');
-      const catSelect = document.getElementById('exam-category');
-      if (catSelect) {
-        catSelect.addEventListener('change', filterSubjects);
-        console.log('✅ Category change listener attached');
-      }
+      // Initialize when DOM is ready
+      document.addEventListener("DOMContentLoaded", () => {
+        console.log(
+          "🚀 CREATE-EXAM.HTML DOMContentLoaded fired at",
+          new Date().toISOString()
+        );
 
-      // Fetch subjects and profile
-      console.log('⏰ NOW calling fetchOptions()...');
-      fetchOptions();
-      console.log('⏰ fetchOptions() called (async, may complete later)');
-    });
+        // Set today's date
+        console.log("Setting exam date...");
+        const dateEl = document.getElementById("exam-date");
+        if (dateEl) {
+          dateEl.valueAsDate = new Date();
+          console.log("✅ Exam date set");
+        }
 
-    function goStep(n) {
-      for (let i = 1; i <= 4; i++) {
-        document.getElementById(`step-${i}`).classList.remove('active');
-        document.getElementById(`step-${i}-tab`).classList.remove('active', 'done');
-      }
-      document.getElementById(`step-${n}`).classList.add('active');
-      document.getElementById(`step-${n}-tab`).classList.add('active');
-      for (let i = 1; i < n; i++) {
-        document.getElementById(`step-${i}-tab`).classList.add('done');
-      }
-      if (n === 4) renderPreview();
-    }
+        // Attach event listener for generate code button
+        console.log("Attaching generate code listener...");
+        const codeBtn = document.getElementById("generate-code-btn");
+        if (codeBtn) {
+          codeBtn.addEventListener("click", generateCode);
+          console.log("✅ Generate code listener attached");
+        }
 
-    function reindexQuestions() {
-      const cards = document.querySelectorAll('.question-builder');
-      cards.forEach((card, index) => {
-        const numLabel = card.querySelector('.q-number');
-        if (numLabel) numLabel.textContent = `Soal ${index + 1}`;
+        // Filter subjects dropdown by category change
+        console.log("Attaching category change listener...");
+        const catSelect = document.getElementById("exam-category");
+        if (catSelect) {
+          catSelect.addEventListener("change", filterSubjects);
+          console.log("✅ Category change listener attached");
+        }
+
+        // Fetch subjects and profile
+        console.log("⏰ NOW calling fetchOptions()...");
+        fetchOptions();
+        console.log("⏰ fetchOptions() called (async, may complete later)");
       });
-      const count = cards.length;
-      document.getElementById('q-count-label').textContent = count + ' soal ditambahkan';
-      document.getElementById('empty-state').style.display = count === 0 ? 'block' : 'none';
-    }
 
-    function addQuestion(type, existingData = null) {
-      questionCount++;
-      const qId = 'q-' + questionCount;
+      function goStep(n) {
+        for (let i = 1; i <= 4; i++) {
+          document.getElementById(`step-${i}`).classList.remove("active");
+          document
+            .getElementById(`step-${i}-tab`)
+            .classList.remove("active", "done");
+        }
+        document.getElementById(`step-${n}`).classList.add("active");
+        document.getElementById(`step-${n}-tab`).classList.add("active");
+        for (let i = 1; i < n; i++) {
+          document.getElementById(`step-${i}-tab`).classList.add("done");
+        }
+        if (n === 4) renderPreview();
+      }
 
-      const newQuestion = existingData ? {
-        ...JSON.parse(JSON.stringify(existingData)),
-        id: qId
-      } : {
-        id: qId,
-        type: type,
-        text: '',
-        media_url: [],
-        options: [],
-        correct: '',
-        correct_answers_checkbox: [],
-        points: 1,
-        difficulty: 'sedang'
-      };
+      function reindexQuestions() {
+        const cards = document.querySelectorAll(".question-builder");
+        cards.forEach((card, index) => {
+          const numLabel = card.querySelector(".q-number");
+          if (numLabel) numLabel.textContent = `Soal ${index + 1}`;
+        });
+        const count = cards.length;
+        document.getElementById("q-count-label").textContent =
+          count + " soal ditambahkan";
+        document.getElementById("empty-state").style.display =
+          count === 0 ? "block" : "none";
+      }
 
-      // Add to start of array
-      questions.unshift(newQuestion);
+      function addQuestion(type, existingData = null) {
+        questionCount++;
+        const qId = "q-" + questionCount;
 
-      const div = document.createElement('div');
-      div.className = 'question-builder';
-      div.id = qId;
-      div.innerHTML = `
+        const newQuestion = existingData
+          ? {
+              ...JSON.parse(JSON.stringify(existingData)),
+              id: qId,
+            }
+          : {
+              id: qId,
+              type: type,
+              text: "",
+              media_url: [],
+              options: [],
+              correct: "",
+              correct_answers_checkbox: [],
+              points: 1,
+              difficulty: "sedang",
+            };
+
+        // Add to start of array
+        questions.unshift(newQuestion);
+
+        const div = document.createElement("div");
+        div.className = "question-builder";
+        div.id = qId;
+        div.innerHTML = `
         <div class="q-header">
           <div style="display:flex;align-items:center;gap:12px">
             <span class="drag-handle">⠿</span>
             <span class="q-number">Soal</span>
             <div class="type-selector">
-              <button class="type-btn ${newQuestion.type==='multiple'?'active':''}" onclick="changeType('${qId}','multiple')" data-type="multiple">Pilihan Ganda</button>
-              <button class="type-btn ${newQuestion.type==='checkbox'?'active':''}" onclick="changeType('${qId}','checkbox')" data-type="checkbox">PG Kompleks</button>
-              <button class="type-btn ${newQuestion.type==='essay'?'active':''}" onclick="changeType('${qId}','essay')" data-type="essay">Esai</button>
-              <button class="type-btn ${newQuestion.type==='truefalse'?'active':''}" onclick="changeType('${qId}','truefalse')" data-type="truefalse">Benar/Salah</button>
+              <button class="type-btn ${
+                newQuestion.type === "multiple" ? "active" : ""
+              }" onclick="changeType('${qId}','multiple')" data-type="multiple">Pilihan Ganda</button>
+              <button class="type-btn ${
+                newQuestion.type === "checkbox" ? "active" : ""
+              }" onclick="changeType('${qId}','checkbox')" data-type="checkbox">PG Kompleks</button>
+              <button class="type-btn ${
+                newQuestion.type === "essay" ? "active" : ""
+              }" onclick="changeType('${qId}','essay')" data-type="essay">Esai</button>
+              <button class="type-btn ${
+                newQuestion.type === "truefalse" ? "active" : ""
+              }" onclick="changeType('${qId}','truefalse')" data-type="truefalse">Benar/Salah</button>
             </div>
           </div>
           <div style="display:flex;gap:8px">
@@ -686,14 +1385,18 @@
 
         <div class="form-group">
           <label>Teks Soal *</label>
-          <textarea class="form-control" placeholder="Tulis pertanyaan di sini..." rows="3" oninput="updateQuestionData('${qId}', 'text', this.value)">${newQuestion.text}</textarea>
+          <textarea class="form-control" placeholder="Tulis pertanyaan di sini..." rows="3" oninput="updateQuestionData('${qId}', 'text', this.value)">${
+          newQuestion.text
+        }</textarea>
         </div>
 
         <div class="form-group">
           <label>Gambar Soal (Opsional)</label>
           <div style="display:flex; gap:10px; align-items:center">
             <input type="file" class="form-control" accept="image/*" onchange="uploadQuestionMedia(this, 0)" style="flex:1" multiple>
-            <input type="hidden" class="q-media" value='${JSON.stringify(newQuestion.media_url)}'>
+            <input type="hidden" class="q-media" value='${JSON.stringify(
+              newQuestion.media_url
+            )}'>
           </div>
           <div class="q-media-preview" style="margin-top:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap:10px;">
           </div>
@@ -701,127 +1404,197 @@
         </div>
 
         <div id="${qId}-options">
-          ${(newQuestion.type === 'multiple' || newQuestion.type === 'checkbox') ? renderMultipleOptions(qId, newQuestion.type, newQuestion.options, newQuestion.correct, newQuestion.correct_answers_checkbox) : ''}
-          ${newQuestion.type === 'essay' ? renderEssayOptions(qId, newQuestion.correct) : ''}
-          ${newQuestion.type === 'truefalse' ? renderTrueFalseOptions(qId, newQuestion.correct) : ''}
+          ${
+            newQuestion.type === "multiple" || newQuestion.type === "checkbox"
+              ? renderMultipleOptions(
+                  qId,
+                  newQuestion.type,
+                  newQuestion.options,
+                  newQuestion.correct,
+                  newQuestion.correct_answers_checkbox
+                )
+              : ""
+          }
+          ${
+            newQuestion.type === "essay"
+              ? renderEssayOptions(qId, newQuestion.correct)
+              : ""
+          }
+          ${
+            newQuestion.type === "truefalse"
+              ? renderTrueFalseOptions(qId, newQuestion.correct)
+              : ""
+          }
         </div>
 
         <div class="form-row" style="margin-top:12px">
           <div class="form-group">
             <label>Bobot Nilai</label>
-            <input type="number" class="form-control q-points" value="${parseInt(newQuestion.points) || 1}" min="1" max="100" oninput="updateQuestionData('${qId}', 'points', parseInt(this.value) || 1)">
+            <input type="number" class="form-control q-points" value="${
+              parseInt(newQuestion.points) || 1
+            }" min="1" max="100" oninput="updateQuestionData('${qId}', 'points', parseInt(this.value) || 1)">
           </div>
           <div class="form-group">
             <label>Tingkat Kesulitan</label>
             <select class="form-control" onchange="updateQuestionData('${qId}', 'difficulty', this.value)">
-              <option value="mudah" ${newQuestion.difficulty==='mudah'?'selected':''}>Mudah</option>
-              <option value="sedang" ${newQuestion.difficulty==='sedang'?'selected':''}>Sedang</option>
-              <option value="sulit" ${newQuestion.difficulty==='sulit'?'selected':''}>Sulit</option>
+              <option value="mudah" ${
+                newQuestion.difficulty === "mudah" ? "selected" : ""
+              }>Mudah</option>
+              <option value="sedang" ${
+                newQuestion.difficulty === "sedang" ? "selected" : ""
+              }>Sedang</option>
+              <option value="sulit" ${
+                newQuestion.difficulty === "sulit" ? "selected" : ""
+              }>Sulit</option>
             </select>
           </div>
         </div>
       `;
-      
-      const builder = document.getElementById('questions-builder');
-      builder.prepend(div);
-      
-      // Sync initial data if duplicating
-      if (existingData) {
-        // Special handling for multiple choice options if duplicating
-        if (newQuestion.type === 'multiple' || newQuestion.type === 'checkbox') {
-          const optContainer = div.querySelector('.options-container');
-          if (optContainer) {
-            optContainer.innerHTML = ''; // Clear defaults
-            const letters = ['A','B','C','D','E','F','G','H'];
-            newQuestion.options.forEach((opt, i) => {
-              const row = document.createElement('div');
-              row.className = 'option-row';
-              row.dataset.index = i;
-              const inputType = newQuestion.type === 'checkbox' ? 'checkbox' : 'radio';
-              const isChecked = newQuestion.type === 'checkbox' ? 
-                newQuestion.correct_answers_checkbox.includes(i.toString()) : 
-                newQuestion.correct === i.toString();
-              
-              // Ensure opt has text and image properties
-              const optText = (opt && opt.text) ? opt.text : '';
-              const optImg = (opt && opt.image) ? opt.image : '';
-              const imgStyle = optImg ? 'display:flex' : 'display:none';
-              
-              row.innerHTML = `
-                <input type="${inputType}" name="${qId}-correct" value="${i}" ${isChecked?'checked':''} onchange="updateOptionSelection('${qId}', ${i}, this.checked)">
-                <span class="option-label">${letters[i] || '?'}.</span>
+
+        const builder = document.getElementById("questions-builder");
+        builder.prepend(div);
+
+        // Sync initial data if duplicating
+        if (existingData) {
+          // Special handling for multiple choice options if duplicating
+          if (
+            newQuestion.type === "multiple" ||
+            newQuestion.type === "checkbox"
+          ) {
+            const optContainer = div.querySelector(".options-container");
+            if (optContainer) {
+              optContainer.innerHTML = ""; // Clear defaults
+              const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+              newQuestion.options.forEach((opt, i) => {
+                const row = document.createElement("div");
+                row.className = "option-row";
+                row.dataset.index = i;
+                const inputType =
+                  newQuestion.type === "checkbox" ? "checkbox" : "radio";
+                const isChecked =
+                  newQuestion.type === "checkbox"
+                    ? newQuestion.correct_answers_checkbox.includes(
+                        i.toString()
+                      )
+                    : newQuestion.correct === i.toString();
+
+                // Ensure opt has text and image properties
+                const optText = opt && opt.text ? opt.text : "";
+                const optImg = opt && opt.image ? opt.image : "";
+                const imgStyle = optImg ? "display:flex" : "display:none";
+
+                row.innerHTML = `
+                <input type="${inputType}" name="${qId}-correct" value="${i}" ${
+                  isChecked ? "checked" : ""
+                } onchange="updateOptionSelection('${qId}', ${i}, this.checked)">
+                <span class="option-label">${letters[i] || "?"}.</span>
                 <input type="text" class="form-control option-text" placeholder="Pilihan" value="${optText}" oninput="updateOptionText('${qId}', ${i}, this.value)">
                 <div class="opt-image-preview-wrap" style="${imgStyle}">
-                  <img src="${optImg ? '../' + optImg : ''}" class="opt-image-preview" alt="">
+                  <img src="${
+                    optImg ? "../" + optImg : ""
+                  }" class="opt-image-preview" alt="">
                   <button type="button" class="opt-image-remove" onclick="removeOptionMedia(this)">✕</button>
                 </div>
-                <input type="hidden" class="opt-image-url" value="${optImg || ''}">
+                <input type="hidden" class="opt-image-url" value="${
+                  optImg || ""
+                }">
                 <label class="btn btn-sm btn-outline" style="padding:6px; margin-bottom:0; cursor:pointer">
                   🖼️
                   <input type="file" accept="image/*" style="display:none" onchange="uploadOptionMedia(this, '${qId}', ${i})">
                 </label>
                 <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;padding:6px 10px" onclick="this.closest('.option-row').remove()">✕</button>
               `;
-              optContainer.appendChild(row);
-            });
+                optContainer.appendChild(row);
+              });
+            }
           }
+        }
+
+        renderMediaPreviews(div);
+        reindexQuestions();
+
+        // Auto focus textarea
+        div.querySelector("textarea").focus();
+      }
+
+      function duplicateQuestion(qId) {
+        // Collect latest data from DOM first to ensure we duplicate the current state
+        collectOptionsFromDOM(qId);
+        const original = getQuestionById(qId);
+        if (original) {
+          addQuestion(original.type, original);
         }
       }
 
-      renderMediaPreviews(div);
-      reindexQuestions();
-      
-      // Auto focus textarea
-      div.querySelector('textarea').focus();
-    }
+      function renderMultipleOptions(
+        qId,
+        type = "multiple",
+        existingOptions = [],
+        correctAnswer = "",
+        correctAnswersCheckbox = []
+      ) {
+        const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+        const inputType = type === "checkbox" ? "checkbox" : "radio";
 
-    function duplicateQuestion(qId) {
-      // Collect latest data from DOM first to ensure we duplicate the current state
-      collectOptionsFromDOM(qId);
-      const original = getQuestionById(qId);
-      if (original) {
-        addQuestion(original.type, original);
-      }
-    }
+        // If no existing options, create 4 empty ones
+        const optionsToRender =
+          existingOptions && existingOptions.length > 0
+            ? existingOptions
+            : [
+                { text: "", image: null },
+                { text: "", image: null },
+                { text: "", image: null },
+                { text: "", image: null },
+              ];
 
-    function renderMultipleOptions(qId, type = 'multiple', existingOptions = [], correctAnswer = '', correctAnswersCheckbox = []) {
-      const letters = ['A','B','C','D','E','F','G','H'];
-      const inputType = type === 'checkbox' ? 'checkbox' : 'radio';
-      
-      // If no existing options, create 4 empty ones
-      const optionsToRender = existingOptions && existingOptions.length > 0 ? existingOptions : 
-        [{text: '', image: null}, {text: '', image: null}, {text: '', image: null}, {text: '', image: null}];
-      
-      return `
+        return `
         <div class="form-group">
-          <label>Pilihan Jawaban <span class="correct-label">(${inputType === 'radio' ? '●' : '■'} = Jawaban Benar)</span></label>
+          <label>Pilihan Jawaban <span class="correct-label">(${
+            inputType === "radio" ? "●" : "■"
+          } = Jawaban Benar)</span></label>
           <div class="options-container">
-          ${optionsToRender.map((opt, i) => {
-            // Extract option text and image
-            const optText = (typeof opt === 'string') ? opt : (opt && opt.text ? opt.text : '');
-            const optImage = (opt && opt.image) ? opt.image : '';
-            
-            // Determine if this option is selected
-            let isChecked = false;
-            if (type === 'checkbox') {
-              isChecked = correctAnswersCheckbox && Array.isArray(correctAnswersCheckbox) && correctAnswersCheckbox.includes(i.toString());
-            } else {
-              isChecked = correctAnswer === i.toString() || correctAnswer === i;
-            }
-            
-            const imgDisplay = optImage ? 'flex' : 'none';
-            const imgSrc = optImage ? (optImage.startsWith('..') ? optImage : '../' + optImage) : '';
-            
-            return `
+          ${optionsToRender
+            .map((opt, i) => {
+              // Extract option text and image
+              const optText =
+                typeof opt === "string" ? opt : opt && opt.text ? opt.text : "";
+              const optImage = opt && opt.image ? opt.image : "";
+
+              // Determine if this option is selected
+              let isChecked = false;
+              if (type === "checkbox") {
+                isChecked =
+                  correctAnswersCheckbox &&
+                  Array.isArray(correctAnswersCheckbox) &&
+                  correctAnswersCheckbox.includes(i.toString());
+              } else {
+                isChecked =
+                  correctAnswer === i.toString() || correctAnswer === i;
+              }
+
+              const imgDisplay = optImage ? "flex" : "none";
+              const imgSrc = optImage
+                ? optImage.startsWith("..")
+                  ? optImage
+                  : "../" + optImage
+                : "";
+
+              return `
               <div class="option-row" data-index="${i}">
-                <input type="${inputType}" name="${qId}-correct" value="${i}" title="Tandai sebagai jawaban benar" ${isChecked ? 'checked' : ''} onchange="updateOptionSelection('${qId}', ${i}, this.checked)">
-                <span class="option-label">${letters[i] || '?'}.</span>
-                <input type="text" class="form-control option-text" placeholder="Pilihan ${letters[i] || '?'}" value="${optText}" oninput="updateOptionText('${qId}', ${i}, this.value)">
+                <input type="${inputType}" name="${qId}-correct" value="${i}" title="Tandai sebagai jawaban benar" ${
+                isChecked ? "checked" : ""
+              } onchange="updateOptionSelection('${qId}', ${i}, this.checked)">
+                <span class="option-label">${letters[i] || "?"}.</span>
+                <input type="text" class="form-control option-text" placeholder="Pilihan ${
+                  letters[i] || "?"
+                }" value="${optText}" oninput="updateOptionText('${qId}', ${i}, this.value)">
                 <div class="opt-image-preview-wrap" style="display:${imgDisplay}">
                   <img src="${imgSrc}" class="opt-image-preview" alt="">
                   <button type="button" class="opt-image-remove" onclick="removeOptionMedia(this)">✕</button>
                 </div>
-                <input type="hidden" class="opt-image-url" value="${optImage || ''}">
+                <input type="hidden" class="opt-image-url" value="${
+                  optImage || ""
+                }">
                 <label class="btn btn-sm btn-outline" style="padding:6px; margin-bottom:0; cursor:pointer" title="Upload Gambar Pilihan">
                   🖼️
                   <input type="file" accept="image/*" style="display:none" onchange="uploadOptionMedia(this, '${qId}', ${i})">
@@ -829,15 +1602,16 @@
                 <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;padding:6px 10px" onclick="this.closest('.option-row').remove()">✕</button>
               </div>
             `;
-          }).join('')}
+            })
+            .join("")}
           </div>
           <button class="add-option-btn" onclick="addOption(this, '${qId}', '${type}')">+ Tambah Pilihan</button>
         </div>
       `;
-    }
+      }
 
-    function renderEssayOptions(qId, currentAnswer = '') {
-      return `
+      function renderEssayOptions(qId, currentAnswer = "") {
+        return `
         <div class="form-group">
           <label>Kunci Jawaban / Rubrik Penilaian</label>
           <textarea class="form-control essay-answer" placeholder="Tulis kunci jawaban atau rubrik penilaian..." rows="3" oninput="updateQuestionData('${qId}', 'correct', this.value)">${currentAnswer}</textarea>
@@ -847,36 +1621,42 @@
           <input type="number" class="form-control" value="50" min="0">
         </div>
       `;
-    }
+      }
 
-    function renderTrueFalseOptions(qId, correct = '') {
-      return `
+      function renderTrueFalseOptions(qId, correct = "") {
+        return `
         <div class="form-group">
           <label>Jawaban Benar <span class="correct-label">(● = Jawaban Benar)</span></label>
           <div class="option-row">
-            <input type="radio" name="${qId}-correct" value="0" ${correct==='0'?'checked':''} onchange="updateOptionSelection('${qId}', 0, this.checked)">
+            <input type="radio" name="${qId}-correct" value="0" ${
+          correct === "0" ? "checked" : ""
+        } onchange="updateOptionSelection('${qId}', 0, this.checked)">
             <span class="option-label">✓</span>
             <span style="font-weight:600;color:var(--success)">BENAR</span>
           </div>
           <div class="option-row">
-            <input type="radio" name="${qId}-correct" value="1" ${correct==='1'?'checked':''} onchange="updateOptionSelection('${qId}', 1, this.checked)">
+            <input type="radio" name="${qId}-correct" value="1" ${
+          correct === "1" ? "checked" : ""
+        } onchange="updateOptionSelection('${qId}', 1, this.checked)">
             <span class="option-label">✗</span>
             <span style="font-weight:600;color:var(--danger)">SALAH</span>
           </div>
         </div>
       `;
-    }
+      }
 
-    function addOption(btn, qId, type = 'multiple') {
-      const letters = ['A','B','C','D','E','F','G','H'];
-      const container = btn.closest('.form-group').querySelector('.options-container');
-      const rows = container.querySelectorAll('.option-row').length;
-      const letter = letters[rows] || String.fromCharCode(65 + rows);
-      const row = document.createElement('div');
-      row.className = 'option-row';
-      row.dataset.index = rows;
-      const inputType = type === 'checkbox' ? 'checkbox' : 'radio';
-      row.innerHTML = `
+      function addOption(btn, qId, type = "multiple") {
+        const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
+        const container = btn
+          .closest(".form-group")
+          .querySelector(".options-container");
+        const rows = container.querySelectorAll(".option-row").length;
+        const letter = letters[rows] || String.fromCharCode(65 + rows);
+        const row = document.createElement("div");
+        row.className = "option-row";
+        row.dataset.index = rows;
+        const inputType = type === "checkbox" ? "checkbox" : "radio";
+        row.innerHTML = `
         <input type="${inputType}" name="${qId}-correct" value="${rows}" title="Tandai sebagai jawaban benar" onchange="updateOptionSelection('${qId}', ${rows}, this.checked)">
         <span class="option-label">${letter}.</span>
         <input type="text" class="form-control option-text" placeholder="Pilihan ${letter}" oninput="updateOptionText('${qId}', ${rows}, this.value)">
@@ -891,667 +1671,797 @@
         </label>
         <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;padding:6px 10px" onclick="this.closest('.option-row').remove()">✕</button>
       `;
-      container.appendChild(row);
-    }
-
-
-    function removeQuestion(qId) {
-      if (confirm('Hapus soal ini?')) {
-        const index = questions.findIndex(q => q.id === qId);
-        if (index > -1) questions.splice(index, 1);
-        document.getElementById(qId).remove();
-        reindexQuestions();
+        container.appendChild(row);
       }
-    }
 
-    // Update option text in the question data model
-    function updateOptionText(qId, optIndex, text) {
-      const question = getQuestionById(qId);
-      if (!question) return;
-      
-      // Ensure options array has enough items
-      while (question.options.length <= optIndex) {
-        question.options.push({ text: '', image: '' });
+      function removeQuestion(qId) {
+        if (confirm("Hapus soal ini?")) {
+          const index = questions.findIndex((q) => q.id === qId);
+          if (index > -1) questions.splice(index, 1);
+          document.getElementById(qId).remove();
+          reindexQuestions();
+        }
       }
-      
-      // Store text value
-      if (typeof question.options[optIndex] === 'string') {
-        question.options[optIndex] = { text: text, image: '' };
-      } else {
-        question.options[optIndex].text = text;
-      }
-    }
 
-    // Update which option is marked as correct
-    function updateOptionSelection(qId, optIndex, isChecked) {
-      const question = getQuestionById(qId);
-      if (!question) return;
-      
-      if (question.type === 'checkbox') {
-        // For checkbox, maintain an array of selected indices
-        if (!Array.isArray(question.correct_answers_checkbox)) {
+      // Update option text in the question data model
+      function updateOptionText(qId, optIndex, text) {
+        const question = getQuestionById(qId);
+        if (!question) return;
+
+        // Ensure options array has enough items
+        while (question.options.length <= optIndex) {
+          question.options.push({ text: "", image: "" });
+        }
+
+        // Store text value
+        if (typeof question.options[optIndex] === "string") {
+          question.options[optIndex] = { text: text, image: "" };
+        } else {
+          question.options[optIndex].text = text;
+        }
+      }
+
+      // Update which option is marked as correct
+      function updateOptionSelection(qId, optIndex, isChecked) {
+        const question = getQuestionById(qId);
+        if (!question) return;
+
+        if (question.type === "checkbox") {
+          // For checkbox, maintain an array of selected indices
+          if (!Array.isArray(question.correct_answers_checkbox)) {
+            question.correct_answers_checkbox = [];
+          }
+          const indexStr = optIndex.toString();
+          if (
+            isChecked &&
+            !question.correct_answers_checkbox.includes(indexStr)
+          ) {
+            question.correct_answers_checkbox.push(indexStr);
+          } else if (!isChecked) {
+            question.correct_answers_checkbox =
+              question.correct_answers_checkbox.filter((i) => i !== indexStr);
+          }
+        } else {
+          // For radio button (multiple/truefalse), only one answer can be correct
+          if (isChecked) {
+            question.correct = optIndex.toString();
+          }
+        }
+      }
+
+      // Collect option data from DOM before preview
+      function collectOptionsFromDOM(qId) {
+        const card = document.getElementById(qId);
+        const question = getQuestionById(qId);
+        if (!card || !question) return;
+
+        // Always read question media from the hidden input
+        const mediaInput = card.querySelector(".q-media");
+        if (mediaInput) {
+          try {
+            question.media_url = JSON.parse(mediaInput.value) || [];
+          } catch (e) {
+            question.media_url = [];
+          }
+        }
+
+        // Clear existing options (but not for essay)
+        if (question.type !== "essay") {
+          question.options = [];
           question.correct_answers_checkbox = [];
         }
-        const indexStr = optIndex.toString();
-        if (isChecked && !question.correct_answers_checkbox.includes(indexStr)) {
-          question.correct_answers_checkbox.push(indexStr);
-        } else if (!isChecked) {
-          question.correct_answers_checkbox = question.correct_answers_checkbox.filter(i => i !== indexStr);
-        }
-      } else {
-        // For radio button (multiple/truefalse), only one answer can be correct
-        if (isChecked) {
-          question.correct = optIndex.toString();
-        }
-      }
-    }
 
-    // Collect option data from DOM before preview
-    function collectOptionsFromDOM(qId) {
-      const card = document.getElementById(qId);
-      const question = getQuestionById(qId);
-      if (!card || !question) return;
-      
-      // Always read question media from the hidden input
-      const mediaInput = card.querySelector('.q-media');
-      if (mediaInput) {
-        try {
-          question.media_url = JSON.parse(mediaInput.value) || [];
-        } catch(e) {
-          question.media_url = [];
-        }
-      }
-      
-      // Clear existing options (but not for essay)
-      if (question.type !== 'essay') {
-        question.options = [];
-        question.correct_answers_checkbox = [];
-      }
-      
-      // Handle essay questions
-      if (question.type === 'essay') {
-        const essayTextarea = card.querySelector('.essay-answer');
-        if (essayTextarea) {
-          question.correct = essayTextarea.value;
-        }
-        return;
-      }
-      
-      // Reset correct answer for non-essay types
-      question.correct = '';
-      
-      // Handle true/false questions
-      if (question.type === 'truefalse') {
-        question.options = [
-          { text: 'Benar', image: '' },
-          { text: 'Salah', image: '' }
-        ];
-        
-        // Find which radio button is checked
-        const radios = card.querySelectorAll(`input[name="${qId}-correct"]`);
-        radios.forEach((radio, index) => {
-          if (radio.checked) {
-            question.correct = index.toString();
+        // Handle essay questions
+        if (question.type === "essay") {
+          const essayTextarea = card.querySelector(".essay-answer");
+          if (essayTextarea) {
+            question.correct = essayTextarea.value;
           }
-        });
-        return;
-      }
-      
-      // Handle multiple choice and checkbox questions
-      const optContainer = card.querySelector('.options-container');
-      if (!optContainer) return; // Not a multiple choice question type
-      
-      // Collect all option rows
-      const rows = optContainer.querySelectorAll('.option-row');
-      rows.forEach((row, index) => {
-        const textInput = row.querySelector('.option-text');
-        const imageUrl = row.querySelector('.opt-image-url')?.value || '';
-        const radioInput = row.querySelector(`input[type="radio"], input[type="checkbox"]`);
-        
-        const optText = textInput ? textInput.value : '';
-        question.options.push({
-          text: optText,
-          image: imageUrl
-        });
-        
-        // Capture which option is marked correct
-        if (radioInput && radioInput.checked) {
-          if (question.type === 'checkbox') {
-            if (!question.correct_answers_checkbox.includes(index.toString())) {
-              question.correct_answers_checkbox.push(index.toString());
+          return;
+        }
+
+        // Reset correct answer for non-essay types
+        question.correct = "";
+
+        // Handle true/false questions
+        if (question.type === "truefalse") {
+          question.options = [
+            { text: "Benar", image: "" },
+            { text: "Salah", image: "" },
+          ];
+
+          // Find which radio button is checked
+          const radios = card.querySelectorAll(`input[name="${qId}-correct"]`);
+          radios.forEach((radio, index) => {
+            if (radio.checked) {
+              question.correct = index.toString();
             }
-          } else {
-            question.correct = index.toString();
-          }
+          });
+          return;
         }
-      });
-    }
 
+        // Handle multiple choice and checkbox questions
+        const optContainer = card.querySelector(".options-container");
+        if (!optContainer) return; // Not a multiple choice question type
 
-    async function uploadQuestionMedia(input, questionIndex) {
-      if (!input.files || !input.files[0]) return;
-      
-      const files = input.files;
-      const questionCard = input.closest('.question-builder');
-      const statusEl = questionCard.querySelector('.q-upload-status');
-      const hiddenInput = questionCard.querySelector('.q-media');
+        // Collect all option rows
+        const rows = optContainer.querySelectorAll(".option-row");
+        rows.forEach((row, index) => {
+          const textInput = row.querySelector(".option-text");
+          const imageUrl = row.querySelector(".opt-image-url")?.value || "";
+          const radioInput = row.querySelector(
+            `input[type="radio"], input[type="checkbox"]`
+          );
 
-      let currentMedia = [];
-      try {
+          const optText = textInput ? textInput.value : "";
+          question.options.push({
+            text: optText,
+            image: imageUrl,
+          });
+
+          // Capture which option is marked correct
+          if (radioInput && radioInput.checked) {
+            if (question.type === "checkbox") {
+              if (
+                !question.correct_answers_checkbox.includes(index.toString())
+              ) {
+                question.correct_answers_checkbox.push(index.toString());
+              }
+            } else {
+              question.correct = index.toString();
+            }
+          }
+        });
+      }
+
+      async function uploadQuestionMedia(input, questionIndex) {
+        if (!input.files || !input.files[0]) return;
+
+        const files = input.files;
+        const questionCard = input.closest(".question-builder");
+        const statusEl = questionCard.querySelector(".q-upload-status");
+        const hiddenInput = questionCard.querySelector(".q-media");
+
+        let currentMedia = [];
+        try {
           currentMedia = JSON.parse(hiddenInput.value || "[]");
           if (!Array.isArray(currentMedia)) currentMedia = [];
-      } catch(e) { currentMedia = []; }
-
-      statusEl.style.display = 'block';
-      statusEl.textContent = `⌛ Mengunggah ${files.length} file...`;
-
-      for (const file of files) {
-        const formData = new FormData();
-        formData.append('file', file);
-
-        try {
-          const response = await fetch('../php/upload_media.php', {
-            method: 'POST',
-            body: formData,
-            credentials: 'include'
-          });
-          const result = await response.json();
-
-          if (result.success) {
-            currentMedia.push(result.url);
-          } else {
-            alert('Gagal mengunggah ' + file.name + ': ' + result.message);
-          }
-        } catch (error) {
-          console.error('Upload error:', error);
+        } catch (e) {
+          currentMedia = [];
         }
+
+        statusEl.style.display = "block";
+        statusEl.textContent = `⌛ Mengunggah ${files.length} file...`;
+
+        for (const file of files) {
+          const formData = new FormData();
+          formData.append("file", file);
+
+          try {
+            const response = await fetch("../php/upload_media.php", {
+              method: "POST",
+              body: formData,
+              credentials: "include",
+            });
+            const result = await response.json();
+
+            if (result.success) {
+              currentMedia.push(result.url);
+            } else {
+              alert("Gagal mengunggah " + file.name + ": " + result.message);
+            }
+          } catch (error) {
+            console.error("Upload error:", error);
+          }
+        }
+
+        hiddenInput.value = JSON.stringify(currentMedia);
+        renderMediaPreviews(questionCard);
+
+        statusEl.textContent = "✅ Berhasil diunggah";
+        setTimeout(() => {
+          statusEl.style.display = "none";
+        }, 2000);
+        input.value = "";
       }
 
-      hiddenInput.value = JSON.stringify(currentMedia);
-      renderMediaPreviews(questionCard);
-      
-      statusEl.textContent = '✅ Berhasil diunggah';
-      setTimeout(() => { statusEl.style.display = 'none'; }, 2000);
-      input.value = ''; 
-    }
+      function renderMediaPreviews(questionCard) {
+        const hiddenInput = questionCard.querySelector(".q-media");
+        const previewEl = questionCard.querySelector(".q-media-preview");
+        let media = [];
+        try {
+          media = JSON.parse(hiddenInput.value);
+        } catch (e) {
+          media = [];
+        }
 
-    function renderMediaPreviews(questionCard) {
-      const hiddenInput = questionCard.querySelector('.q-media');
-      const previewEl = questionCard.querySelector('.q-media-preview');
-      let media = [];
-      try { media = JSON.parse(hiddenInput.value); } catch(e) { media = []; }
-
-      previewEl.innerHTML = '';
-      media.forEach((url, index) => {
-        const div = document.createElement('div');
-        div.style.position = 'relative';
-        div.innerHTML = `
+        previewEl.innerHTML = "";
+        media.forEach((url, index) => {
+          const div = document.createElement("div");
+          div.style.position = "relative";
+          div.innerHTML = `
           <img src="../${url}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0">
           <button type="button" class="btn btn-sm btn-danger" onclick="removeMedia(this, ${index})" 
             style="position:absolute; top:-5px; right:-5px; border-radius:50%; width:20px; height:20px; padding:0; display:flex; align-items:center; justify-content:center; font-size:10px">✕</button>
         `;
-        previewEl.appendChild(div);
-      });
-    }
-
-    function removeMedia(btn, index) {
-      const questionCard = btn.closest('.question-builder');
-      const qId = questionCard.id;
-      const question = questions.find(q => q.id === qId);
-      if (!question) return;
-
-      question.media_url.splice(index, 1);
-      questionCard.querySelector('.q-media').value = JSON.stringify(question.media_url);
-      renderMediaPreviews(questionCard);
-      updateQuestionData(qId, 'media_url', question.media_url); // Update in central array
-    }
-
-    // Helper to find question object by qId
-    function getQuestionById(qId) {
-      return questions.find(q => q.id === qId);
-    }
-
-    // Generic function to update a question's data in the array
-    function updateQuestionData(qId, field, value) {
-      const question = getQuestionById(qId);
-      if (question) {
-        question[field] = value;
-        // console.log(`[Update] Q: ${qId}, Field: ${field}, Value:`, value, question);
-        if (field === 'options' || field === 'correct' || field === 'correct_answers_checkbox' || field === 'type') {
-          // If critical fields, re-render preview immediately
-          // No, only re-render preview on step change
-        }
-      }
-    }
-
-    // Function to change question type
-    function changeType(qId, newType) {
-      const card = document.getElementById(qId);
-      const question = getQuestionById(qId);
-      if (!question) return;
-
-      // Update the central data model
-      question.type = newType;
-      question.correct = ''; // Reset correct answers on type change
-      question.correct_answers_checkbox = [];
-      question.options = []; // Reset options as structure might change
-
-      // Update DOM (active button)
-      card.querySelectorAll('.type-btn').forEach(b => {
-        b.classList.remove('active');
-        if (b.dataset.type === newType) {
-          b.classList.add('active');
-        }
-      });
-
-      // Re-render options section based on new type
-      const optContainer = document.getElementById(qId + '-options');
-      if (newType === 'multiple' || newType === 'checkbox') {
-        optContainer.innerHTML = renderMultipleOptions(qId, newType, question.options, question.correct, question.correct_answers_checkbox);
-      } else if (newType === 'essay') {
-        optContainer.innerHTML = renderEssayOptions(qId, question.correct);
-      } else if (newType === 'truefalse') {
-        optContainer.innerHTML = renderTrueFalseOptions(qId, question.correct);
-      }
-      updateQuestionData(qId, 'options', question.options); // Update in central array
-    }
-
-    async function uploadOptionMedia(input, qId, optIndex) {
-      if (!input.files || !input.files[0]) return;
-      
-      const file = input.files[0];
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const response = await fetch('../php/upload_media.php', {
-          method: 'POST',
-          body: formData,
-          credentials: 'include'
+          previewEl.appendChild(div);
         });
-        const result = await response.json();
+      }
 
-        if (result.success) {
-          const row = input.closest('.option-row');
-          const previewWrap = row.querySelector('.opt-image-preview-wrap');
-          const previewImg = row.querySelector('.opt-image-preview');
-          const hiddenInput = row.querySelector('.opt-image-url');
+      function removeMedia(btn, index) {
+        const questionCard = btn.closest(".question-builder");
+        const qId = questionCard.id;
+        const question = questions.find((q) => q.id === qId);
+        if (!question) return;
 
-          hiddenInput.value = result.url;
-          previewImg.src = '../' + result.url;
-          previewWrap.style.display = 'flex';
-          
-          // Update the questions array
-          const q = questions.find(q => q.id === qId);
-          if (q && q.options[optIndex]) {
-              if (typeof q.options[optIndex] === 'string') {
-                  q.options[optIndex] = { text: q.options[optIndex], image: result.url };
-              } else {
-                  q.options[optIndex].image = result.url;
-              }
+        question.media_url.splice(index, 1);
+        questionCard.querySelector(".q-media").value = JSON.stringify(
+          question.media_url
+        );
+        renderMediaPreviews(questionCard);
+        updateQuestionData(qId, "media_url", question.media_url); // Update in central array
+      }
+
+      // Helper to find question object by qId
+      function getQuestionById(qId) {
+        return questions.find((q) => q.id === qId);
+      }
+
+      // Generic function to update a question's data in the array
+      function updateQuestionData(qId, field, value) {
+        const question = getQuestionById(qId);
+        if (question) {
+          question[field] = value;
+          // console.log(`[Update] Q: ${qId}, Field: ${field}, Value:`, value, question);
+          if (
+            field === "options" ||
+            field === "correct" ||
+            field === "correct_answers_checkbox" ||
+            field === "type"
+          ) {
+            // If critical fields, re-render preview immediately
+            // No, only re-render preview on step change
           }
-        } else {
-          alert('Gagal mengunggah gambar: ' + result.message);
         }
-      } catch (error) {
-        console.error('Upload error:', error);
-      }
-    }
-
-    function removeOptionMedia(btn) {
-      const row = btn.closest('.option-row');
-      row.querySelector('.opt-image-url').value = '';
-      row.querySelector('.opt-image-preview-wrap').style.display = 'none';
-    }
-
-    function renderPreview() {
-      const preview = document.getElementById('preview-content');
-      if (questions.length === 0) {
-        preview.innerHTML = '<p class="text-center" style="color:#64748b">Belum ada soal untuk ditampilkan dalam preview.</p>';
-        return;
       }
 
-      // Collect option data from DOM for all questions before rendering
-      questions.forEach(q => {
-        collectOptionsFromDOM(q.id);
-      });
+      // Function to change question type
+      function changeType(qId, newType) {
+        const card = document.getElementById(qId);
+        const question = getQuestionById(qId);
+        if (!question) return;
 
-      const escapeHtml = (str) => {
-        const div = document.createElement('div');
-        div.appendChild(document.createTextNode(str));
-        return div.innerHTML;
-      };
-      const escapeUrl = (url) => encodeURI(url);
+        // Update the central data model
+        question.type = newType;
+        question.correct = ""; // Reset correct answers on type change
+        question.correct_answers_checkbox = [];
+        question.options = []; // Reset options as structure might change
 
-      preview.innerHTML = questions.map((q, idx) => {
-        const qText = q.text || '(Teks soal tidak tersedia)';
-        const qType = q.type || 'multiple';
-        const letters = ['A', 'B', 'C', 'D', 'E', 'F'];
+        // Update DOM (active button)
+        card.querySelectorAll(".type-btn").forEach((b) => {
+          b.classList.remove("active");
+          if (b.dataset.type === newType) {
+            b.classList.add("active");
+          }
+        });
 
-        let mediaHtml = '';
-        if (q.media_url && q.media_url.length > 0) {
-            const finalMedia = q.media_url.filter(url => typeof url === 'string' && url.length > 5 && (url.includes('uploads/') || url.startsWith('http')));
-            if (finalMedia.length > 0) {
+        // Re-render options section based on new type
+        const optContainer = document.getElementById(qId + "-options");
+        if (newType === "multiple" || newType === "checkbox") {
+          optContainer.innerHTML = renderMultipleOptions(
+            qId,
+            newType,
+            question.options,
+            question.correct,
+            question.correct_answers_checkbox
+          );
+        } else if (newType === "essay") {
+          optContainer.innerHTML = renderEssayOptions(qId, question.correct);
+        } else if (newType === "truefalse") {
+          optContainer.innerHTML = renderTrueFalseOptions(
+            qId,
+            question.correct
+          );
+        }
+        updateQuestionData(qId, "options", question.options); // Update in central array
+      }
+
+      async function uploadOptionMedia(input, qId, optIndex) {
+        if (!input.files || !input.files[0]) return;
+
+        const file = input.files[0];
+        const formData = new FormData();
+        formData.append("file", file);
+
+        try {
+          const response = await fetch("../php/upload_media.php", {
+            method: "POST",
+            body: formData,
+            credentials: "include",
+          });
+          const result = await response.json();
+
+          if (result.success) {
+            const row = input.closest(".option-row");
+            const previewWrap = row.querySelector(".opt-image-preview-wrap");
+            const previewImg = row.querySelector(".opt-image-preview");
+            const hiddenInput = row.querySelector(".opt-image-url");
+
+            hiddenInput.value = result.url;
+            previewImg.src = "../" + result.url;
+            previewWrap.style.display = "flex";
+
+            // Update the questions array
+            const q = questions.find((q) => q.id === qId);
+            if (q && q.options[optIndex]) {
+              if (typeof q.options[optIndex] === "string") {
+                q.options[optIndex] = {
+                  text: q.options[optIndex],
+                  image: result.url,
+                };
+              } else {
+                q.options[optIndex].image = result.url;
+              }
+            }
+          } else {
+            alert("Gagal mengunggah gambar: " + result.message);
+          }
+        } catch (error) {
+          console.error("Upload error:", error);
+        }
+      }
+
+      function removeOptionMedia(btn) {
+        const row = btn.closest(".option-row");
+        row.querySelector(".opt-image-url").value = "";
+        row.querySelector(".opt-image-preview-wrap").style.display = "none";
+      }
+
+      function renderPreview() {
+        const preview = document.getElementById("preview-content");
+        if (questions.length === 0) {
+          preview.innerHTML =
+            '<p class="text-center" style="color:#64748b">Belum ada soal untuk ditampilkan dalam preview.</p>';
+          return;
+        }
+
+        // Collect option data from DOM for all questions before rendering
+        questions.forEach((q) => {
+          collectOptionsFromDOM(q.id);
+        });
+
+        const escapeHtml = (str) => {
+          const div = document.createElement("div");
+          div.appendChild(document.createTextNode(str));
+          return div.innerHTML;
+        };
+        const escapeUrl = (url) => encodeURI(url);
+
+        preview.innerHTML = questions
+          .map((q, idx) => {
+            const qText = q.text || "(Teks soal tidak tersedia)";
+            const qType = q.type || "multiple";
+            const letters = ["A", "B", "C", "D", "E", "F"];
+
+            let mediaHtml = "";
+            if (q.media_url && q.media_url.length > 0) {
+              const finalMedia = q.media_url.filter(
+                (url) =>
+                  typeof url === "string" &&
+                  url.length > 5 &&
+                  (url.includes("uploads/") || url.startsWith("http"))
+              );
+              if (finalMedia.length > 0) {
                 const imgCount = finalMedia.length;
-                const gridCols = imgCount === 1 ? '1fr' : (imgCount === 2 ? '1fr 1fr' : 'repeat(auto-fit, minmax(100px, 1fr))');
-                const maxHeight = imgCount === 1 ? '160px' : '120px';
-                const maxWidth = imgCount === 1 ? '320px' : '100%';
+                const gridCols =
+                  imgCount === 1
+                    ? "1fr"
+                    : imgCount === 2
+                    ? "1fr 1fr"
+                    : "repeat(auto-fit, minmax(100px, 1fr))";
+                const maxHeight = imgCount === 1 ? "160px" : "120px";
+                const maxWidth = imgCount === 1 ? "320px" : "100%";
 
                 mediaHtml = `
                     <div class="question-media-container" style="display: grid; grid-template-columns: ${gridCols}; gap: 10px; margin-bottom: 20px; justify-items: center; width: 100%; max-width: ${maxWidth}; margin-left: auto; margin-right: auto;">
-                        ${finalMedia.map(url => {
-                            const finalUrl = escapeUrl(url.startsWith('http') ? url : '../' + url);
+                        ${finalMedia
+                          .map((url) => {
+                            const finalUrl = escapeUrl(
+                              url.startsWith("http") ? url : "../" + url
+                            );
                             return `
                                 <div class="media-item" style="width: 100%; text-align: center;">
                                     <img src="${finalUrl}" alt="Gambar Soal" 
                                         style="max-width: 100%; max-height: ${maxHeight}; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
                                 </div>
                             `;
-                        }).join('')}
+                          })
+                          .join("")}
                     </div>
                 `;
+              }
             }
-        }
 
-        let optionsHtml = '';
-        if (qType === 'multiple' || qType === 'checkbox' || qType === 'truefalse') {
-          let currentOptions = q.options || [];
-          if (qType === 'truefalse' && currentOptions.length === 0) {
-              currentOptions = [{ text: 'Benar' }, { text: 'Salah' }];
-          }
-
-          optionsHtml = `<ul class="options-list" style="list-style:none; padding:0; margin-top:15px">
-            ${currentOptions.map((opt, optIdx) => {
-              const optText = typeof opt === 'object' ? opt.text : opt;
-              const optImg = typeof opt === 'object' ? opt.image : null;
-              
-              // Only show options with text
-              if (!optText || optText.trim() === '') return '';
-              
-              let isCorrect = false;
-              if (qType === 'multiple' || qType === 'truefalse') {
-                  isCorrect = (q.correct !== undefined && q.correct !== null && q.correct.toString() === optIdx.toString());
-              } else if (qType === 'checkbox') {
-                  isCorrect = Array.isArray(q.correct_answers_checkbox) && q.correct_answers_checkbox.includes(optIdx.toString());
+            let optionsHtml = "";
+            if (
+              qType === "multiple" ||
+              qType === "checkbox" ||
+              qType === "truefalse"
+            ) {
+              let currentOptions = q.options || [];
+              if (qType === "truefalse" && currentOptions.length === 0) {
+                currentOptions = [{ text: "Benar" }, { text: "Salah" }];
               }
 
-              return `
-                <li class="option-item" style="padding:10px 15px; background:${isCorrect ? '#d1fae5' : '#fff'}; border:1px solid ${isCorrect ? '#10b981' : '#e2e8f0'}; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:10px; font-size:0.9rem; color:${isCorrect ? '#065f46' : '#1e293b'}; font-weight:${isCorrect ? '600' : 'normal'};">
+              optionsHtml = `<ul class="options-list" style="list-style:none; padding:0; margin-top:15px">
+            ${currentOptions
+              .map((opt, optIdx) => {
+                const optText = typeof opt === "object" ? opt.text : opt;
+                const optImg = typeof opt === "object" ? opt.image : null;
+
+                // Only show options with text
+                if (!optText || optText.trim() === "") return "";
+
+                let isCorrect = false;
+                if (qType === "multiple" || qType === "truefalse") {
+                  isCorrect =
+                    q.correct !== undefined &&
+                    q.correct !== null &&
+                    q.correct.toString() === optIdx.toString();
+                } else if (qType === "checkbox") {
+                  isCorrect =
+                    Array.isArray(q.correct_answers_checkbox) &&
+                    q.correct_answers_checkbox.includes(optIdx.toString());
+                }
+
+                return `
+                <li class="option-item" style="padding:10px 15px; background:${
+                  isCorrect ? "#d1fae5" : "#fff"
+                }; border:1px solid ${
+                  isCorrect ? "#10b981" : "#e2e8f0"
+                }; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:10px; font-size:0.9rem; color:${
+                  isCorrect ? "#065f46" : "#1e293b"
+                }; font-weight:${isCorrect ? "600" : "normal"};">
                   <strong>${letters[optIdx]}.</strong> ${escapeHtml(optText)}
-                  ${optImg ? `
+                  ${
+                    optImg
+                      ? `
                     <div style="margin-left:auto; text-align:right;">
-                      <img src="../${escapeUrl(optImg)}" style="max-height:60px; border-radius:4px; border:1px solid #e2e8f0;">
+                      <img src="../${escapeUrl(
+                        optImg
+                      )}" style="max-height:60px; border-radius:4px; border:1px solid #e2e8f0;">
                     </div>
-                  ` : ''}
-                  ${isCorrect ? `<span style="margin-left:10px; color:#10b981; font-weight:700">✓ BENAR</span>` : ''}
+                  `
+                      : ""
+                  }
+                  ${
+                    isCorrect
+                      ? `<span style="margin-left:10px; color:#10b981; font-weight:700">✓ BENAR</span>`
+                      : ""
+                  }
                 </li>
               `;
-            }).filter(html => html !== '').join('')}
+              })
+              .filter((html) => html !== "")
+              .join("")}
           </ul>`;
-        } else if (qType === 'essay') {
-          optionsHtml = `
+            } else if (qType === "essay") {
+              optionsHtml = `
             <div style="padding:15px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; margin-top:15px">
               <p style="font-size:0.9rem; color:#64748b; margin-bottom:8px"><em>Ini adalah soal esai. Siswa akan mengetik jawaban di sini.</em></p>
-              <p style="font-size:0.85rem; color:#475569; font-weight:600">Kunci Jawaban/Rubrik: ${q.correct || '(Belum ada kunci jawaban)'}</p>
+              <p style="font-size:0.85rem; color:#475569; font-weight:600">Kunci Jawaban/Rubrik: ${
+                q.correct || "(Belum ada kunci jawaban)"
+              }</p>
             </div>
           `;
-        }
+            }
 
-        return `
+            return `
           <div class="preview-q-card" style="background:#fff; border-radius:12px; padding:20px; margin-bottom:20px; border:1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-            <div class="question-number" style="font-size:0.85rem; font-weight:700; color:var(--primary-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Soal ${idx + 1} ${qType === 'checkbox' ? '(PG Kompleks)' : ''}</div>
+            <div class="question-number" style="font-size:0.85rem; font-weight:700; color:var(--primary-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Soal ${
+              idx + 1
+            } ${qType === "checkbox" ? "(PG Kompleks)" : ""}</div>
             ${mediaHtml}
-            <div class="question-text" style="font-size:1.05rem; font-weight:500; margin-bottom:15px; color:#1e293b;">${escapeHtml(qText)}</div>
+            <div class="question-text" style="font-size:1.05rem; font-weight:500; margin-bottom:15px; color:#1e293b;">${escapeHtml(
+              qText
+            )}</div>
             ${optionsHtml}
           </div>
         `;
-      }).join('');
-    }
-
-    async function saveDraft() {
-      alert('Draft berhasil disimpan secara lokal!');
-    }
-
-    async function publishExam() {
-      if (questions.length === 0) {
-        alert('Tambahkan minimal 1 soal sebelum mempublikasikan!');
-        return;
+          })
+          .join("");
       }
 
-      const processedQuestions = questions.map(q => {
-        let correctAnswerValue = '';
-        if (q.type === 'multiple' || q.type === 'truefalse' || q.type === 'essay') {
-          correctAnswerValue = q.correct !== undefined && q.correct !== null ? q.correct.toString() : '';
-        } else if (q.type === 'checkbox') {
-          correctAnswerValue = JSON.stringify(q.correct_answers_checkbox || []);
+      async function saveDraft() {
+        alert("Draft berhasil disimpan secara lokal!");
+      }
+
+      async function publishExam() {
+        if (questions.length === 0) {
+          alert("Tambahkan minimal 1 soal sebelum mempublikasikan!");
+          return;
         }
 
-        return {
-          ...q,
-          correct_answer: correctAnswerValue,
-          media_url: JSON.stringify(q.media_url || [])
+        const processedQuestions = questions.map((q) => {
+          let correctAnswerValue = "";
+          if (
+            q.type === "multiple" ||
+            q.type === "truefalse" ||
+            q.type === "essay"
+          ) {
+            correctAnswerValue =
+              q.correct !== undefined && q.correct !== null
+                ? q.correct.toString()
+                : "";
+          } else if (q.type === "checkbox") {
+            correctAnswerValue = JSON.stringify(
+              q.correct_answers_checkbox || []
+            );
+          }
+
+          return {
+            ...q,
+            correct_answer: correctAnswerValue,
+            media_url: JSON.stringify(q.media_url || []),
+          };
+        });
+
+        const examData = {
+          action: "create_exam",
+          name: document.getElementById("exam-name").value,
+          subject: document.getElementById("exam-subject").value,
+          class: document.getElementById("exam-class").value,
+          duration: parseInt(document.getElementById("exam-duration").value),
+          question_count: questions.length,
+          description: document.getElementById("exam-desc").value,
+          start_time:
+            document.getElementById("exam-date").value +
+            " " +
+            document.getElementById("exam-start").value +
+            ":00",
+          end_time: document.getElementById("exam-date").value + " 23:59:59", // Placeholder
+          show_results_setting: document.getElementById("show-results-setting")
+            .value,
+          questions: processedQuestions,
         };
-      });
 
-      const examData = {
-        action: 'create_exam',
-        name: document.getElementById('exam-name').value,
-        subject: document.getElementById('exam-subject').value,
-        class: document.getElementById('exam-class').value,
-        duration: parseInt(document.getElementById('exam-duration').value),
-        question_count: questions.length,
-        description: document.getElementById('exam-desc').value,
-        start_time: document.getElementById('exam-date').value + ' ' + document.getElementById('exam-start').value + ':00',
-        end_time: document.getElementById('exam-date').value + ' 23:59:59', // Placeholder
-        show_results_setting: document.getElementById('show-results-setting').value,
-        questions: processedQuestions
-      };
+        try {
+          const response = await fetch("../php/exam_api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(examData),
+            credentials: "include",
+          });
+          const result = await response.json();
 
-      try {
-        const response = await fetch('../php/exam_api.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(examData),
-          credentials: 'include'
-        });
-        const result = await response.json();
-
-        if (result.success) {
-          alert('🚀 Ujian berhasil dipublikasikan!');
-          window.location.href = 'dashboard.html';
-        } else {
-          alert('❌ Gagal: ' + result.message);
+          if (result.success) {
+            alert("🚀 Ujian berhasil dipublikasikan!");
+            window.location.href = "dashboard.html";
+          } else {
+            alert("❌ Gagal: " + result.message);
+          }
+        } catch (error) {
+          console.error("Publish error:", error);
+          alert("Terjadi kesalahan koneksi.");
         }
-      } catch (error) {
-        console.error('Publish error:', error);
-        alert('Terjadi kesalahan koneksi.');
       }
-    }
 
-    // ===== BANK SOAL FUNCTIONS =====
+      // ===== BANK SOAL FUNCTIONS =====
 
-    function openBankSoalModal() {
-      document.getElementById('bankSoalModal').style.display = 'flex';
-      loadBankQuestions();
-    }
+      function openBankSoalModal() {
+        document.getElementById("bankSoalModal").style.display = "flex";
+        loadBankQuestions();
+      }
 
-    function closeBankSoalModal() {
-      document.getElementById('bankSoalModal').style.display = 'none';
-    }
+      function closeBankSoalModal() {
+        document.getElementById("bankSoalModal").style.display = "none";
+      }
 
-    function loadBankQuestions() {
-      let url = '../php/exam_api.php?action=get_bank_questions';
-      const search = document.getElementById('bankSearchInput').value;
-      const category = document.getElementById('bankCategoryFilter').value;
+      function loadBankQuestions() {
+        let url = "../php/exam_api.php?action=get_bank_questions";
+        const search = document.getElementById("bankSearchInput").value;
+        const category = document.getElementById("bankCategoryFilter").value;
 
-      if (search) url += '&search=' + encodeURIComponent(search);
-      if (category) url += '&category=' + encodeURIComponent(category);
+        if (search) url += "&search=" + encodeURIComponent(search);
+        if (category) url += "&category=" + encodeURIComponent(category);
 
-      console.log('🔄 Loading bank questions from:', url);
+        console.log("🔄 Loading bank questions from:", url);
 
-      fetch(url)
-        .then(r => {
-          console.log('Response status:', r.status);
-          if (!r.ok) {
-            throw new Error(`HTTP ${r.status}: ${r.statusText}`);
-          }
-          return r.text(); // Read as text first
-        })
-        .then(text => {
-          console.log('Response text (first 200 chars):', text.substring(0, 200));
-          try {
-            const d = JSON.parse(text);
-            if (d.success) {
-              bankQuestions = d.questions || [];
-              renderBankQuestions();
-            } else {
-              console.error('❌ API error:', d.message);
-              alert('Error: ' + (d.message || 'Gagal load soal dari bank'));
+        fetch(url)
+          .then((r) => {
+            console.log("Response status:", r.status);
+            if (!r.ok) {
+              throw new Error(`HTTP ${r.status}: ${r.statusText}`);
             }
-          } catch (parseError) {
-            console.error('❌ JSON Parse error:', parseError);
-            console.error('Response was:', text);
-            alert('Error: Respons server tidak valid. Cek console.');
-          }
-        })
-        .catch(e => {
-          console.error('❌ Network/Fetch error:', e);
-          alert('Error: ' + e.message);
-        });
-    }
-
-    function searchBankQuestions() {
-      loadBankQuestions();
-    }
-
-    function renderBankQuestions() {
-      const container = document.getElementById('bankQuestionsList');
-
-      if (bankQuestions.length === 0) {
-        container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:32px;">Tidak ada soal di bank.</div>';
-        return;
+            return r.text(); // Read as text first
+          })
+          .then((text) => {
+            console.log(
+              "Response text (first 200 chars):",
+              text.substring(0, 200)
+            );
+            try {
+              const d = JSON.parse(text);
+              if (d.success) {
+                bankQuestions = d.questions || [];
+                renderBankQuestions();
+              } else {
+                console.error("❌ API error:", d.message);
+                alert("Error: " + (d.message || "Gagal load soal dari bank"));
+              }
+            } catch (parseError) {
+              console.error("❌ JSON Parse error:", parseError);
+              console.error("Response was:", text);
+              alert("Error: Respons server tidak valid. Cek console.");
+            }
+          })
+          .catch((e) => {
+            console.error("❌ Network/Fetch error:", e);
+            alert("Error: " + e.message);
+          });
       }
 
-      container.innerHTML = bankQuestions.map(q => {
-        const typeLabel = {
-          'multiple': '🔘 PG',
-          'checkbox': '☑️ Multi-jawab',
-          'essay': '📝 Essay',
-          'truefalse': '✔️ B/S'
-        }[q.question_type] || q.question_type;
+      function searchBankQuestions() {
+        loadBankQuestions();
+      }
 
-        const diffLabel = { 'easy': '📗 Mudah', 'medium': '📙 Sedang', 'hard': '📕 Sulit' }[q.difficulty] || q.difficulty;
+      function renderBankQuestions() {
+        const container = document.getElementById("bankQuestionsList");
 
-        return `
+        if (bankQuestions.length === 0) {
+          container.innerHTML =
+            '<div style="text-align:center; color:#94a3b8; padding:32px;">Tidak ada soal di bank.</div>';
+          return;
+        }
+
+        container.innerHTML = bankQuestions
+          .map((q) => {
+            const typeLabel =
+              {
+                multiple: "🔘 PG",
+                checkbox: "☑️ Multi-jawab",
+                essay: "📝 Essay",
+                truefalse: "✔️ B/S",
+              }[q.question_type] || q.question_type;
+
+            const diffLabel =
+              { easy: "📗 Mudah", medium: "📙 Sedang", hard: "📕 Sulit" }[
+                q.difficulty
+              ] || q.difficulty;
+
+            return `
           <div style="padding:16px; background:#f8fafc; border-radius:10px; border-left:3px solid var(--primary-light); margin-bottom:12px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
             <div style="flex:1;">
               <div style="margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
                 <span style="font-size:0.75rem; background:rgba(59, 130, 246, 0.1); color:#1e40af; padding:3px 10px; border-radius:12px; font-weight:600;">${typeLabel}</span>
-                <span style="font-size:0.75rem; background:rgba(107, 114, 128, 0.1); color:#374151; padding:3px 10px; border-radius:12px;">${q.category}</span>
+                <span style="font-size:0.75rem; background:rgba(107, 114, 128, 0.1); color:#374151; padding:3px 10px; border-radius:12px;">${
+                  q.category
+                }</span>
                 <span style="font-size:0.75rem; color:#64748b;">${diffLabel}</span>
               </div>
-              <p style="margin:0 0 8px 0; color:#1e293b; font-weight:500; line-height:1.4;">${q.question_text}</p>
-              <p style="margin:0; font-size:0.8rem; color:#64748b;">Poin: <strong>${q.points}</strong> | ${new Date(q.created_at).toLocaleDateString('id-ID')}</p>
+              <p style="margin:0 0 8px 0; color:#1e293b; font-weight:500; line-height:1.4;">${
+                q.question_text
+              }</p>
+              <p style="margin:0; font-size:0.8rem; color:#64748b;">Poin: <strong>${
+                q.points
+              }</strong> | ${new Date(q.created_at).toLocaleDateString(
+              "id-ID"
+            )}</p>
             </div>
-            <button class="btn btn-sm" style="background:rgba(34, 197, 94, 0.1); color:#15803d; border:none; cursor:pointer; padding:8px 14px; border-radius:6px; font-weight:600; white-space:nowrap;" onclick="addQuestionFromBank(${q.id})">
+            <button class="btn btn-sm" style="background:rgba(34, 197, 94, 0.1); color:#15803d; border:none; cursor:pointer; padding:8px 14px; border-radius:6px; font-weight:600; white-space:nowrap;" onclick="addQuestionFromBank(${
+              q.id
+            })">
               ✓ Pakai
             </button>
           </div>
         `;
-      }).join('');
-    }
-
-    function addQuestionFromBank(bankQuestionId) {
-      // Cari soal dari bankQuestions array
-      const bankQuestion = bankQuestions.find(q => q.id === bankQuestionId);
-      if (!bankQuestion) {
-        alert('Error: Soal tidak ditemukan');
-        return;
+          })
+          .join("");
       }
 
-      const type = bankQuestion.question_type;
-      
-      // Parse options - could be JSON string or already parsed array
-      let parsedOptions = [];
-      if (bankQuestion.options) {
-        // If it's a string, try to parse it as JSON
-        if (typeof bankQuestion.options === 'string') {
-          try {
-            parsedOptions = JSON.parse(bankQuestion.options);
-          } catch (e) {
-            console.warn('Failed to parse options as JSON, treating as plain text');
-            parsedOptions = [bankQuestion.options];
-          }
-        } else if (Array.isArray(bankQuestion.options)) {
-          parsedOptions = bankQuestion.options;
+      function addQuestionFromBank(bankQuestionId) {
+        // Cari soal dari bankQuestions array
+        const bankQuestion = bankQuestions.find((q) => q.id === bankQuestionId);
+        if (!bankQuestion) {
+          alert("Error: Soal tidak ditemukan");
+          return;
         }
-      }
-      
-      // Normalize options to proper format {text, image}
-      let normalizedOptions = [];
-      if (parsedOptions && Array.isArray(parsedOptions)) {
-        normalizedOptions = parsedOptions.map(opt => {
-          if (typeof opt === 'string') {
-            return { text: opt, image: null };
-          } else if (typeof opt === 'object' && opt !== null) {
-            return { text: opt.text || opt, image: opt.image || null };
-          }
-          return { text: '', image: null };
-        }).filter(opt => opt.text && opt.text.trim() !== '');
-      }
-      
-      // Parse correct_answer if it's a JSON string (for checkboxes, it could be an array)
-      let correctAnswer = bankQuestion.correct_answer || '';
-      let correctAnswersCheckbox = [];
-      
-      if (type === 'checkbox' && bankQuestion.correct_answer) {
-        if (typeof bankQuestion.correct_answer === 'string') {
-          try {
-            correctAnswersCheckbox = JSON.parse(bankQuestion.correct_answer);
-            if (!Array.isArray(correctAnswersCheckbox)) {
-              correctAnswersCheckbox = [correctAnswersCheckbox];
+
+        const type = bankQuestion.question_type;
+
+        // Parse options - could be JSON string or already parsed array
+        let parsedOptions = [];
+        if (bankQuestion.options) {
+          // If it's a string, try to parse it as JSON
+          if (typeof bankQuestion.options === "string") {
+            try {
+              parsedOptions = JSON.parse(bankQuestion.options);
+            } catch (e) {
+              console.warn(
+                "Failed to parse options as JSON, treating as plain text"
+              );
+              parsedOptions = [bankQuestion.options];
             }
-          } catch (e) {
-            // If not JSON, treat as single answer
-            correctAnswersCheckbox = [bankQuestion.correct_answer];
+          } else if (Array.isArray(bankQuestion.options)) {
+            parsedOptions = bankQuestion.options;
           }
-        } else if (Array.isArray(bankQuestion.correct_answer)) {
-          correctAnswersCheckbox = bankQuestion.correct_answer;
         }
-      } else {
-        correctAnswer = bankQuestion.correct_answer;
+
+        // Normalize options to proper format {text, image}
+        let normalizedOptions = [];
+        if (parsedOptions && Array.isArray(parsedOptions)) {
+          normalizedOptions = parsedOptions
+            .map((opt) => {
+              if (typeof opt === "string") {
+                return { text: opt, image: null };
+              } else if (typeof opt === "object" && opt !== null) {
+                return { text: opt.text || opt, image: opt.image || null };
+              }
+              return { text: "", image: null };
+            })
+            .filter((opt) => opt.text && opt.text.trim() !== "");
+        }
+
+        // Parse correct_answer if it's a JSON string (for checkboxes, it could be an array)
+        let correctAnswer = bankQuestion.correct_answer || "";
+        let correctAnswersCheckbox = [];
+
+        if (type === "checkbox" && bankQuestion.correct_answer) {
+          if (typeof bankQuestion.correct_answer === "string") {
+            try {
+              correctAnswersCheckbox = JSON.parse(bankQuestion.correct_answer);
+              if (!Array.isArray(correctAnswersCheckbox)) {
+                correctAnswersCheckbox = [correctAnswersCheckbox];
+              }
+            } catch (e) {
+              // If not JSON, treat as single answer
+              correctAnswersCheckbox = [bankQuestion.correct_answer];
+            }
+          } else if (Array.isArray(bankQuestion.correct_answer)) {
+            correctAnswersCheckbox = bankQuestion.correct_answer;
+          }
+        } else {
+          correctAnswer = bankQuestion.correct_answer;
+        }
+
+        // Konversi data bank soal ke format yang sesuai dengan addQuestion
+        const newQuestion = {
+          type: type,
+          text: bankQuestion.question_text || "",
+          media_url: [],
+          options: normalizedOptions,
+          correct: correctAnswer,
+          correct_answers_checkbox: correctAnswersCheckbox,
+          points: parseInt(bankQuestion.points) || 1,
+          difficulty:
+            bankQuestion.difficulty === "easy"
+              ? "mudah"
+              : bankQuestion.difficulty === "hard"
+              ? "sulit"
+              : "sedang",
+          category: bankQuestion.category || "Umum",
+        };
+
+        // Tambah ke questions
+        addQuestion(type, newQuestion);
+
+        // Tutup modal
+        closeBankSoalModal();
+
+        // Scroll ke soal baru yang ditambahkan
+        setTimeout(() => {
+          const firstQuestion = document.querySelector(".question-builder");
+          if (firstQuestion) {
+            firstQuestion.scrollIntoView({
+              behavior: "smooth",
+              block: "start",
+            });
+          }
+        }, 100);
+
+        alert("✓ Soal berhasil ditambahkan ke ujian!");
       }
-      
-      // Konversi data bank soal ke format yang sesuai dengan addQuestion
-      const newQuestion = {
-        type: type,
-        text: bankQuestion.question_text || '',
-        media_url: [],
-        options: normalizedOptions,
-        correct: correctAnswer,
-        correct_answers_checkbox: correctAnswersCheckbox,
-        points: parseInt(bankQuestion.points) || 1,
-        difficulty: bankQuestion.difficulty === 'easy' ? 'mudah' : (bankQuestion.difficulty === 'hard' ? 'sulit' : 'sedang'),
-        category: bankQuestion.category || 'Umum'
-      };
-
-      // Tambah ke questions
-      addQuestion(type, newQuestion);
-
-      // Tutup modal
-      closeBankSoalModal();
-
-      // Scroll ke soal baru yang ditambahkan
-      setTimeout(() => {
-        const firstQuestion = document.querySelector('.question-builder');
-        if (firstQuestion) {
-          firstQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-      }, 100);
-
-      alert('✓ Soal berhasil ditambahkan ke ujian!');
-    }
-  </script>
-  <script src="/exam-system/js/ui.js"></script>
-</body>
+    </script>
+    <script src="/exam-system/js/ui.js"></script>
+  </body>
 </html>
