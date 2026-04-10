@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ExamSafe — Login API
  * POST /php/login.php
@@ -8,7 +9,7 @@
 require_once 'db.php';
 
 // Global error handler to return JSON instead of HTML
-set_error_handler(function($errno, $errstr, $errfile, $errline) {
+set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     if (!(error_reporting() & $errno)) return false;
     header('Content-Type: application/json');
     echo json_encode([
@@ -18,7 +19,7 @@ set_error_handler(function($errno, $errstr, $errfile, $errline) {
     exit;
 });
 
-set_exception_handler(function($e) {
+set_exception_handler(function ($e) {
     header('Content-Type: application/json');
     echo json_encode([
         'success' => false,
@@ -48,17 +49,17 @@ if (!$role || !$username || !$password) {
 
 $db = getDB();
 
-// Rate limiting: max 5 attempts per 15 minutes
+// Rate limiting: max 5 attempts per 1 minutes
 $ip = $_SERVER['REMOTE_ADDR'];
-$stmt = $db->prepare("SELECT COUNT(*) as cnt FROM login_attempts WHERE ip = ? AND created_at > DATE_SUB(NOW(), INTERVAL 15 MINUTE)");
+$stmt = $db->prepare("SELECT COUNT(*) as cnt FROM login_attempts WHERE ip = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)");
 $stmt->execute([$ip]);
 $attempts = $stmt->fetch()['cnt'];
 if ($attempts >= 5) {
-    jsonResponse(['success' => false, 'message' => 'Terlalu banyak percobaan login. Coba lagi dalam 15 menit.'], 429);
+    jsonResponse(['success' => false, 'message' => 'Terlalu banyak percobaan login. Coba lagi dalam 1 menit.'], 429);
 }
 
 // Find user by role
-$table = match($role) {
+$table = match ($role) {
     'siswa' => 'students',
     'guru'  => 'teachers',
     'admin' => 'admins',
@@ -99,7 +100,8 @@ if ($role === 'guru' && $user['approval_status'] !== 'approved') {
 
 // Create session
 session_regenerate_id(true);
-$_SESSION['user_id']   = $user['id'];$_SESSION['role']      = $role;
+$_SESSION['user_id']   = $user['id'];
+$_SESSION['role']      = $role;
 $_SESSION['username']  = $user['username'] ?? $user['email'];
 $_SESSION['full_name'] = $user['full_name'];
 
@@ -115,7 +117,7 @@ jsonResponse([
         'name'      => $user['full_name'],
         'username'  => $user['username'] ?? $user['email'],
     ],
-    'redirect'  => match($role) {
+    'redirect'  => match ($role) {
         'siswa' => 'student/dashboard.html',
         'guru'  => 'teacher/dashboard.html',
         'admin' => 'admin/dashboard.html',
