@@ -1,306 +1,494 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Kelola Siswa — Admin ExamSafe</title>
-  <link rel="stylesheet" href="../css/style.css">
-</head>
-<body>
-  <nav class="navbar">
-    <div class="navbar-brand">🎓 Exam<span>Safe</span> <span style="font-size:0.75rem;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:50px;margin-left:8px">ADMIN</span></div>
-    <div class="navbar-nav">
-      <div class="nav-user">
-        <div class="nav-avatar" style="background:var(--accent)">A</div>
-        <span>Administrator</span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kelola Siswa — Admin ExamSafe</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div class="navbar-brand">
+        🎓 Exam<span>Safe</span>
+        <span
+          style="
+            font-size: 0.75rem;
+            background: rgba(255, 255, 255, 0.2);
+            padding: 2px 8px;
+            border-radius: 50px;
+            margin-left: 8px;
+          "
+          >ADMIN</span
+        >
       </div>
-      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
+      <div class="navbar-nav">
+        <div class="nav-user">
+          <div class="nav-avatar" style="background: var(--accent)">A</div>
+          <span>Administrator</span>
+        </div>
+        <a
+          href="../index.html"
+          class="btn btn-sm btn-outline"
+          style="color: #fff; border-color: rgba(255, 255, 255, 0.4)"
+          >Keluar</a
+        >
+      </div>
+    </nav>
+
+    <div class="layout">
+      <aside class="sidebar">
+        <ul class="sidebar-menu">
+          <li>
+            <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+          </li>
+          <li>
+            <a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a>
+          </li>
+          <li>
+            <a href="students.html" class="active"
+              ><span class="icon">👨‍🎓</span> Kelola Siswa</a
+            >
+          </li>
+          <li>
+            <a href="exams.html"><span class="icon">📝</span> Semua Ujian</a>
+          </li>
+          <li>
+            <a href="reports.html"><span class="icon">📊</span> Laporan</a>
+          </li>
+          <li>
+            <a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a>
+          </li>
+          <li>
+            <a href="security-logs.html"
+              ><span class="icon">🔒</span> Log Keamanan</a
+            >
+          </li>
+        </ul>
+      </aside>
+
+      <main class="main-content">
+        <div class="page-header">
+          <div>
+            <div class="page-title">👨‍🎓 Kelola Siswa</div>
+            <div class="page-subtitle">Manajemen seluruh siswa di sekolah</div>
+          </div>
+          <div style="display: flex; gap: 10px">
+            <input
+              type="text"
+              id="studentSearch"
+              class="form-control"
+              placeholder="Cari nama, NISN, atau kelas..."
+              onkeyup="filterStudents()"
+              style="width: 280px"
+            />
+            <button class="btn btn-primary" onclick="openModal()">
+              + Tambah Siswa
+            </button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="table-wrapper">
+            <table>
+              <thead>
+                <tr>
+                  <th>No</th>
+                  <th>Nama Siswa</th>
+                  <th>NISN</th>
+                  <th>Username</th>
+                  <th>Kelas</th>
+                  <th>Status</th>
+                  <th>Aksi</th>
+                </tr>
+              </thead>
+              <tbody id="student-list">
+                <tr>
+                  <td colspan="7" style="text-align: center; padding: 20px">
+                    Memuat data siswa...
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </main>
     </div>
-  </nav>
 
-  <div class="layout">
-    <aside class="sidebar">
-      <ul class="sidebar-menu">
-        <li><a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a></li>
-        <li><a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a></li>
-        <li><a href="students.html" class="active"><span class="icon">👨‍🎓</span> Kelola Siswa</a></li>
-        <li><a href="exams.html"><span class="icon">📝</span> Semua Ujian</a></li>
-        <li><a href="reports.html"><span class="icon">📊</span> Laporan</a></li>
-        <li><a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a></li>
-        <li><a href="security-logs.html"><span class="icon">🔒</span> Log Keamanan</a></li>
-      </ul>
-    </aside>
-
-    <main class="main-content">
-      <div class="page-header">
-        <div>
-          <div class="page-title">👨‍🎓 Kelola Siswa</div>
-          <div class="page-subtitle">Manajemen seluruh siswa di sekolah</div>
+    <!-- Modal Tambah/Edit Siswa -->
+    <div id="studentModal" class="modal">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h3 id="modalTitle">Tambah Siswa</h3>
+          <span class="close" onclick="closeModal()">&times;</span>
         </div>
-        <div style="display: flex; gap: 10px;">
-          <input type="text" id="studentSearch" class="form-control" placeholder="Cari nama, NISN, atau kelas..." onkeyup="filterStudents()" style="width: 280px;">
-          <button class="btn btn-primary" onclick="openModal()">+ Tambah Siswa</button>
-        </div>
+        <form id="studentForm" onsubmit="saveStudent(event)">
+          <input type="hidden" id="studentId" />
+          <div class="form-group">
+            <label>Nama Lengkap</label>
+            <input
+              type="text"
+              id="fullName"
+              class="form-control"
+              required
+              placeholder="Nama lengkap siswa"
+            />
+          </div>
+          <div class="form-group">
+            <label>NISN</label>
+            <input
+              type="text"
+              id="nisn"
+              class="form-control"
+              required
+              placeholder="Nomor Induk Siswa Nasional"
+            />
+          </div>
+          <div class="form-group">
+            <label>Username</label>
+            <input
+              type="text"
+              id="username"
+              class="form-control"
+              required
+              placeholder="Digunakan untuk login"
+            />
+          </div>
+          <div class="form-group">
+            <label>Kelas</label>
+            <select id="class" class="form-control" required>
+              <option value="">-- Pilih Kelas --</option>
+              <!-- Dynamic -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label id="passLabel"
+              >Password (Kosongkan jika tidak ingin mengubah)</label
+            >
+            <input
+              type="password"
+              id="password"
+              class="form-control"
+              placeholder="Minimal 6 karakter"
+            />
+          </div>
+          <div style="margin-top: 20px; text-align: right">
+            <button
+              type="button"
+              class="btn btn-outline"
+              onclick="closeModal()"
+            >
+              Batal
+            </button>
+            <button type="submit" class="btn btn-primary">Simpan Data</button>
+          </div>
+        </form>
       </div>
-
-      <div class="card">
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>No</th>
-                <th>Nama Siswa</th>
-                <th>NISN</th>
-                <th>Username</th>
-                <th>Kelas</th>
-                <th>Status</th>
-                <th>Aksi</th>
-              </tr>
-            </thead>
-            <tbody id="student-list">
-              <tr><td colspan="7" style="text-align:center;padding:20px">Memuat data siswa...</td></tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
-  </div>
-
-  <!-- Modal Tambah/Edit Siswa -->
-  <div id="studentModal" class="modal">
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3 id="modalTitle">Tambah Siswa</h3>
-        <span class="close" onclick="closeModal()">&times;</span>
-      </div>
-      <form id="studentForm" onsubmit="saveStudent(event)">
-        <input type="hidden" id="studentId">
-        <div class="form-group">
-          <label>Nama Lengkap</label>
-          <input type="text" id="fullName" class="form-control" required placeholder="Nama lengkap siswa">
-        </div>
-        <div class="form-group">
-          <label>NISN</label>
-          <input type="text" id="nisn" class="form-control" required placeholder="Nomor Induk Siswa Nasional">
-        </div>
-        <div class="form-group">
-          <label>Username</label>
-          <input type="text" id="username" class="form-control" required placeholder="Digunakan untuk login">
-        </div>
-        <div class="form-group">
-          <label>Kelas</label>
-          <select id="class" class="form-control" required>
-            <option value="">-- Pilih Kelas --</option>
-            <!-- Dynamic -->
-          </select>
-        </div>
-        <div class="form-group">
-          <label id="passLabel">Password (Kosongkan jika tidak ingin mengubah)</label>
-          <input type="password" id="password" class="form-control" placeholder="Minimal 6 karakter">
-        </div>
-        <div style="margin-top:20px; text-align:right">
-          <button type="button" class="btn btn-outline" onclick="closeModal()">Batal</button>
-          <button type="submit" class="btn btn-primary">Simpan Data</button>
-        </div>
-      </form>
     </div>
-  </div>
 
-  <style>
-    .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); }
-    .modal-content { background: white; margin: 5% auto; padding: 20px; border-radius: 8px; width: 500px; box-shadow: 0 5px 15px rgba(0,0,0,0.3); }
-    .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid #eee; margin-bottom: 15px; padding-bottom: 10px; }
-    .close { cursor: pointer; font-size: 24px; }
-    .btn-sm { padding: 5px 10px; font-size: 12px; }
-  </style>
+    <style>
+      .modal {
+        display: none;
+        position: fixed;
+        z-index: 1000;
+        left: 0;
+        top: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.5);
+      }
+      .modal-content {
+        background: white;
+        margin: 5% auto;
+        padding: 20px;
+        border-radius: 8px;
+        width: 500px;
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #eee;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+      }
+      .close {
+        cursor: pointer;
+        font-size: 24px;
+      }
+      .btn-sm {
+        padding: 5px 10px;
+        font-size: 12px;
+      }
+    </style>
 
-  <script>
-    let allStudents = [];
+    <script>
+      let allStudents = [];
 
-    document.addEventListener('DOMContentLoaded', () => {
-      fetchStudents();
-      fetchClasses();
-      fetchAdminProfile();
-    });
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchStudents();
+        fetchClasses();
+        fetchAdminProfile();
+      });
 
-    async function fetchAdminProfile() {
-      try {
-        const response = await fetch('../php/admin_api.php?action=get_admin_profile');
-        const data = await response.json();
-        if (data.success) {
-          document.querySelector('.nav-user span').textContent = data.user.full_name;
-          document.querySelector('.nav-avatar').textContent = data.user.full_name.charAt(0).toUpperCase();
-        }
-      } catch (e) {}
-    }
-
-    async function fetchClasses() {
-      try {
-        const response = await fetch('../php/exam_api.php?action=get_classes');
-        const data = await response.json();
-        if (data.success) {
-          const select = document.getElementById('class');
-          data.classes.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.name;
-            opt.textContent = c.name;
-            select.appendChild(opt);
-          });
-        }
-      } catch (e) { console.error('Error fetching classes:', e); }
-    }
-
-    async function fetchStudents() {
-      try {
-        const response = await fetch('../php/admin_api.php?action=get_all_students');
-        const data = await response.json();
-        
-        const tbody = document.getElementById('student-list');
-        if (data.success) {
-          allStudents = data.students;
-          if (data.students.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">Belum ada data siswa.</td></tr>';
-            return;
+      async function fetchAdminProfile() {
+        try {
+          const response = await fetch(
+            "../php/admin_api.php?action=get_admin_profile"
+          );
+          const data = await response.json();
+          if (data.success) {
+            document.querySelector(".nav-user span").textContent =
+              data.user.full_name;
+            document.querySelector(".nav-avatar").textContent =
+              data.user.full_name.charAt(0).toUpperCase();
           }
-          tbody.innerHTML = data.students.map((s, i) => `
+        } catch (e) {}
+      }
+
+      async function fetchClasses() {
+        try {
+          const response = await fetch(
+            "../php/exam_api.php?action=get_classes"
+          );
+          const data = await response.json();
+          if (data.success) {
+            const select = document.getElementById("class");
+            data.classes.forEach((c) => {
+              const opt = document.createElement("option");
+              opt.value = c.name;
+              opt.textContent = c.name;
+              select.appendChild(opt);
+            });
+          }
+        } catch (e) {
+          console.error("Error fetching classes:", e);
+        }
+      }
+
+      async function fetchStudents() {
+        try {
+          const response = await fetch(
+            "../php/admin_api.php?action=get_all_students"
+          );
+          const data = await response.json();
+
+          const tbody = document.getElementById("student-list");
+          if (data.success) {
+            allStudents = data.students;
+            if (data.students.length === 0) {
+              tbody.innerHTML =
+                '<tr><td colspan="7" style="text-align:center;padding:20px">Belum ada data siswa.</td></tr>';
+              return;
+            }
+            tbody.innerHTML = data.students
+              .map(
+                (s, i) => `
             <tr>
               <td>${i + 1}</td>
-              <td><b>${s.full_name}</b></td>
-              <td>${s.nisn}</td>
-              <td>${s.username || '-'}</td>
-              <td>${s.class}</td>
-              <td><span class="badge ${s.is_active == 1 ? 'badge-success' : 'badge-danger'}">${s.is_active == 1 ? 'Aktif' : 'Nonaktif'}</span></td>
+              <td><b>${escapeHtml(s.full_name)}</b></td>
+              <td>${escapeHtml(s.nisn)}</td>
+              <td>${escapeHtml(s.username || "-")}</td>
+              <td>${escapeHtml(s.class)}</td>
+              <td><span class="badge ${
+                s.is_active == 1 ? "badge-success" : "badge-danger"
+              }">${s.is_active == 1 ? "Aktif" : "Nonaktif"}</span></td>
               <td>
-                <button class="btn btn-sm btn-outline" onclick="editStudent(${s.id})">Edit</button>
-                <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${s.id})">Hapus</button>
+                <button class="btn btn-sm btn-outline" onclick="editStudent(${
+                  s.id
+                })">Edit</button>
+                <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${
+                  s.id
+                })">Hapus</button>
               </td>
             </tr>
-          `).join('');
+          `
+              )
+              .join("");
+          }
+        } catch (error) {
+          console.error("Error fetching students:", error);
         }
-      } catch (error) {
-        console.error('Error fetching students:', error);
       }
-    }
 
-    function openModal(id = null) {
-      const modal = document.getElementById('studentModal');
-      const form = document.getElementById('studentForm');
-      modal.style.display = 'block';
-      
-      if (id) {
-        const s = allStudents.find(item => item.id == id);
-        document.getElementById('modalTitle').textContent = 'Edit Data Siswa';
-        document.getElementById('studentId').value = s.id;
-        document.getElementById('fullName').value = s.full_name;
-        document.getElementById('nisn').value = s.nisn;
-        document.getElementById('username').value = s.username;
-        document.getElementById('class').value = s.class;
-        document.getElementById('passLabel').textContent = 'Password Baru (Kosongkan jika tidak berubah)';
-        document.getElementById('password').required = false;
-      } else {
-        document.getElementById('modalTitle').textContent = 'Tambah Siswa Baru';
-        form.reset();
-        document.getElementById('studentId').value = '';
-        document.getElementById('passLabel').textContent = 'Password (Default: siswa123)';
-        document.getElementById('password').required = false;
-      }
-    }
+      function openModal(id = null) {
+        const modal = document.getElementById("studentModal");
+        const form = document.getElementById("studentForm");
+        modal.style.display = "block";
 
-    function closeModal() {
-      document.getElementById('studentModal').style.display = 'none';
-    }
+        if (id) {
+          const student = allStudents.find((item) => item.id == id);
 
-    async function saveStudent(e) {
-      e.preventDefault();
-      const id = document.getElementById('studentId').value;
-      const action = id ? 'update_student' : 'add_student';
-      
-      const payload = {
-        action: action,
-        id: id,
-        full_name: document.getElementById('fullName').value,
-        nisn: document.getElementById('nisn').value,
-        username: document.getElementById('username').value,
-        class: document.getElementById('class').value,
-        password: document.getElementById('password').value
-      };
+          if (!student) {
+            console.error("Student not found with id:", id);
+            alert("Data siswa tidak ditemukan. Silakan refresh halaman.");
+            closeModal();
+            return;
+          }
 
-      try {
-        const response = await fetch('../php/admin_api.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const data = await response.json();
-        if (data.success) {
-          alert(data.message);
-          closeModal();
-          fetchStudents();
+          document.getElementById("modalTitle").textContent = "Edit Data Siswa";
+          document.getElementById("studentId").value = student.id;
+          document.getElementById("fullName").value = student.full_name || "";
+          document.getElementById("nisn").value = student.nisn || "";
+          document.getElementById("username").value = student.username || "";
+          document.getElementById("class").value = student.class || "";
+          document.getElementById("passLabel").textContent =
+            "Password Baru (Kosongkan jika tidak berubah)";
+          document.getElementById("password").value = "";
+          document.getElementById("password").required = false;
         } else {
-          alert('Error: ' + data.message);
+          document.getElementById("modalTitle").textContent =
+            "Tambah Siswa Baru";
+          form.reset();
+          document.getElementById("studentId").value = "";
+          document.getElementById("fullName").value = "";
+          document.getElementById("nisn").value = "";
+          document.getElementById("username").value = "";
+          document.getElementById("class").value = "";
+          document.getElementById("password").value = "";
+          document.getElementById("passLabel").textContent =
+            "Password (Default: siswa123)";
+          document.getElementById("password").required = false;
         }
-      } catch (err) {
-        alert('Terjadi kesalahan saat menyimpan data.');
       }
-    }
 
-    async function deleteStudent(id) {
-      if (!confirm('Apakah Anda yakin ingin menghapus siswa ini? Seluruh data nilai siswa ini akan ikut terhapus.')) return;
-      
-      try {
-        const response = await fetch('../php/admin_api.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action: 'delete_student', id: id })
-        });
-        const data = await response.json();
-        if (data.success) {
-          alert(data.message);
-          fetchStudents();
-        } else {
-          alert('Error: ' + data.message);
+      function closeModal() {
+        document.getElementById("studentModal").style.display = "none";
+      }
+
+      async function saveStudent(e) {
+        e.preventDefault();
+        const id = document.getElementById("studentId").value;
+        const action = id ? "update_student" : "add_student";
+
+        const payload = {
+          action: action,
+          id: id || undefined,
+          full_name: document.getElementById("fullName").value,
+          nisn: document.getElementById("nisn").value,
+          username: document.getElementById("username").value,
+          class: document.getElementById("class").value,
+          password: document.getElementById("password").value || undefined,
+        };
+
+        Object.keys(payload).forEach(
+          (key) => payload[key] === undefined && delete payload[key]
+        );
+
+        try {
+          const response = await fetch("../php/admin_api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+          const data = await response.json();
+          if (data.success) {
+            alert(data.message);
+            closeModal();
+            fetchStudents();
+          } else {
+            alert("Error: " + data.message);
+          }
+        } catch (err) {
+          console.error("Save error:", err);
+          alert("Terjadi kesalahan saat menyimpan data.");
         }
-      } catch (err) {
-        alert('Terjadi kesalahan saat menghapus data.');
-      }
-    }
-
-    function editStudent(id) {
-      openModal(id);
-    }
-
-    function filterStudents() {
-      const query = document.getElementById('studentSearch').value.toLowerCase();
-      const tbody = document.getElementById('student-list');
-      
-      const filtered = allStudents.filter(s => 
-        s.full_name.toLowerCase().includes(query) || 
-        s.nisn.toLowerCase().includes(query) ||
-        s.class.toLowerCase().includes(query) ||
-        (s.username && s.username.toLowerCase().includes(query))
-      );
-
-      if (filtered.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">Data tidak ditemukan.</td></tr>';
-        return;
       }
 
-      tbody.innerHTML = filtered.map((s, i) => `
+      async function deleteStudent(id) {
+        if (
+          !confirm(
+            "Apakah Anda yakin ingin menghapus siswa ini? Seluruh data nilai siswa ini akan ikut terhapus."
+          )
+        )
+          return;
+
+        try {
+          const response = await fetch("../php/admin_api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ action: "delete_student", id: id }),
+          });
+          const data = await response.json();
+          if (data.success) {
+            alert(data.message);
+            fetchStudents();
+          } else {
+            alert("Error: " + data.message);
+          }
+        } catch (err) {
+          console.error("Delete error:", err);
+          alert("Terjadi kesalahan saat menghapus data.");
+        }
+      }
+
+      function editStudent(id) {
+        if (!allStudents || allStudents.length === 0) {
+          alert("Data siswa masih dimuat. Silakan tunggu sebentar.");
+          fetchStudents().then(() => {
+            openModal(id);
+          });
+          return;
+        }
+        openModal(id);
+      }
+
+      function filterStudents() {
+        const query = document
+          .getElementById("studentSearch")
+          .value.toLowerCase();
+        const tbody = document.getElementById("student-list");
+
+        const filtered = allStudents.filter(
+          (s) =>
+            s.full_name.toLowerCase().includes(query) ||
+            s.nisn.toLowerCase().includes(query) ||
+            s.class.toLowerCase().includes(query) ||
+            (s.username && s.username.toLowerCase().includes(query))
+        );
+
+        if (filtered.length === 0) {
+          tbody.innerHTML =
+            '<tr><td colspan="7" style="text-align:center;padding:20px">Data tidak ditemukan.</td></tr>';
+          return;
+        }
+
+        tbody.innerHTML = filtered
+          .map(
+            (s, i) => `
         <tr>
           <td>${i + 1}</td>
-          <td><b>${s.full_name}</b></td>
-          <td>${s.nisn}</td>
-          <td>${s.username || '-'}</td>
-          <td>${s.class}</td>
-          <td><span class="badge ${s.is_active == 1 ? 'badge-success' : 'badge-danger'}">${s.is_active == 1 ? 'Aktif' : 'Nonaktif'}</span></td>
+          <td><b>${escapeHtml(s.full_name)}</b></td>
+          <td>${escapeHtml(s.nisn)}</td>
+          <td>${escapeHtml(s.username || "-")}</td>
+          <td>${escapeHtml(s.class)}</td>
+          <td><span class="badge ${
+            s.is_active == 1 ? "badge-success" : "badge-danger"
+          }">${s.is_active == 1 ? "Aktif" : "Nonaktif"}</span></td>
           <td>
-            <button class="btn btn-sm btn-outline" onclick="editStudent(${s.id})">Edit</button>
-            <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${s.id})">Hapus</button>
+            <button class="btn btn-sm btn-outline" onclick="editStudent(${
+              s.id
+            })">Edit</button>
+            <button class="btn btn-sm btn-outline" style="color:var(--danger); border-color:var(--danger)" onclick="deleteStudent(${
+              s.id
+            })">Hapus</button>
           </td>
         </tr>
-      `).join('');
-    }
-  </script>
-  <script src="/exam-system/js/ui.js"></script>
-</body>
+      `
+          )
+          .join("");
+      }
+
+      function escapeHtml(str) {
+        if (!str) return "";
+        return str
+          .replace(/&/g, "&amp;")
+          .replace(/</g, "&lt;")
+          .replace(/>/g, "&gt;")
+          .replace(/"/g, "&quot;")
+          .replace(/'/g, "&#39;");
+      }
+    </script>
+    <script src="/exam-system/js/ui.js"></script>
+  </body>
 </html>

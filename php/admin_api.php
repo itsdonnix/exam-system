@@ -1,4 +1,5 @@
 <?php
+
 /**
  * ExamSafe — Admin API
  */
@@ -15,55 +16,107 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'admin') {
 }
 
 switch ($action) {
-    case 'get_stats':        getStats();        break;
-    case 'get_pending_teachers': getPendingTeachers(); break;
-    case 'get_pending_students': getPendingStudents(); break;
-    case 'approve_teacher':  approveTeacher();  break;
-    case 'reject_teacher':   rejectTeacher();   break;
-    case 'approve_student':  approveStudent();  break;
-    case 'reject_student':   rejectStudent();   break;
-    case 'get_all_exams':    getAllExams();     break;
-    case 'get_security_logs': getSecurityLogs(); break;
-    case 'get_teachers':     getTeachers();     break;
-    case 'get_all_students': getAllStudents();  break;
-    case 'get_admin_profile': getAdminProfile(); break;
-    case 'update_admin_profile': updateAdminProfile(); break;
-    
+    case 'get_stats':
+        getStats();
+        break;
+    case 'get_pending_teachers':
+        getPendingTeachers();
+        break;
+    case 'get_pending_students':
+        getPendingStudents();
+        break;
+    case 'approve_teacher':
+        approveTeacher();
+        break;
+    case 'reject_teacher':
+        rejectTeacher();
+        break;
+    case 'approve_student':
+        approveStudent();
+        break;
+    case 'reject_student':
+        rejectStudent();
+        break;
+    case 'get_all_exams':
+        getAllExams();
+        break;
+    case 'get_security_logs':
+        getSecurityLogs();
+        break;
+    case 'get_teachers':
+        getTeachers();
+        break;
+    case 'get_all_students':
+        getAllStudents();
+        break;
+    case 'get_admin_profile':
+        getAdminProfile();
+        break;
+    case 'update_admin_profile':
+        updateAdminProfile();
+        break;
+
     // Teacher CRUD
-    case 'add_teacher':      addTeacher();      break;
-    case 'update_teacher':   updateTeacher();   break;
-    case 'delete_teacher':   deleteTeacher();   break;
-    
+    case 'add_teacher':
+        addTeacher();
+        break;
+    case 'update_teacher':
+        updateTeacher();
+        break;
+    case 'delete_teacher':
+        deleteTeacher();
+        break;
+
     // Student CRUD
-    case 'add_student':      addStudent();      break;
-    case 'update_student':   updateStudent();   break;
-    case 'delete_student':   deleteStudent();   break;
-    
+    case 'add_student':
+        addStudent();
+        break;
+    case 'update_student':
+        updateStudent();
+        break;
+    case 'delete_student':
+        deleteStudent();
+        break;
+
     // Class CRUD
-    case 'get_classes':      getClassesAdmin(); break;
-    case 'add_class':        addClass();        break;
-    case 'delete_class':     deleteClass();     break;
-    
+    case 'get_classes':
+        getClassesAdmin();
+        break;
+    case 'add_class':
+        addClass();
+        break;
+    case 'delete_class':
+        deleteClass();
+        break;
+
     // Subject CRUD
-    case 'get_subjects':     getSubjectsAdmin(); break;
-    case 'add_subject':      addSubject();      break;
-    case 'delete_subject':   deleteSubject();   break;
+    case 'get_subjects':
+        getSubjectsAdmin();
+        break;
+    case 'add_subject':
+        addSubject();
+        break;
+    case 'delete_subject':
+        deleteSubject();
+        break;
 
     default:
         jsonResponse(['success' => false, 'message' => 'Action tidak valid'], 400);
 }
 
-function getClassesAdmin() {
+function getClassesAdmin()
+{
     $db = getDB();
     $classes = $db->query("SELECT * FROM classes ORDER BY name ASC")->fetchAll();
     jsonResponse(['success' => true, 'classes' => $classes]);
 }
 
-function addClass() {
+function addClass()
+{
     $data = getInput();
     $name = sanitize($data['name'] ?? '');
     if (!$name) jsonResponse(['success' => false, 'message' => 'Nama kelas wajib diisi'], 400);
-    
+
     $db = getDB();
     try {
         $stmt = $db->prepare("INSERT INTO classes (name) VALUES (?)");
@@ -74,7 +127,8 @@ function addClass() {
     }
 }
 
-function deleteClass() {
+function deleteClass()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
@@ -87,18 +141,20 @@ function deleteClass() {
     }
 }
 
-function getSubjectsAdmin() {
+function getSubjectsAdmin()
+{
     $db = getDB();
     $subjects = $db->query("SELECT * FROM subjects ORDER BY category ASC, name ASC")->fetchAll();
     jsonResponse(['success' => true, 'subjects' => $subjects]);
 }
 
-function addSubject() {
+function addSubject()
+{
     $data = getInput();
     $name = sanitize($data['name'] ?? '');
     $category = sanitize($data['category'] ?? 'Umum');
     if (!$name) jsonResponse(['success' => false, 'message' => 'Nama mata pelajaran wajib diisi'], 400);
-    
+
     $db = getDB();
     try {
         $stmt = $db->prepare("INSERT INTO subjects (name, category) VALUES (?, ?)");
@@ -109,7 +165,8 @@ function addSubject() {
     }
 }
 
-function deleteSubject() {
+function deleteSubject()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
@@ -122,10 +179,11 @@ function deleteSubject() {
     }
 }
 
-function addTeacher() {
+function addTeacher()
+{
     $data = getInput();
     $db = getDB();
-    
+
     $fullName = sanitize($data['full_name'] ?? '');
     $gelar    = sanitize($data['gelar'] ?? '');
     $nip      = sanitize($data['nip'] ?? '');
@@ -143,10 +201,11 @@ function addTeacher() {
     }
 }
 
-function updateTeacher() {
+function updateTeacher()
+{
     $data = getInput();
     $db = getDB();
-    
+
     $id       = (int)($data['id'] ?? 0);
     $fullName = sanitize($data['full_name'] ?? '');
     $gelar    = sanitize($data['gelar'] ?? '');
@@ -170,11 +229,12 @@ function updateTeacher() {
     }
 }
 
-function deleteTeacher() {
+function deleteTeacher()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
-    
+
     try {
         $stmt = $db->prepare("DELETE FROM teachers WHERE id = ?");
         $stmt->execute([$id]);
@@ -185,10 +245,11 @@ function deleteTeacher() {
     }
 }
 
-function addStudent() {
+function addStudent()
+{
     $data = getInput();
     $db = getDB();
-    
+
     $fullName = sanitize($data['full_name'] ?? '');
     $nisn     = sanitize($data['nisn'] ?? '');
     $username = sanitize($data['username'] ?? '');
@@ -205,10 +266,11 @@ function addStudent() {
     }
 }
 
-function updateStudent() {
+function updateStudent()
+{
     $data = getInput();
     $db = getDB();
-    
+
     $id       = (int)($data['id'] ?? 0);
     $fullName = sanitize($data['full_name'] ?? '');
     $nisn     = sanitize($data['nisn'] ?? '');
@@ -231,11 +293,12 @@ function updateStudent() {
     }
 }
 
-function deleteStudent() {
+function deleteStudent()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
-    
+
     try {
         $stmt = $db->prepare("DELETE FROM students WHERE id = ?");
         $stmt->execute([$id]);
@@ -246,19 +309,22 @@ function deleteStudent() {
     }
 }
 
-function getTeachers() {
+function getTeachers()
+{
     $db = getDB();
     $teachers = $db->query("SELECT id, full_name, gelar, nip, email, subject, approval_status, is_active FROM teachers ORDER BY full_name ASC")->fetchAll();
     jsonResponse(['success' => true, 'teachers' => $teachers]);
 }
 
-function getAllStudents() {
+function getAllStudents()
+{
     $db = getDB();
-    $students = $db->query("SELECT id, full_name, nisn, class, is_active FROM students ORDER BY class ASC, full_name ASC")->fetchAll();
+    $students = $db->query("SELECT id, full_name, username, nisn, class, is_active FROM students ORDER BY class ASC, full_name ASC")->fetchAll();
     jsonResponse(['success' => true, 'students' => $students]);
 }
 
-function getStats() {
+function getStats()
+{
     $db = getDB();
     $avgScore = $db->query("SELECT AVG(score) FROM exam_submissions")->fetchColumn();
     $stats = [
@@ -271,17 +337,19 @@ function getStats() {
     jsonResponse(['success' => true, 'stats' => $stats]);
 }
 
-function getAdminProfile() {
+function getAdminProfile()
+{
     $db = getDB();
     $stmt = $db->prepare("SELECT id, username, email, full_name FROM admins WHERE id = ?");
     $stmt->execute([$_SESSION['user_id']]);
     jsonResponse(['success' => true, 'user' => $stmt->fetch()]);
 }
 
-function updateAdminProfile() {
+function updateAdminProfile()
+{
     $data = getInput();
     $db = getDB();
-    
+
     $fullName = sanitize($data['full_name'] ?? '');
     $email    = sanitize($data['email'] ?? '');
     $password = $data['new_password'] ?? '';
@@ -298,13 +366,15 @@ function updateAdminProfile() {
     jsonResponse(['success' => true, 'message' => 'Profil admin diperbarui']);
 }
 
-function getPendingStudents() {
+function getPendingStudents()
+{
     $db = getDB();
     $students = $db->query("SELECT id, full_name, nisn, class, username, created_at FROM students WHERE approval_status = 'pending' ORDER BY created_at DESC")->fetchAll();
     jsonResponse(['success' => true, 'students' => $students]);
 }
 
-function approveStudent() {
+function approveStudent()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
@@ -313,7 +383,8 @@ function approveStudent() {
     jsonResponse(['success' => true, 'message' => 'Siswa berhasil disetujui']);
 }
 
-function rejectStudent() {
+function rejectStudent()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
@@ -322,35 +393,39 @@ function rejectStudent() {
     jsonResponse(['success' => true, 'message' => 'Siswa berhasil ditolak']);
 }
 
-function getPendingTeachers() {
+function getPendingTeachers()
+{
     $db = getDB();
     $teachers = $db->query("SELECT id, full_name, nip, email, phone, subject, school, created_at FROM teachers WHERE approval_status = 'pending' ORDER BY created_at DESC")->fetchAll();
     jsonResponse(['success' => true, 'teachers' => $teachers]);
 }
 
-function approveTeacher() {
+function approveTeacher()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
-    
+
     $stmt = $db->prepare("UPDATE teachers SET approval_status = 'approved', is_active = 1, approved_at = NOW() WHERE id = ?");
     $stmt->execute([$id]);
-    
+
     jsonResponse(['success' => true, 'message' => 'Guru berhasil disetujui']);
 }
 
-function rejectTeacher() {
+function rejectTeacher()
+{
     $data = getInput();
     $id = (int)($data['id'] ?? 0);
     $db = getDB();
-    
+
     $stmt = $db->prepare("UPDATE teachers SET approval_status = 'rejected', is_active = 0 WHERE id = ?");
     $stmt->execute([$id]);
-    
+
     jsonResponse(['success' => true, 'message' => 'Guru berhasil ditolak']);
 }
 
-function getAllExams() {
+function getAllExams()
+{
     $db = getDB();
     $exams = $db->query("
         SELECT e.*, t.full_name as teacher_name, 
@@ -362,7 +437,8 @@ function getAllExams() {
     jsonResponse(['success' => true, 'exams' => $exams]);
 }
 
-function getSecurityLogs() {
+function getSecurityLogs()
+{
     $db = getDB();
     $logs = $db->query("
         SELECT v.*, s.full_name as student_name, e.name as exam_name
