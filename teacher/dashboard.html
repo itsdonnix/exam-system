@@ -1,0 +1,739 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard Guru — ExamSafe</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .exam-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 20px 24px;
+      box-shadow: 0 4px 16px rgba(26,60,110,0.08);
+      border-left: 4px solid var(--primary-light);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 14px;
+      transition: transform 0.2s;
+    }
+    .exam-card:hover { transform: translateY(-2px); }
+    .exam-card-info h4 { font-size: 1rem; font-weight: 700; color: var(--primary); }
+    .exam-card-meta { display: flex; gap: 14px; margin-top: 6px; flex-wrap: wrap; }
+    .exam-card-meta span { font-size: 0.8rem; color: #64748b; }
+    .exam-card-actions { display: flex; gap: 8px; }
+    .quick-actions { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin-bottom: 28px; }
+    .quick-action-card {
+      background: #fff;
+      border-radius: 14px;
+      padding: 24px;
+      text-align: center;
+      box-shadow: 0 4px 16px rgba(26,60,110,0.08);
+      cursor: pointer;
+      transition: all 0.2s;
+      border: 2px solid transparent;
+    }
+    .quick-action-card:hover { border-color: var(--primary-light); transform: translateY(-3px); }
+    .quick-action-card .icon { font-size: 2.5rem; margin-bottom: 10px; }
+    .quick-action-card h4 { font-size: 0.95rem; font-weight: 700; color: var(--primary); }
+    .quick-action-card p { font-size: 0.8rem; color: #64748b; margin-top: 4px; }
+
+    /* Skeleton Loader Styles */
+    .skeleton-loader {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 12px;
+    }
+
+    .skeleton-line {
+      height: 12px;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      border-radius: 4px;
+      animation: shimmer 1.5s infinite;
+    }
+
+    .skeleton-avatar {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+    }
+
+    @keyframes shimmer {
+      0% { background-position: 200% 0; }
+      100% { background-position: -200% 0; }
+    }
+
+    /* Spinner Styles */
+    .spinner {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100%;
+    }
+
+    .spinner-ring {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #2563eb;
+      border-radius: 50%;
+      width: 40px;
+      height: 40px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🎓 Exam<span>Safe</span></div>
+    <div class="navbar-nav">
+      <a href="dashboard.html" class="nav-link active">Dashboard</a>
+      <a href="create-exam.html" class="nav-link">Buat Ujian</a>
+      <a href="question-bank.html" class="nav-link">Bank Soal</a>
+      <a href="results.html" class="nav-link">Hasil Ujian</a>
+      <div class="nav-user">
+        <div class="nav-avatar">G</div>
+        <span>Pak Budi</span>
+      </div>
+      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+  <script src="/exam-system/js/ui.js"></script>
+      <ul class="sidebar-menu">
+        <li><a href="dashboard.html" class="active"><span class="icon">🏠</span> Dashboard</a></li>
+        <li><a href="create-exam.html"><span class="icon">➕</span> Buat Ujian Baru</a></li>
+        <li><a href="question-bank.html"><span class="icon">📚</span> Bank Soal</a></li>
+        <li><a href="results.html"><span class="icon">📊</span> Hasil Ujian</a></li>
+        <li><a href="students.html"><span class="icon">👥</span> Data Siswa</a></li>
+        <li><a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">Dashboard Guru</div>
+          <div class="page-subtitle"></div>
+        </div>
+        <a href="create-exam.html" class="btn btn-primary">➕ Buat Ujian Baru</a>
+      </div>
+
+      <!-- Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">📝</div>
+          <div>
+            <div class="stat-value">8</div>
+            <div class="stat-label">Total Ujian</div>
+          </div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--success)">
+          <div class="stat-icon" style="background:rgba(16,185,129,0.1)">✅</div>
+          <div>
+            <div class="stat-value" style="color:var(--success)">3</div>
+            <div class="stat-label">Ujian Aktif</div>
+          </div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--accent)">
+          <div class="stat-icon" style="background:rgba(245,158,11,0.1)">👨‍🎓</div>
+          <div>
+            <div class="stat-value" style="color:var(--accent)">142</div>
+            <div class="stat-label">Total Siswa</div>
+          </div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--secondary)">
+          <div class="stat-icon" style="background:rgba(14,165,233,0.1)">⭐</div>
+          <div>
+            <div class="stat-value" style="color:var(--secondary)">78.5</div>
+            <div class="stat-label">Rata-rata Nilai</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <div class="quick-action-card" onclick="window.location.href='create-exam.html'">
+          <div class="icon">📝</div>
+          <h4>Buat Ujian Baru</h4>
+          <p>Tambah soal pilihan ganda & esai</p>
+        </div>
+        <div class="quick-action-card" onclick="window.location.href='question-bank.html'">
+          <div class="icon">📚</div>
+          <h4>Bank Soal</h4>
+          <p>Kelola soal untuk digunakan kembali</p>
+        </div>
+        <div class="quick-action-card" onclick="window.location.href='results.html'">
+          <div class="icon">📊</div>
+          <h4>Lihat Hasil Ujian</h4>
+          <p>Laporan nilai dan statistik siswa</p>
+        </div>
+        <div class="quick-action-card">
+          <div class="icon">👁️</div>
+          <h4>Monitor Ujian</h4>
+          <p>Pantau aktivitas siswa real-time</p>
+        </div>
+        <div class="quick-action-card">
+          <div class="icon">📤</div>
+          <h4>Export Nilai</h4>
+          <p>Download laporan dalam format Excel</p>
+        </div>
+      </div>
+
+      <!-- Exam List -->
+      <div class="card">
+        <div class="page-header" style="margin-bottom:20px">
+          <div style="flex:1">
+            <div class="page-title" style="font-size:1.1rem">📋 Daftar Ujian Saya</div>
+          </div>
+          <div style="display:flex; gap:10px; flex:2; justify-content: flex-end;">
+            <input type="text" id="examSearch" class="form-control" placeholder="Cari nama ujian atau kelas..." onkeyup="filterExams()" style="max-width:300px; padding: 8px 14px;">
+            <a href="create-exam.html" class="btn btn-primary btn-sm">+ Tambah</a>
+          </div>
+        </div>
+
+        <div id="exam-list">
+          <div class="exam-card">
+            <div class="exam-card-info">
+              <h4>Matematika — Bab 5: Integral</h4>
+              <div class="exam-card-meta">
+                <span>📅 15 Jan 2024, 08:00–09:30</span>
+                <span>⏱️ 90 menit</span>
+                <span>📝 40 soal</span>
+                <span>👥 35 siswa</span>
+              </div>
+              <div class="exam-card-meta">
+                <span class="badge badge-success">Aktif</span>
+                <span>🔑 Kode: <b>UJIAN2024</b></span>
+              </div>
+            </div>
+            <div class="exam-card-actions">
+              <button class="btn btn-sm btn-secondary" onclick="showMonitor()">👁️ Monitor</button>
+              <a href="create-exam.html?edit=1" class="btn btn-sm btn-outline">✏️ Edit</a>
+              <button class="btn btn-sm btn-danger" onclick="deleteExam(this)">🗑️</button>
+            </div>
+          </div>
+
+          <div class="exam-card">
+            <div class="exam-card-info">
+              <h4>Matematika — Bab 4: Turunan</h4>
+              <div class="exam-card-meta">
+                <span>📅 10 Jan 2024, 10:00–11:30</span>
+                <span>⏱️ 90 menit</span>
+                <span>📝 35 soal</span>
+                <span>👥 35 siswa</span>
+              </div>
+              <div class="exam-card-meta">
+                <span class="badge badge-secondary">Selesai</span>
+                <span>⭐ Rata-rata: <b>78.5</b></span>
+              </div>
+            </div>
+            <div class="exam-card-actions">
+              <a href="results.html" class="btn btn-sm btn-secondary">📊 Hasil</a>
+              <a href="create-exam.html?edit=2" class="btn btn-sm btn-outline">✏️ Edit</a>
+              <button class="btn btn-sm btn-danger" onclick="deleteExam(this)">🗑️</button>
+            </div>
+          </div>
+
+          <div class="exam-card" style="border-left-color:#94a3b8">
+            <div class="exam-card-info">
+              <h4>Matematika — Bab 6: Statistika</h4>
+              <div class="exam-card-meta">
+                <span>📅 20 Jan 2024, 08:00–09:30</span>
+                <span>⏱️ 90 menit</span>
+                <span>📝 40 soal</span>
+                <span>👥 35 siswa</span>
+              </div>
+              <div class="exam-card-meta">
+                <span class="badge badge-warning">Draft</span>
+              </div>
+            </div>
+            <div class="exam-card-actions">
+              <button class="btn btn-sm btn-success" onclick="activateExam(this)">▶️ Aktifkan</button>
+              <a href="create-exam.html?edit=3" class="btn btn-sm btn-outline">✏️ Edit</a>
+              <button class="btn btn-sm btn-danger" onclick="deleteExam(this)">🗑️</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Recent Violations -->
+      <div class="card mt-3">
+        <div class="page-title" style="font-size:1.1rem;margin-bottom:16px">⚠️ Pelanggaran Terbaru</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Siswa</th>
+                <th>Ujian</th>
+                <th>Pelanggaran</th>
+                <th>Waktu</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Andi Pratama</b> (XII IPA 1)</td>
+                <td>Matematika — Integral</td>
+                <td>Perpindahan tab terdeteksi</td>
+                <td>08:23:15</td>
+                <td><span class="badge badge-warning">Peringatan</span></td>
+              </tr>
+              <tr>
+                <td><b>Siti Rahayu</b> (XII IPA 2)</td>
+                <td>Matematika — Integral</td>
+                <td>Keluar fullscreen</td>
+                <td>08:45:02</td>
+                <td><span class="badge badge-danger">Dihentikan</span></td>
+              </tr>
+              <tr>
+                <td><b>Budi Santoso</b> (XII IPA 1)</td>
+                <td>Matematika — Turunan</td>
+                <td>Developer tools dibuka</td>
+                <td>10:12:44</td>
+                <td><span class="badge badge-warning">Peringatan</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Monitor Modal -->
+  <div class="modal-overlay" id="monitor-modal">
+    <div class="modal" style="max-width:700px">
+      <div class="modal-header">
+        <div class="modal-title">👁️ Monitor Ujian — Matematika Integral</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:16px">
+        <div class="stat-card" style="padding:14px">
+          <div><div class="stat-value" style="font-size:1.4rem">35</div><div class="stat-label">Total</div></div>
+        </div>
+        <div class="stat-card" style="padding:14px;border-left-color:var(--success)">
+          <div><div class="stat-value" style="font-size:1.4rem;color:var(--success)">28</div><div class="stat-label">Aktif</div></div>
+        </div>
+        <div class="stat-card" style="padding:14px;border-left-color:var(--warning)">
+          <div><div class="stat-value" style="font-size:1.4rem;color:var(--warning)">5</div><div class="stat-label">Selesai</div></div>
+        </div>
+        <div class="stat-card" style="padding:14px;border-left-color:var(--danger)">
+          <div><div class="stat-value" style="font-size:1.4rem;color:var(--danger)">2</div><div class="stat-label">Pelanggaran</div></div>
+        </div>
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead><tr><th>Siswa</th><th>Progress</th><th>Waktu</th><th>Status</th></tr></thead>
+          <tbody>
+            <tr><td>Andi Pratama</td><td>25/40 soal</td><td>32 menit</td><td><span class="badge badge-success">Aktif</span></td></tr>
+            <tr><td>Siti Rahayu</td><td>—</td><td>—</td><td><span class="badge badge-danger">Dihentikan</span></td></tr>
+            <tr><td>Budi Santoso</td><td>38/40 soal</td><td>78 menit</td><td><span class="badge badge-success">Aktif</span></td></tr>
+            <tr><td>Dewi Lestari</td><td>40/40 soal</td><td>65 menit</td><td><span class="badge badge-warning">Selesai</span></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      showSkeletonLoader();
+      showStatsSkeletonLoader();
+      showNavUserSkeletonLoader();
+      fetchDashboardData();
+      showViolationSkeletonLoader();
+      fetchViolations();
+    });
+
+    function showSkeletonLoader() {
+      const container = document.getElementById('exam-list');
+      container.innerHTML = `
+        <div class="skeleton-loader">
+          <div class="skeleton-line" style="width: 40%"></div>
+          <div class="skeleton-line" style="width: 60%"></div>
+          <div class="skeleton-line" style="width: 30%"></div>
+        </div>
+        <div class="skeleton-loader">
+          <div class="skeleton-line" style="width: 50%"></div>
+          <div class="skeleton-line" style="width: 70%"></div>
+          <div class="skeleton-line" style="width: 40%"></div>
+        </div>
+      `;
+    }
+
+    function showViolationSkeletonLoader() {
+      const tbody = document.querySelector('.main-content .card:last-of-type table tbody');
+      if (!tbody) return;
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5">
+            <div class="skeleton-loader" style="margin: 8px 0;">
+              <div class="skeleton-line" style="width: 100%; height: 16px;"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="5">
+            <div class="skeleton-loader" style="margin: 8px 0;">
+              <div class="skeleton-line" style="width: 100%; height: 16px;"></div>
+            </div>
+          </td>
+        </tr>
+        <tr>
+          <td colspan="5">
+            <div class="skeleton-loader" style="margin: 8px 0;">
+              <div class="skeleton-line" style="width: 100%; height: 16px;"></div>
+            </div>
+          </td>
+        </tr>
+      `;
+    }
+
+    function showStatsSkeletonLoader() {
+      const statCards = document.querySelectorAll('.stat-card');
+      statCards.forEach(card => {
+        const valueDiv = card.querySelector('.stat-value');
+        if (valueDiv) {
+          valueDiv.innerHTML = `<div class="skeleton-line" style="width: 60%; margin: 4px 0;"></div>`;
+        }
+      });
+    }
+
+    function showNavUserSkeletonLoader() {
+      const navUser = document.querySelector('.nav-user');
+      if (!navUser) return;
+      
+      const avatar = navUser.querySelector('.nav-avatar');
+      const nameSpan = navUser.querySelector('span');
+      
+      if (avatar) {
+        avatar.innerHTML = `<div class="skeleton-avatar"></div>`;
+      }
+      if (nameSpan) {
+        nameSpan.innerHTML = `<div class="skeleton-line" style="width: 80%; height: 12px;"></div>`;
+      }
+    }
+
+    let allExams = [];
+
+    async function fetchDashboardData() {
+      try {
+        // Fetch exams
+        const response = await fetch('../php/exam_api.php?action=get_exams', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+
+        if (data.success) {
+          allExams = data.exams;
+          renderExams(allExams);
+          updateStats(allExams);
+          fetchViolations(); 
+        }
+
+        // Fetch Teacher Stats (Total Siswa & Rata-rata Nilai)
+        const statsRes = await fetch('../php/exam_api.php?action=get_teacher_stats', {
+          credentials: 'include'
+        });
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          // Update stat cards with real data
+          const statValues = document.querySelectorAll('.stat-value');
+          if (statValues[2]) statValues[2].textContent = statsData.total_students;
+          if (statValues[3]) statValues[3].textContent = statsData.average_score;
+        }
+
+        // Fetch Profile for name
+        const profileRes = await fetch('../php/exam_api.php?action=get_profile', {
+          credentials: 'include'
+        });
+        const profileData = await profileRes.json();
+        if (profileData.success) {
+          const user = profileData.user;
+          const fullNameWithGelar = user.full_name + (user.gelar ? ', ' + user.gelar : '');
+          
+          // Update Navbar
+          document.querySelector('.nav-user span').textContent = fullNameWithGelar;
+          document.querySelector('.nav-avatar').textContent = user.full_name.charAt(0).toUpperCase();
+          
+          // Update Welcome Subtitle
+          document.querySelector('.page-subtitle').textContent = `Selamat datang, ${fullNameWithGelar} — ${user.subject}`;
+        }
+      } catch (error) {
+        console.error('Error fetching dashboard data:', error);
+      }
+    }
+
+    async function fetchViolations() {
+      try {
+        const response = await fetch('../php/exam_api.php?action=get_recent_violations', {
+          credentials: 'include'
+        });
+        const data = await response.json();
+
+        const tbody = document.querySelector('.main-content .card:last-of-type table tbody');
+        if (!tbody) return;
+
+        if (data.success) {
+          if (data.violations.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px">Tidak ada pelanggaran terdeteksi.</td></tr>';
+            return;
+          }
+          
+          tbody.innerHTML = data.violations.map(v => `
+            <tr>
+              <td>${v.student_name}</td>
+              <td>${v.exam_name}</td>
+              <td>${v.reason}</td>
+              <td>${new Date(v.created_at).toLocaleTimeString('id-ID')}</td>
+              <td><span class="badge badge-${v.violation_count >= 3 ? 'danger' : 'warning'}">${v.violation_count >= 3 ? 'Dihentikan' : 'Peringatan'}</span></td>
+            </tr>
+          `).join('');
+        } else {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b">Gagal memuat data pelanggaran.</td></tr>';
+        }
+      } catch (error) {
+        console.error('Error fetching violations:', error);
+        const tbody = document.querySelector('.main-content .card:last-of-type table tbody');
+        if (tbody) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;padding:40px;color:#64748b">Terjadi kesalahan saat memuat data pelanggaran.</td></tr>';
+        }
+      }
+    }
+
+    function filterExams() {
+      const query = document.getElementById('examSearch').value.toLowerCase();
+      const filtered = allExams.filter(e => 
+        e.name.toLowerCase().includes(query) || 
+        e.class.toLowerCase().includes(query) ||
+        e.subject.toLowerCase().includes(query)
+      );
+      renderExams(filtered);
+    }
+
+    function renderExams(exams) {
+      const container = document.getElementById('exam-list');
+      if (!exams || exams.length === 0) {
+        container.innerHTML = '<div style="text-align:center;padding:40px;color:#64748b">Belum ada ujian atau tidak ditemukan.</div>';
+        return;
+      }
+
+      container.innerHTML = exams.map(exam => {
+        const statusClass = exam.status === 'active' ? 'badge-success' : (exam.status === 'ended' ? 'badge-secondary' : 'badge-warning');
+        const statusText = exam.status.charAt(0).toUpperCase() + exam.status.slice(1);
+        const examDate = new Date(exam.start_time).toLocaleDateString('id-ID', { day:'numeric', month:'short', year:'numeric' });
+        const examTime = new Date(exam.start_time).toLocaleTimeString('id-ID', { hour:'2-digit', minute:'2-digit' });
+        
+        return `
+          <div class="exam-card" style="border-left-color: ${exam.status === 'active' ? 'var(--success)' : '#94a3b8'}">
+            <div class="exam-card-info">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px">
+                <span class="badge badge-info" style="font-size:0.7rem">📅 ${examDate}</span>
+                <h4>${exam.name}</h4>
+              </div>
+              <div class="exam-card-meta">
+                <span>📚 ${exam.subject}</span>
+                <span>👥 ${exam.class}</span>
+                <span>⏱️ ${exam.duration_minutes} menit</span>
+                <span>📝 ${exam.question_count} soal</span>
+              </div>
+              <div class="exam-card-meta">
+                <span class="badge ${statusClass}">${statusText}</span>
+                <span>🕒 Mulai: ${examTime}</span>
+                <span>🔑 Kode: <b style="letter-spacing:1px">${exam.exam_code}</b></span>
+              </div>
+            </div>
+            <div class="exam-card-actions">
+              ${exam.status === 'draft' || exam.status === 'ended' ? 
+                `<button class="btn btn-sm btn-success" onclick="activateExam(${exam.id})">▶️ Aktifkan</button>` : 
+                `<button class="btn btn-sm btn-danger" onclick="deactivateExam(${exam.id})" style="background:#ef4444">⏹ Berhentikan</button>`
+              }
+              
+              ${exam.status === 'active' ? 
+                `<button class="btn btn-sm btn-secondary" onclick="showMonitor(${exam.id})">👁️ Monitor</button>` : 
+                `<button class="btn btn-sm btn-outline" onclick="deleteExam(${exam.id})">🗑️ Hapus</button>`
+              }
+              
+              <button class="btn btn-sm btn-outline" onclick="duplicateExam(${exam.id})" title="Copy seluruh isi ujian ini">👯 Duplikat</button>
+              <a href="results.html?exam_id=${exam.id}" class="btn btn-sm btn-outline">📊 Hasil</a>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function duplicateExam(id) {
+      if (!confirm('Duplikat ujian ini?\nSeluruh soal (40 nomor atau lebih) akan disalin secara otomatis ke draf baru.')) return;
+      
+      try {
+        const response = await fetch('../php/exam_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'duplicate_exam', exam_id: id })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ ' + result.message);
+          fetchDashboardData();
+        } else {
+          alert('❌ ' + result.message);
+        }
+      } catch (error) {}
+    }
+
+    async function activateExam(id) {
+      if (!confirm('Aktifkan ujian ini? Setelah aktif, siswa dapat mengerjakan sesuai jadwal.')) return;
+      
+      try {
+        const response = await fetch('../php/exam_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'activate_exam', exam_id: id })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('🚀 ' + result.message);
+          fetchDashboardData();
+        } else {
+          alert('❌ ' + result.message);
+        }
+      } catch (error) {}
+    }
+
+    async function deactivateExam(id) {
+      if (!confirm('⚠️ Hentikan ujian ini?\nSiswa yang sedang mengerjakan akan terputus dan tidak bisa masuk lagi.')) return;
+      
+      try {
+        const response = await fetch('../php/exam_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'deactivate_exam', exam_id: id })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('⏹ ' + result.message);
+          fetchDashboardData();
+        } else {
+          alert('❌ ' + result.message);
+        }
+      } catch (error) {}
+    }
+
+    function updateStats(exams) {
+      const total = exams.length;
+      const active = exams.filter(e => e.status === 'active').length;
+      
+      const statValues = document.querySelectorAll('.stat-value');
+      // Update Total Ujian dan Ujian Aktif (indices 0 dan 1)
+      if (statValues[0]) statValues[0].textContent = total;
+      if (statValues[1]) statValues[1].textContent = active;
+      // Indices 2 dan 3 (Total Siswa dan Rata-rata Nilai) akan di-update dari get_teacher_stats API
+    }
+
+    async function deleteExam(id) {
+      if (!confirm('⚠️ PERHATIAN!\nMenghapus ujian akan menghapus seluruh soal dan data nilai siswa terkait ujian ini.\n\nApakah Anda yakin ingin menghapus ujian ini secara permanen?')) return;
+      
+      try {
+        const response = await fetch('../php/exam_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'delete_exam', exam_id: id })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('🗑️ ' + result.message);
+          fetchDashboardData(); // Refresh list
+        } else {
+          alert('❌ ' + result.message);
+        }
+      } catch (error) {
+        console.error('Error deleting exam:', error);
+      }
+    }
+
+    async function showMonitor(id) {
+      document.getElementById('monitor-modal').classList.add('active');
+      const tbody = document.querySelector('#monitor-modal table tbody');
+      tbody.innerHTML = '<tr><td colspan="4" style="text-align:center">Memuat...</td></tr>';
+
+      try {
+        const response = await fetch(`../php/exam_api.php?action=get_exam_monitor&exam_id=${id}`);
+        const data = await response.json();
+        
+        if (data.success) {
+          // Update Modal Stats
+          const statVals = document.querySelectorAll('#monitor-modal .stat-value');
+          statVals[0].textContent = data.stats.total;
+          statVals[1].textContent = data.participants.length;
+          statVals[2].textContent = data.stats.finished;
+          statVals[3].textContent = data.stats.violation;
+
+          if (data.participants.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px">Belum ada siswa yang bergabung.</td></tr>';
+            return;
+          }
+
+          tbody.innerHTML = data.participants.map(p => `
+            <tr>
+              <td>${p.full_name}</td>
+              <td>${p.score || '—'} (Skor)</td>
+              <td>${p.submitted_at ? new Date(p.submitted_at).toLocaleTimeString('id-ID') : '—'}</td>
+              <td style="display:flex; align-items:center; gap:10px">
+                <span class="badge badge-${p.is_forced == 1 ? 'danger' : 'success'}">
+                  ${p.is_forced == 1 ? 'Diputus' : 'Selesai'}
+                </span>
+                ${p.v_count > 0 ? `<span style="color:red; font-size:0.7rem">⚠️ ${p.v_count}x</span>` : ''}
+                
+                ${p.is_forced == 1 ? 
+                  `<button class="btn btn-sm btn-success" style="padding:2px 8px; font-size:0.7rem" onclick="grantTolerance(${id}, ${p.student_id}, '${p.full_name}')">🔓 Toleransi</button>` 
+                  : ''
+                }
+              </td>
+            </tr>
+          `).join('');
+        }
+      } catch (error) {}
+    }
+
+    async function grantTolerance(examId, studentId, name) {
+      if (!confirm(`Berikan toleransi kepada ${name}?\nSiswa akan dapat masuk kembali ke ujian ini.`)) return;
+      
+      try {
+        const response = await fetch('../php/exam_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'unlock_student', exam_id: examId, student_id: studentId })
+        });
+        const result = await response.json();
+        
+        if (result.success) {
+          alert('✅ ' + result.message);
+          showMonitor(examId); // Refresh modal
+        } else {
+          alert('❌ ' + result.message);
+        }
+      } catch (error) {}
+    }
+
+    function closeModal() {
+      document.getElementById('monitor-modal').classList.remove('active');
+    }
+  </script>
+</body>
+</html>
+');

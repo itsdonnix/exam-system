@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Admin Panel — ExamSafe</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .approval-card {
+      background: #fff;
+      border-radius: 12px;
+      padding: 18px 20px;
+      margin-bottom: 12px;
+      box-shadow: 0 2px 12px rgba(26,60,110,0.07);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      border-left: 4px solid var(--warning);
+    }
+    .approval-card.approved { border-left-color: var(--success); }
+    .approval-card.rejected { border-left-color: var(--danger); }
+    .teacher-avatar { width: 44px; height: 44px; border-radius: 50%; background: var(--primary); color: #fff; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1.1rem; flex-shrink: 0; }
+    .teacher-info { flex: 1; margin-left: 14px; }
+    .teacher-info h4 { font-size: 0.95rem; font-weight: 700; color: var(--primary); }
+    .teacher-info p { font-size: 0.8rem; color: #64748b; margin-top: 2px; }
+    .system-stat { background: linear-gradient(135deg, var(--primary), var(--primary-light)); color: #fff; border-radius: 14px; padding: 20px; }
+    .system-stat .val { font-size: 2rem; font-weight: 800; }
+    .system-stat .lbl { font-size: 0.82rem; opacity: 0.85; }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🎓 Exam<span>Safe</span> <span style="font-size:0.75rem;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:50px;margin-left:8px">ADMIN</span></div>
+    <div class="navbar-nav">
+      <div class="nav-user">
+        <div class="nav-avatar" style="background:var(--accent)">A</div>
+        <span>Administrator</span>
+      </div>
+      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <ul class="sidebar-menu">
+        <li><a href="dashboard.html" class="active"><span class="icon">🏠</span> Dashboard</a></li>
+        <li><a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a></li>
+        <li><a href="students.html"><span class="icon">👨‍🎓</span> Kelola Siswa</a></li>
+        <li><a href="exams.html"><span class="icon">📝</span> Semua Ujian</a></li>
+        <li><a href="reports.html"><span class="icon">📊</span> Laporan</a></li>
+        <li><a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a></li>
+        <li><a href="security-logs.html"><span class="icon">🔒</span> Log Keamanan</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">⚙️ Panel Administrator</div>
+          <div class="page-subtitle">Kelola seluruh sistem ujian sekolah</div>
+        </div>
+      </div>
+
+      <!-- System Stats -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👨‍🏫</div>
+          <div><div class="stat-value" id="stat-teachers">-</div><div class="stat-label">Total Guru</div></div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--secondary)">
+          <div class="stat-icon" style="background:rgba(14,165,233,0.1)">👨‍🎓</div>
+          <div><div class="stat-value" style="color:var(--secondary)" id="stat-students">-</div><div class="stat-label">Total Siswa</div></div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--success)">
+          <div class="stat-icon" style="background:rgba(16,185,129,0.1)">📝</div>
+          <div><div class="stat-value" style="color:var(--success)" id="stat-exams">-</div><div class="stat-label">Total Ujian</div></div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--warning)">
+          <div class="stat-icon" style="background:rgba(245,158,11,0.1)">⏳</div>
+          <div><div class="stat-value" style="color:var(--warning)" id="stat-pending">-</div><div class="stat-label">Menunggu Approval</div></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px">
+        <!-- Pending Guru -->
+        <div class="card">
+          <div class="page-header" style="margin-bottom:16px">
+            <div class="page-title" style="font-size:1rem">⏳ Persetujuan Guru Baru</div>
+          </div>
+          <div id="pending-teachers-list" style="min-height: 50px;"></div>
+        </div>
+
+        <!-- Pending Siswa -->
+        <div class="card">
+          <div class="page-header" style="margin-bottom:16px">
+            <div class="page-title" style="font-size:1rem">⏳ Persetujuan Siswa Baru</div>
+          </div>
+          <div id="pending-students-list" style="min-height: 50px;"></div>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:24px;margin-top:24px">
+        <!-- Security Log -->
+        <div class="card">
+          <div class="page-title" style="font-size:1rem;margin-bottom:16px">🔒 Log Keamanan Terbaru</div>
+          <div id="security-logs-container" style="display:flex;flex-direction:column;gap:10px">
+            <div style="padding:12px;background:#fef3c7;border-radius:8px;border-left:3px solid var(--warning)">
+              <div style="font-size:0.82rem;font-weight:700;color:#92400e">⚠️ Pelanggaran Ujian</div>
+              <div style="font-size:0.8rem;color:#78350f;margin-top:2px">Siti Rahayu — Keluar fullscreen 3x → Ujian dihentikan</div>
+              <div style="font-size:0.75rem;color:#a16207;margin-top:2px">08:45:02 | Matematika Integral</div>
+            </div>
+            <div style="padding:12px;background:#fee2e2;border-radius:8px;border-left:3px solid var(--danger)">
+              <div style="font-size:0.82rem;font-weight:700;color:#991b1b">🚫 Login Gagal Berulang</div>
+              <div style="font-size:0.8rem;color:#7f1d1d;margin-top:2px">IP 192.168.1.45 — 5x percobaan login gagal</div>
+              <div style="font-size:0.75rem;color:#991b1b;margin-top:2px">09:12:33 | Akun diblokir sementara</div>
+            </div>
+            <div style="padding:12px;background:#dbeafe;border-radius:8px;border-left:3px solid var(--secondary)">
+              <div style="font-size:0.82rem;font-weight:700;color:#1e40af">ℹ️ Ujian Dimulai</div>
+              <div style="font-size:0.8rem;color:#1e3a8a;margin-top:2px">35 siswa mengikuti ujian Matematika Integral</div>
+              <div style="font-size:0.75rem;color:#1d4ed8;margin-top:2px">08:00:00 | Kelas XII IPA 1</div>
+            </div>
+            <div style="padding:12px;background:#d1fae5;border-radius:8px;border-left:3px solid var(--success)">
+              <div style="font-size:0.82rem;font-weight:700;color:#065f46">✅ Guru Baru Disetujui</div>
+              <div style="font-size:0.8rem;color:#064e3b;margin-top:2px">Rina Kusuma (Kimia) — Akun diaktifkan</div>
+              <div style="font-size:0.75rem;color:#047857;margin-top:2px">07:30:15 | Admin: superadmin</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- All Exams Table -->
+      <div class="card mt-3">
+        <div class="page-header" style="margin-bottom:16px">
+          <div class="page-title" style="font-size:1rem">📝 Semua Ujian Aktif</div>
+          <span class="badge badge-success">5 Aktif</span>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Nama Ujian</th>
+                <th>Guru</th>
+                <th>Kelas</th>
+                <th>Jadwal</th>
+                <th>Peserta</th>
+                <th>Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td><b>Matematika — Integral</b></td>
+                <td>Pak Budi</td>
+                <td>XII IPA 1</td>
+                <td>15 Jan, 08:00</td>
+                <td>35/35</td>
+                <td><span class="badge badge-success">Berlangsung</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="stopExam(this)">⏹ Stop</button></td>
+              </tr>
+              <tr>
+                <td><b>Fisika — Gelombang</b></td>
+                <td>Pak Andi</td>
+                <td>XII IPA 2</td>
+                <td>15 Jan, 10:00</td>
+                <td>0/33</td>
+                <td><span class="badge badge-warning">Menunggu</span></td>
+                <td><button class="btn btn-sm btn-outline">Detail</button></td>
+              </tr>
+              <tr>
+                <td><b>Bahasa Indonesia — Teks</b></td>
+                <td>Bu Sari</td>
+                <td>XII IPS 1</td>
+                <td>15 Jan, 08:00</td>
+                <td>30/30</td>
+                <td><span class="badge badge-success">Berlangsung</span></td>
+                <td><button class="btn btn-sm btn-danger" onclick="stopExam(this)">⏹ Stop</button></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchDashboardData();
+      fetchAdminProfile();
+    });
+
+    async function fetchAdminProfile() {
+      try {
+        const response = await fetch('../php/admin_api.php?action=get_admin_profile');
+        const data = await response.json();
+        if (data.success) {
+          document.querySelector('.nav-user span').textContent = data.user.full_name;
+          document.querySelector('.nav-avatar').textContent = data.user.full_name.charAt(0).toUpperCase();
+        }
+      } catch (e) {}
+    }
+
+    async function fetchDashboardData() {
+      try {
+        // Fetch stats
+        const statsRes = await fetch('../php/admin_api.php?action=get_stats');
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          const s = statsData.stats;
+          const setVal = (id, val) => {
+            const el = document.getElementById(id);
+            if (el) el.textContent = val;
+          };
+          
+          setVal('stat-teachers', s.teachers);
+          setVal('stat-students', s.students);
+          setVal('stat-exams', s.exams);
+          setVal('stat-pending', s.pending);
+        }
+
+        // Fetch pending teachers
+        const teachersRes = await fetch('../php/admin_api.php?action=get_pending_teachers');
+        const teachersData = await teachersRes.json();
+        if (teachersData.success) {
+          renderPendingTeachers(teachersData.teachers);
+        }
+
+        // Fetch pending students
+        const studentsRes = await fetch('../php/admin_api.php?action=get_pending_students');
+        const studentsData = await studentsRes.json();
+        if (studentsData.success) {
+          renderPendingStudents(studentsData.students);
+        }
+
+        // Fetch exams
+        const examsRes = await fetch('../php/admin_api.php?action=get_all_exams');
+        const examsData = await examsRes.json();
+        if (examsData.success) {
+          renderExams(examsData.exams);
+        }
+
+        // Fetch security logs
+        const logsRes = await fetch('../php/admin_api.php?action=get_security_logs');
+        const logsData = await logsRes.json();
+        if (logsData.success) {
+          renderSecurityLogs(logsData.logs);
+        }
+      } catch (error) {
+        console.error('Admin dashboard fetch error:', error);
+      }
+    }
+
+    function renderPendingTeachers(teachers) {
+      const container = document.getElementById('pending-teachers-list');
+      container.innerHTML = '';
+
+      if (teachers.length === 0) {
+        container.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px">Tidak ada guru pending.</p>';
+        return;
+      }
+
+      teachers.forEach(t => {
+        const div = document.createElement('div');
+        div.className = 'approval-card';
+        div.innerHTML = `
+          <div class="teacher-avatar">${t.full_name.charAt(0)}</div>
+          <div class="teacher-info">
+            <h4>${t.full_name}</h4>
+            <p>📚 ${t.subject} | NIP: ${t.nip || '-'}</p>
+            <p>📧 ${t.email} | 📅 ${new Date(t.created_at).toLocaleDateString('id-ID')}</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+            <button class="btn btn-success btn-sm" onclick="approveTeacher(${t.id}, '${t.full_name}')">✅</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectTeacher(${t.id}, '${t.full_name}')">❌</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    function renderPendingStudents(students) {
+      const container = document.getElementById('pending-students-list');
+      container.innerHTML = '';
+
+      if (students.length === 0) {
+        container.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px">Tidak ada siswa pending.</p>';
+        return;
+      }
+
+      students.forEach(s => {
+        const div = document.createElement('div');
+        div.className = 'approval-card';
+        div.innerHTML = `
+          <div class="teacher-avatar" style="background:var(--secondary)">${s.full_name.charAt(0)}</div>
+          <div class="teacher-info">
+            <h4>${s.full_name}</h4>
+            <p>👥 ${s.class} | NISN: ${s.nisn}</p>
+            <p>👤 @${s.username} | 📅 ${new Date(s.created_at).toLocaleDateString('id-ID')}</p>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+            <button class="btn btn-success btn-sm" onclick="approveStudent(${s.id}, '${s.full_name}')">✅</button>
+            <button class="btn btn-danger btn-sm" onclick="rejectStudent(${s.id}, '${s.full_name}')">❌</button>
+          </div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    async function approveStudent(id, name) {
+      if (!confirm(`Setujui pendaftaran siswa ${name}?`)) return;
+      const res = await fetch('../php/admin_api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'approve_student', id: id })
+      });
+      const data = await res.json();
+      if (data.success) { alert(data.message); fetchDashboardData(); }
+    }
+
+    async function rejectStudent(id, name) {
+      if (!confirm(`Tolak pendaftaran siswa ${name}?`)) return;
+      const res = await fetch('../php/admin_api.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'reject_student', id: id })
+      });
+      const data = await res.json();
+      if (data.success) { alert(data.message); fetchDashboardData(); }
+    }
+
+    function renderExams(exams) {
+      const tbody = document.querySelector('table tbody');
+      if (exams.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;padding:20px">Belum ada ujian.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = exams.map(e => {
+        const statusClass = e.status === 'active' ? 'success' : (e.status === 'ended' ? 'danger' : 'warning');
+        const statusText = e.status.charAt(0).toUpperCase() + e.status.slice(1);
+        return `
+          <tr>
+            <td><b>${e.name}</b></td>
+            <td>${e.teacher_name}</td>
+            <td>${e.class}</td>
+            <td>${new Date(e.start_time).toLocaleString('id-ID', {day:'2-digit', month:'short', hour:'2-digit', minute:'2-digit'})}</td>
+            <td>${e.participants}/${e.question_count}</td>
+            <td><span class="badge badge-${statusClass}">${statusText}</span></td>
+            <td><button class="btn btn-sm btn-outline">Detail</button></td>
+          </tr>
+        `;
+      }).join('');
+    }
+
+    function renderSecurityLogs(logs) {
+      const container = document.getElementById('security-logs-container');
+      if (!container) return;
+      
+      if (logs.length === 0) {
+        container.innerHTML = '<p style="color:#64748b;text-align:center;padding:20px">Tidak ada aktivitas pelanggaran.</p>';
+        return;
+      }
+
+      container.innerHTML = logs.map(log => {
+        const isCritical = log.violation_count >= 3;
+        const color = isCritical ? 'danger' : 'warning';
+        return `
+          <div style="padding:12px;background:#fef3c7;border-radius:8px;border-left:3px solid var(--${color});margin-bottom:10px">
+            <div style="font-size:0.82rem;font-weight:700;color:#92400e">${isCritical ? '🚫 Pelanggaran Berat' : '⚠️ Pelanggaran'}</div>
+            <div style="font-size:0.8rem;color:#78350f;margin-top:2px">${log.student_name} — ${log.reason}</div>
+            <div style="font-size:0.75rem;color:#a16207;margin-top:2px">${new Date(log.created_at).toLocaleTimeString('id-ID')} | ${log.exam_name}</div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    async function approveTeacher(id, name) {
+      if (!confirm(`Setujui pendaftaran guru ${name}?`)) return;
+      try {
+        const response = await fetch('../php/admin_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'approve_teacher', id: id })
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert(result.message);
+          fetchDashboardData();
+        }
+      } catch (error) {}
+    }
+
+    async function rejectTeacher(id, name) {
+      if (!confirm(`Tolak pendaftaran guru ${name}?`)) return;
+      try {
+        const response = await fetch('../php/admin_api.php', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'reject_teacher', id: id })
+        });
+        const result = await response.json();
+        if (result.success) {
+          alert(result.message);
+          fetchDashboardData();
+        }
+      } catch (error) {}
+    }
+  </script>
+  <script src="/exam-system/js/ui.js"></script>
+</body>
+</html>

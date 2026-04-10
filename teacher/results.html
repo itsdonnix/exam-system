@@ -1,0 +1,546 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hasil Ujian — ExamSafe</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .score-bar { height: 8px; background: #e2e8f0; border-radius: 50px; overflow: hidden; margin-top: 4px; }
+    .score-bar-fill { height: 100%; border-radius: 50px; background: linear-gradient(90deg, #2563eb, #0ea5e9); }
+    .score-cell { font-weight: 700; }
+    .score-cell.high { color: var(--success); }
+    .score-cell.mid { color: var(--warning); }
+    .score-cell.low { color: var(--danger); }
+    .chart-bar-wrap { display: flex; align-items: flex-end; gap: 8px; height: 120px; padding: 0 8px; }
+    .chart-bar { flex: 1; background: linear-gradient(180deg, #2563eb, #0ea5e9); border-radius: 6px 6px 0 0; min-width: 30px; position: relative; transition: opacity 0.2s; cursor: pointer; }
+    .chart-bar:hover { opacity: 0.8; }
+    .chart-bar-label { text-align: center; font-size: 0.72rem; color: #64748b; margin-top: 4px; }
+    .chart-bar-val { position: absolute; top: -20px; left: 50%; transform: translateX(-50%); font-size: 0.72rem; font-weight: 700; color: var(--primary); white-space: nowrap; }
+    .filter-bar { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin-bottom: 20px; }
+    .filter-bar select, .filter-bar input { padding: 8px 12px; border: 2px solid #e2e8f0; border-radius: 8px; font-family: 'Poppins', sans-serif; font-size: 0.88rem; outline: none; }
+    .filter-bar select:focus, .filter-bar input:focus { border-color: var(--primary-light); }
+  </style>
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🎓 Exam<span>Safe</span></div>
+    <div class="navbar-nav">
+      <a href="dashboard.html" class="nav-link">Dashboard</a>
+      <a href="create-exam.html" class="nav-link">Buat Ujian</a>
+      <a href="results.html" class="nav-link active">Hasil Ujian</a>
+      <div class="nav-user">
+        <div class="nav-avatar"></div>
+        <span></span>
+      </div>
+      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <ul class="sidebar-menu">
+        <li><a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a></li>
+        <li><a href="create-exam.html"><span class="icon">➕</span> Buat Ujian Baru</a></li>
+        <li><a href="results.html" class="active"><span class="icon">📊</span> Hasil Ujian</a></li>
+        <li><a href="students.html"><span class="icon">👥</span> Data Siswa</a></li>
+        <li><a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title" id="exam-title">📊 Laporan Hasil Ujian</div>
+          <div class="page-subtitle" id="exam-subtitle">Memuat informasi ujian...</div>
+        </div>
+        <div style="display:flex;gap:8px">
+          <button class="btn btn-outline btn-sm" onclick="exportToExcel()">Excel (.csv) 📊</button>
+          <button class="btn btn-outline btn-sm" onclick="exportToPDF()">PDF 📄</button>
+          <button class="btn btn-primary btn-sm" onclick="window.print()">🖨️ Cetak</button>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">👥</div>
+          <div><div class="stat-value">-</div><div class="stat-label">Total Peserta</div></div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--success)">
+          <div class="stat-icon" style="background:rgba(16,185,129,0.1)">✅</div>
+          <div><div class="stat-value" style="color:var(--success)">-</div><div class="stat-label">Lulus (≥75)</div></div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--danger)">
+          <div class="stat-icon" style="background:rgba(239,68,68,0.1)">❌</div>
+          <div><div class="stat-value" style="color:var(--danger)">-</div><div class="stat-label">Tidak Lulus</div></div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--accent)">
+          <div class="stat-icon" style="background:rgba(245,158,11,0.1)">⭐</div>
+          <div><div class="stat-value" style="color:var(--accent)">-</div><div class="stat-label">Rata-rata Nilai</div></div>
+        </div>
+      </div>
+
+      <!-- ANALYTICS PANEL -->
+      <div style="display:grid; grid-template-columns: 2fr 1fr; gap:20px; margin-bottom:24px">
+        <div class="card">
+          <div class="page-title" style="font-size:1rem; margin-bottom:16px">📊 Distribusi Nilai Siswa</div>
+          <div style="height: 250px">
+            <canvas id="scoreChart"></canvas>
+          </div>
+        </div>
+        <div class="card">
+          <div class="page-title" style="font-size:1rem; margin-bottom:16px">🔥 Soal Paling Sulit</div>
+          <div id="difficult-questions" style="font-size: 0.85rem">
+            <!-- Dynamic difficult questions -->
+            <p class="text-center" style="color:#64748b; padding-top:40px">Menghitung analisis soal...</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Filter Section -->
+      <div class="card" style="margin-bottom: 20px;">
+        <div style="display: flex; gap: 15px; align-items: center; flex-wrap: wrap;">
+          <div style="flex: 1; min-width: 250px;">
+            <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; display: block;">Cari Siswa</label>
+            <input type="text" id="search-student" class="form-control" placeholder="Ketik nama atau NISN..." oninput="filterResults()">
+          </div>
+          <div style="width: 180px;">
+            <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; display: block;">Pilih Tingkat</label>
+            <select class="form-control" id="level-filter" onchange="filterResults()">
+              <option value="">Semua Tingkat</option>
+              <option value="Kelas X">Kelas X</option>
+              <option value="Kelas XI">Kelas XI</option>
+              <option value="Kelas XII">Kelas XII</option>
+            </select>
+          </div>
+          <div style="width: 180px;">
+            <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; display: block;">Filter Kelas Spesifik</label>
+            <select class="form-control" id="class-filter" onchange="filterResults()">
+              <option value="">Semua Kelas</option>
+            </select>
+          </div>
+        </div>
+      </div>
+
+      <!-- Results Table -->
+      <div class="card">
+        <div class="table-wrapper">
+          <table id="results-table">
+            <thead>
+              <tr>
+                <th>No</th>
+                <th>Nama Siswa / NISN</th>
+                <th style="text-align:center">Kelas</th>
+                <th style="text-align:center">Nilai Auto</th>
+                <th style="text-align:center">Nilai Esai</th>
+                <th style="text-align:center">Total</th>
+                <th style="text-align:center">Status</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="results-body">
+              <tr><td colspan="8" style="text-align:center; padding:40px; color:#64748b">Memuat data hasil ujian...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Grading Modal -->
+  <div class="modal-overlay" id="grading-modal">
+    <div class="modal" style="max-width:800px">
+      <div class="modal-header">
+        <div class="modal-title">Penilaian Manual Esai</div>
+        <button class="modal-close" onclick="closeModal()">✕</button>
+      </div>
+      <div id="grading-content" style="padding:20px; max-height: 70vh; overflow-y: auto;">
+        <!-- Dynamic content -->
+      </div>
+      <div style="padding:20px; border-top:1px solid #eee; text-align:right">
+        <button class="btn btn-outline" onclick="closeModal()">Batal</button>
+        <button class="btn btn-primary" onclick="submitManualGrade()">Simpan Penilaian</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const params = new URLSearchParams(window.location.search);
+    const examId = params.get('exam_id');
+    let allResults = [];
+
+    if (!examId) {
+      alert('Pilih ujian terlebih dahulu dari dashboard!');
+      window.location.href = 'dashboard.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchResults();
+      fetchProfile();
+    });
+
+    async function fetchProfile() {
+      try {
+        const response = await fetch('../php/exam_api.php?action=get_profile');
+        const data = await response.json();
+        if (data.success) {
+          const user = data.user;
+          document.querySelector('.nav-user span').textContent = user.full_name + (user.gelar ? ', ' + user.gelar : '');
+          document.querySelector('.nav-avatar').textContent = user.full_name.charAt(0).toUpperCase();
+        }
+      } catch (e) {}
+    }
+
+    async function fetchResults() {
+      try {
+        const response = await fetch(`../php/exam_api.php?action=get_results&exam_id=${examId}`);
+        const data = await response.json();
+
+        if (data.success) {
+          allResults = data.results;
+          
+          // Update Exam Info (Placeholder if exam name not in results)
+          if (allResults.length > 0) {
+            // Kita bisa ambil detail ujian dari API lain jika perlu, untuk sekarang pakai data pertama
+          }
+
+          updateStats(data.stats);
+          populateClassFilter(allResults);
+          renderTable(allResults);
+        } else {
+          alert('Gagal memuat hasil: ' + data.message);
+        }
+      } catch (error) {
+        console.error('Error fetching results:', error);
+      }
+    }
+
+    function updateStats(stats) {
+      const vals = document.querySelectorAll('.stat-value');
+      const passed = stats.passed || 0;
+      const total = stats.total || 0;
+      const average = stats.average || 0;
+      
+      vals[0].textContent = total;
+      vals[1].textContent = passed;
+      vals[2].textContent = total - passed;
+      vals[3].textContent = parseFloat(average).toFixed(1);
+    }
+
+    function populateClassFilter(results) {
+      const select = document.getElementById('class-filter');
+      const classes = [...new Set(results.map(r => r.class))].sort();
+      
+      // Clear existing except first
+      select.innerHTML = '<option value="">Semua Kelas</option>';
+      
+      classes.forEach(cls => {
+        if (!cls) return;
+        const opt = document.createElement('option');
+        opt.value = cls;
+        opt.textContent = cls;
+        select.appendChild(opt);
+      });
+    }
+
+    function renderTable(results) {
+      const tbody = document.getElementById('results-body');
+      if (results.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;padding:40px;color:#64748b">Tidak ada data yang cocok dengan filter.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = results.map((s, i) => {
+        const autoScore = parseFloat(s.auto_score || 0);
+        const manualScore = parseFloat(s.manual_score || 0);
+        const totalScore = parseFloat(s.total_score || 0);
+        
+        return `
+          <tr>
+            <td>${i + 1}</td>
+            <td><b>${s.full_name}</b><br><small style="color:#64748b">${s.nisn}</small></td>
+            <td style="text-align:center"><span class="badge badge-outline" style="border-color:#cbd5e1;color:#475569">${s.class}</span></td>
+            <td style="text-align:center"><b>${autoScore.toFixed(1)}</b></td>
+            <td style="text-align:center">${manualScore.toFixed(1)}</td>
+            <td style="text-align:center">
+              <span class="score-cell ${totalScore >= 75 ? 'high' : 'low'}">${totalScore.toFixed(1)}</span>
+            </td>
+            <td style="text-align:center">
+              <span class="badge badge-${s.status === 'graded' ? 'success' : 'warning'}">
+                ${s.status === 'graded' ? 'Selesai' : 'Perlu Nilai'}
+              </span>
+            </td>
+            <td>
+              <button class="btn btn-sm btn-primary" onclick="openGrading(${s.submission_id})">✏️ Nilai Esai</button>
+            </td>
+          </tr>
+        `;
+      }).join('');
+
+      // Render analytics after table is rendered
+      renderAnalytics(results);
+    }
+
+    let scoreChart = null;
+
+    function renderAnalytics(results) {
+      if (!results.length) return;
+
+      // 1. Prepare Chart Data (Ranges)
+      const ranges = { '0-20': 0, '21-40': 0, '41-60': 0, '61-80': 0, '81-100': 0 };
+      results.forEach(r => {
+        const score = parseFloat(r.total_score);
+        if (score <= 20) ranges['0-20']++;
+        else if (score <= 40) ranges['21-40']++;
+        else if (score <= 60) ranges['41-60']++;
+        else if (score <= 80) ranges['61-80']++;
+        else ranges['81-100']++;
+      });
+
+      const ctx = document.getElementById('scoreChart').getContext('2d');
+      if (scoreChart) scoreChart.destroy();
+      
+      scoreChart = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: Object.keys(ranges),
+          datasets: [{
+            label: 'Jumlah Siswa',
+            data: Object.values(ranges),
+            backgroundColor: '#3b82f6',
+            borderRadius: 8
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: { legend: { display: false } },
+          scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } }
+        }
+      });
+
+      // 2. Identify Difficult Questions
+      // This requires fetching question text, but for now we'll analyze the correct/wrong ratio
+      analyzeDifficultQuestions(results);
+    }
+
+    async function analyzeDifficultQuestions(results) {
+      const qStats = {}; // { qId: { correct: 0, total: 0, text: '' } }
+      
+      try {
+        // Fetch all questions to get their text
+        const qRes = await fetch(`../php/exam_api.php?action=get_exam&exam_id=${examId}`);
+        const qData = await qRes.json();
+        
+        if (!qData.success) return;
+        
+        const questionsMap = {};
+        qData.questions.forEach(q => {
+          questionsMap[q.id] = q.question_text || q.text;
+          qStats[q.id] = { correct: 0, total: 0 };
+        });
+
+        // Analyze submissions
+        // We need to fetch detailed answers for all results to do a proper analysis
+        // For efficiency in this demo, we'll simulate based on aggregate if detailed data isn't here
+        // But since we want "Sistem berjalan sebagaimana mestinya", let's assume we need to fetch detail if not present
+        
+        results.forEach(r => {
+          // If the results from API already included a summary of wrong answers, we'd use it.
+          // Since it doesn't, we'd normally need a new API endpoint 'get_exam_stats'.
+          // Let's create a placeholder analysis for now.
+        });
+
+        const diffContainer = document.getElementById('difficult-questions');
+        diffContainer.innerHTML = '<p style="color:#64748b">Analisis butir soal memerlukan data jawaban detail per siswa.</p>';
+        
+      } catch (e) { console.error(e); }
+    }
+
+    function filterResults() {
+      const searchEl = document.getElementById('search-student');
+      const searchQuery = searchEl ? searchEl.value.toLowerCase() : '';
+      const levelFilter = document.getElementById('level-filter').value;
+      const classFilter = document.getElementById('class-filter').value;
+
+      const filtered = allResults.filter(s => {
+        const matchName = s.full_name.toLowerCase().includes(searchQuery) || s.nisn.includes(searchQuery);
+        const matchLevel = !levelFilter || (s.class && s.class.includes(levelFilter.split(' ')[1])); 
+        const matchClass = !classFilter || s.class === classFilter;
+        
+        return matchName && matchLevel && matchClass;
+      });
+
+      renderTable(filtered);
+    }
+function exportToExcel() {
+  if (allResults.length === 0) return alert('Tidak ada data untuk diekspor!');
+
+  // Helper for sorting classes: X, XI, XII
+  const classWeight = (cls) => {
+    if (cls.startsWith('X1')) return 1;
+    if (cls.startsWith('X')) return 1;
+    if (cls.startsWith('XI')) return 2;
+    if (cls.startsWith('XII')) return 3;
+    return 4;
+  };
+
+  const sortedResults = [...allResults].sort((a, b) => {
+    const weightA = classWeight(a.class);
+    const weightB = classWeight(b.class);
+    if (weightA !== weightB) return weightA - weightB;
+    return a.class.localeCompare(b.class, undefined, {numeric: true, sensitivity: 'base'});
+  });
+
+  // Create HTML Table structure which Excel natively imports as a formatted grid
+  let html = `
+    <table border="1">
+      <thead>
+        <tr style="background-color: #1a3c6e; color: #ffffff; font-weight: bold;">
+          <th>No</th>
+          <th>Nama Siswa</th>
+          <th>NISN</th>
+          <th>Kelas</th>
+          <th>Nilai Auto</th>
+          <th>Nilai Esai</th>
+          <th>Total Score</th>
+          <th>Status</th>
+          <th>Tanggal Submit</th>
+        </tr>
+      </thead>
+      <tbody>
+  `;
+
+  sortedResults.forEach((r, i) => {
+    const rowColor = i % 2 === 0 ? '#f9f9f9' : '#ffffff';
+    html += `
+      <tr style="background-color: ${rowColor};">
+        <td style="text-align: center;">${i + 1}</td>
+        <td>${r.full_name}</td>
+        <td>${r.nisn}</td>
+        <td>${r.class}</td>
+        <td style="text-align: center;">${r.auto_score}</td>
+        <td style="text-align: center;">${r.manual_score}</td>
+        <td style="text-align: center; font-weight: bold;">${r.total_score}</td>
+        <td>${r.status}</td>
+        <td>${r.submitted_at}</td>
+      </tr>
+    `;
+  });
+
+  html += `</tbody></table>`;
+
+  // Use .xls extension to force Excel to treat the HTML as a table
+  const blob = new Blob(['\uFEFF', html], { type: 'application/vnd.ms-excel' });
+  const link = document.createElement('a');
+  const url = URL.createObjectURL(blob);
+  link.setAttribute('href', url);
+  link.setAttribute('download', `Hasil_Ujian_${examId}_${new Date().toISOString().slice(0,10)}.xls`);
+  link.style.visibility = 'hidden';
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+}    function exportToPDF() {
+      // PDF export is handled via window.print() with specific CSS
+      // But we can hide non-essential elements for a cleaner look
+      const originalTitle = document.title;
+      document.title = `Laporan_Hasil_Ujian_${examId}`;
+      window.print();
+      document.title = originalTitle;
+    }
+
+    let currentSubmissionId = null;
+
+    async function openGrading(id) {
+      currentSubmissionId = id;
+      document.getElementById('grading-modal').classList.add('active');
+      const content = document.getElementById('grading-content');
+      content.innerHTML = '<div class="text-center">Memuat jawaban siswa...</div>';
+
+      try {
+        const res = await fetch(`../php/exam_api.php?action=get_submission_detail&id=${id}`);
+        const data = await res.json();
+        
+        if (data.success) {
+          const sub = data.submission;
+          const questions = data.questions;
+          const answers = sub.answers;
+
+          let html = `
+            <div style="margin-bottom:20px; padding:15px; background:#f8fafc; border-radius:10px">
+              <strong>Siswa:</strong> ${sub.full_name} (${sub.class})<br>
+              <strong>Nilai Otomatis (PG):</strong> ${parseFloat(sub.score).toFixed(1)}
+            </div>
+          `;
+
+          questions.filter(q => q.question_type === 'essay').forEach((q, idx) => {
+            const studentAns = answers.find(a => a.question_id == q.id)?.student_answer || '<em>Tidak menjawab</em>';
+            html += `
+              <div class="card" style="margin-bottom:15px; border-left:4px solid var(--primary)">
+                <div style="font-size:0.9rem; font-weight:600; margin-bottom:8px">Soal Esai #${idx+1}</div>
+                <p style="margin-bottom:10px">${q.question_text}</p>
+                <div style="background:#f1f5f9; padding:12px; border-radius:8px; font-size:0.9rem; margin-bottom:12px">
+                  <strong>Jawaban Siswa:</strong><br>${studentAns}
+                </div>
+                <div class="form-group" style="margin-bottom:0">
+                  <label>Beri Nilai (0 - ${q.points})</label>
+                  <input type="number" class="form-control essay-point" data-max="${q.points}" placeholder="Masukkan poin..." style="max-width:150px">
+                </div>
+              </div>
+            `;
+          });
+
+          if (questions.filter(q => q.question_type === 'essay').length === 0) {
+            html += '<p class="text-center">Tidak ada soal esai dalam ujian ini.</p>';
+          }
+
+          content.innerHTML = html;
+        }
+      } catch (e) { console.error(e); }
+    }
+
+    async function submitManualGrade() {
+      const inputs = document.querySelectorAll('.essay-point');
+      let totalManual = 0;
+      let valid = true;
+
+      inputs.forEach(input => {
+        const val = parseFloat(input.value || 0);
+        const max = parseFloat(input.dataset.max);
+        if (val > max) {
+          alert(`Poin melebihi batas maksimal (${max})`);
+          valid = false;
+        }
+        totalManual += val;
+      });
+
+      if (!valid) return;
+
+      try {
+        const res = await fetch('../php/exam_api.php', {
+          method: 'POST',
+          headers: {'Content-Type': 'application/json'},
+          body: JSON.stringify({
+            action: 'save_manual_grade',
+            submission_id: currentSubmissionId,
+            manual_score: totalManual
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('Berhasil menyimpan nilai!');
+          closeModal();
+          fetchResults();
+        }
+      } catch (e) {}
+    }
+
+    function closeModal() {
+      document.getElementById('grading-modal').classList.remove('active');
+    }
+  </script>
+  <script src="/exam-system/js/ui.js"></script>
+</body>
+</html>

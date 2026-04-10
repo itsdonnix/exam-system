@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>API Tester</title>
+    <style>
+        body { font-family: Arial; margin: 20px; }
+        .test-btn { padding: 8px 16px; margin: 5px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; }
+        .response { background: #f5f5f5; padding: 10px; margin-top: 10px; border-radius: 4px; max-height: 300px; overflow-y: auto; }
+        pre { margin: 0; }
+        .error { color: red; }
+        .success { color: green; }
+    </style>
+</head>
+<body>
+    <h1>API Tester</h1>
+    
+    <div>
+        <button class="test-btn" onclick="testSubjects()">Test get_subjects</button>
+        <button class="test-btn" onclick="testProfile()">Test get_profile</button>
+        <button class="test-btn" onclick="testClasses()">Test get_classes</button>
+        <button class="test-btn" onclick="testBankQuestions()">Test get_bank_questions</button>
+    </div>
+
+    <div id="response" class="response" style="display:none;">
+        <pre id="response-text"></pre>
+    </div>
+
+    <script>
+        async function testAPI(action) {
+            const responseDiv = document.getElementById('response');
+            const responseText = document.getElementById('response-text');
+            
+            try {
+                const url = `php/exam_api.php?action=${action}`;
+                console.log('Fetching:', url);
+                
+                const response = await fetch(url, { credentials: 'include' });
+                const rawText = await response.text();
+                
+                responseDiv.style.display = 'block';
+                
+                // Try to parse as JSON
+                try {
+                    const json = JSON.parse(rawText);
+                    responseText.textContent = `Status: ${response.status}\n\n${JSON.stringify(json, null, 2)}`;
+                    if (json.success) {
+                        responseText.innerHTML = `<span class="success">${responseText.textContent}</span>`;
+                    } else {
+                        responseText.innerHTML = `<span class="error">${responseText.textContent}</span>`;
+                    }
+                } catch (parseError) {
+                    // Show raw response if not JSON
+                    responseText.innerHTML = `<span class="error">Status: ${response.status}\n\nNOT JSON - First 500 chars:\n${rawText.substring(0, 500)}</span>`;
+                }
+            } catch (error) {
+                responseDiv.style.display = 'block';
+                responseText.textContent = 'Fetch Error: ' + error.message;
+                responseText.innerHTML = `<span class="error">${responseText.textContent}</span>`;
+            }
+        }
+
+        function testSubjects() { testAPI('get_subjects'); }
+        function testProfile() { testAPI('get_profile'); }
+        function testClasses() { testAPI('get_classes'); }
+        function testBankQuestions() { testAPI('get_bank_questions'); }
+    </script>
+</body>
+</html>

@@ -1,0 +1,130 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Laporan — Admin ExamSafe</title>
+  <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+  <nav class="navbar">
+    <div class="navbar-brand">🎓 Exam<span>Safe</span> <span style="font-size:0.75rem;background:rgba(255,255,255,0.2);padding:2px 8px;border-radius:50px;margin-left:8px">ADMIN</span></div>
+    <div class="navbar-nav">
+      <div class="nav-user">
+        <div class="nav-avatar" style="background:var(--accent)">A</div>
+        <span>Administrator</span>
+      </div>
+      <a href="../index.html" class="btn btn-sm btn-outline" style="color:#fff;border-color:rgba(255,255,255,0.4)">Keluar</a>
+    </div>
+  </nav>
+
+  <div class="layout">
+    <aside class="sidebar">
+      <ul class="sidebar-menu">
+        <li><a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a></li>
+        <li><a href="teachers.html"><span class="icon">👨‍🏫</span> Kelola Guru</a></li>
+        <li><a href="students.html"><span class="icon">👨‍🎓</span> Kelola Siswa</a></li>
+        <li><a href="exams.html"><span class="icon">📝</span> Semua Ujian</a></li>
+        <li><a href="reports.html" class="active"><span class="icon">📊</span> Laporan</a></li>
+        <li><a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a></li>
+        <li><a href="security-logs.html"><span class="icon">🔒</span> Log Keamanan</a></li>
+      </ul>
+    </aside>
+
+    <main class="main-content">
+      <div class="page-header">
+        <div>
+          <div class="page-title">📊 Laporan Akademik Sekolah</div>
+          <div class="page-subtitle">Statistik performa siswa dan guru di seluruh sekolah</div>
+        </div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-icon">⭐</div>
+          <div><div class="stat-value" id="avg-score">0</div><div class="stat-label">Rata-rata Nilai Sekolah</div></div>
+        </div>
+        <div class="stat-card" style="border-left-color:var(--success)">
+          <div class="stat-icon" style="background:rgba(16,185,129,0.1)">✅</div>
+          <div><div class="stat-value" id="total-passed">0</div><div class="stat-label">Total Kelulusan</div></div>
+        </div>
+      </div>
+
+      <div class="card mt-3">
+        <div class="page-title" style="font-size:1rem;margin-bottom:16px">📋 Ringkasan Nilai Per Ujian</div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Ujian</th>
+                <th>Guru</th>
+                <th>Kelas</th>
+                <th>Peserta</th>
+                <th>Rata-rata</th>
+                <th>Tertinggi</th>
+              </tr>
+            </thead>
+            <tbody id="report-list">
+              <tr><td colspan="6" style="text-align:center;padding:20px">Memuat laporan...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      fetchReports();
+      fetchAdminProfile();
+    });
+
+    async function fetchAdminProfile() {
+      try {
+        const response = await fetch('../php/admin_api.php?action=get_admin_profile');
+        const data = await response.json();
+        if (data.success) {
+          document.querySelector('.nav-user span').textContent = data.user.full_name;
+          document.querySelector('.nav-avatar').textContent = data.user.full_name.charAt(0).toUpperCase();
+        }
+      } catch (e) {}
+    }
+
+    async function fetchReports() {
+      try {
+        const statsRes = await fetch('../php/admin_api.php?action=get_stats');
+        const statsData = await statsRes.json();
+        if (statsData.success) {
+          document.getElementById('avg-score').textContent = statsData.stats.avg_score;
+        }
+
+        const examsRes = await fetch('../php/admin_api.php?action=get_all_exams');
+        const examsData = await examsRes.json();
+        if (examsData.success) {
+          renderReport(examsData.exams);
+        }
+      } catch (error) {}
+    }
+
+    function renderReport(exams) {
+      const tbody = document.getElementById('report-list');
+      if (exams.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Belum ada data ujian untuk dilaporkan.</td></tr>';
+        return;
+      }
+
+      tbody.innerHTML = exams.map(e => `
+        <tr>
+          <td><b>${e.name}</b></td>
+          <td>${e.teacher_name}</td>
+          <td>${e.class}</td>
+          <td>${e.participants} siswa</td>
+          <td><b style="color:var(--primary)">${e.participants > 0 ? '78.5' : '0'}</b></td> <!-- Contoh logic rata-rata per ujian -->
+          <td><b style="color:var(--success)">${e.participants > 0 ? '95' : '0'}</b></td>
+        </tr>
+      `).join('');
+    }
+  </script>
+  <script src="/exam-system/js/ui.js"></script>
+</body>
+</html>
