@@ -459,7 +459,7 @@ $csrf_token = generateCSRFToken();
                 <div class="alert alert-success">✅ <?php echo htmlspecialchars($success); ?></div>
             <?php endif; ?>
 
-            <!-- Role-specific alert containers for AJAX -->
+            <!-- Role-specific alert containers for AJAX - hidden by default, shown only when content exists -->
             <div id="alert-siswa" class="role-alert" style="display:none;"></div>
             <div id="alert-guru" class="role-alert" style="display:none;"></div>
             <div id="alert-admin" class="role-alert" style="display:none;"></div>
@@ -574,15 +574,11 @@ $csrf_token = generateCSRFToken();
                 }
             });
 
-            // Hide all role alerts and show the current one
+            // Clear all role alerts (hides them if they were visible)
             document.querySelectorAll('.role-alert').forEach(alert => {
-                alert.style.display = 'none';
                 alert.innerHTML = '';
+                alert.style.display = 'none';
             });
-            const currentAlert = document.getElementById(`alert-${role}`);
-            if (currentAlert) {
-                currentAlert.style.display = 'block';
-            }
 
             // Set focus to the username field of the active role
             const activeUsernameField = document.getElementById(`username-${role}`);
@@ -591,12 +587,18 @@ $csrf_token = generateCSRFToken();
             }
         }
 
-        // Display alert message for current role
+        // Display alert message for current role - only shows when message has content
         function showAlert(role, message, type) {
             const alertDiv = document.getElementById(`alert-${role}`);
             if (alertDiv) {
-                alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
-                alertDiv.style.display = 'block';
+                if (message && message.trim() !== '') {
+                    alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+                    alertDiv.style.display = 'block';
+                } else {
+                    // Clear and hide if message is empty
+                    alertDiv.innerHTML = '';
+                    alertDiv.style.display = 'none';
+                }
             }
         }
 
@@ -609,10 +611,10 @@ $csrf_token = generateCSRFToken();
             submitBtn.disabled = true;
             submitBtn.innerHTML = '⌛ Memproses...';
 
-            // Clear previous alerts
+            // Clear previous alerts (hides the alert container)
             showAlert(role, '', '');
 
-            // Show loading message
+            // Show loading message (this will make the alert container visible)
             showAlert(role, '⌛ Sedang memverifikasi...', 'info');
 
             try {
@@ -699,6 +701,9 @@ $csrf_token = generateCSRFToken();
 
                 // Update form fields visibility and disable states
                 updateFormFields();
+
+                // Clear any existing alerts specifically for the newly active role
+                showAlert(role, '', '');
             });
         });
 
