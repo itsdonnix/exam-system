@@ -17,9 +17,15 @@
         justify-content: space-between;
         margin-bottom: 14px;
         transition: transform 0.2s;
+        flex-wrap: wrap;
+        gap: 16px;
       }
       .exam-card:hover {
         transform: translateY(-2px);
+      }
+      .exam-card-info {
+        flex: 1;
+        min-width: 200px;
       }
       .exam-card-info h4 {
         font-size: 1rem;
@@ -39,6 +45,7 @@
       .exam-card-actions {
         display: flex;
         gap: 8px;
+        flex-wrap: wrap;
       }
       .quick-actions {
         display: grid;
@@ -148,12 +155,29 @@
   </head>
   <body>
     <nav class="navbar">
-      <div class="navbar-brand">🎓 Exam<span>Safe</span></div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button
+          class="hamburger-btn"
+          id="hamburgerBtn"
+          aria-label="Toggle menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <div class="navbar-brand">
+          🎓 Exam<span>Safe</span>
+          <span
+            style="
+              font-size: 0.75rem;
+              background: rgba(255, 255, 255, 0.2);
+              padding: 2px 8px;
+              border-radius: 50px;
+              margin-left: 8px;
+            "
+            >GURU</span
+          >
+        </div>
+      </div>
       <div class="navbar-nav">
-        <a href="dashboard.html" class="nav-link active">Dashboard</a>
-        <a href="create-exam.html" class="nav-link">Buat Ujian</a>
-        <a href="question-bank.html" class="nav-link">Bank Soal</a>
-        <a href="results.html" class="nav-link">Hasil Ujian</a>
         <div class="nav-user">
           <div class="nav-avatar">G</div>
           <span>Memuat...</span>
@@ -167,8 +191,23 @@
       </div>
     </nav>
 
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="layout">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-avatar-section">
+          <div
+            class="sidebar-avatar"
+            id="sidebarAvatar"
+            style="background: var(--accent)"
+          >
+            G
+          </div>
+          <div class="sidebar-avatar-name" id="sidebarAvatarName">
+            Memuat...
+          </div>
+          <div class="sidebar-avatar-role" id="sidebarAvatarRole">Guru</div>
+        </div>
         <ul class="sidebar-menu">
           <li>
             <a href="dashboard.html" class="active"
@@ -213,7 +252,7 @@
           <div class="stat-card">
             <div class="stat-icon">📝</div>
             <div>
-              <div class="stat-value">8</div>
+              <div class="stat-value">-</div>
               <div class="stat-label">Total Ujian</div>
             </div>
           </div>
@@ -222,7 +261,7 @@
               ✅
             </div>
             <div>
-              <div class="stat-value" style="color: var(--success)">3</div>
+              <div class="stat-value" style="color: var(--success)">-</div>
               <div class="stat-label">Ujian Aktif</div>
             </div>
           </div>
@@ -231,7 +270,7 @@
               👨‍🎓
             </div>
             <div>
-              <div class="stat-value" style="color: var(--accent)">142</div>
+              <div class="stat-value" style="color: var(--accent)">-</div>
               <div class="stat-label">Total Siswa</div>
             </div>
           </div>
@@ -240,7 +279,7 @@
               ⭐
             </div>
             <div>
-              <div class="stat-value" style="color: var(--secondary)">78.5</div>
+              <div class="stat-value" style="color: var(--secondary)">-</div>
               <div class="stat-label">Rata-rata Nilai</div>
             </div>
           </div>
@@ -272,7 +311,7 @@
             <h4>Lihat Hasil Ujian</h4>
             <p>Laporan nilai dan statistik siswa</p>
           </div>
-          <div class="quick-action-card">
+          <div class="quick-action-card" onclick="showMonitorForFirstExam()">
             <div class="icon">👁️</div>
             <h4>Monitor Ujian</h4>
             <p>Pantau aktivitas siswa real-time</p>
@@ -286,7 +325,10 @@
 
         <!-- Exam List -->
         <div class="card">
-          <div class="page-header" style="margin-bottom: 20px">
+          <div
+            class="page-header"
+            style="margin-bottom: 20px; flex-wrap: wrap; gap: 12px"
+          >
             <div style="flex: 1">
               <div class="page-title" style="font-size: 1.1rem">
                 📋 Daftar Ujian Saya
@@ -298,6 +340,7 @@
                 gap: 10px;
                 flex: 2;
                 justify-content: flex-end;
+                flex-wrap: wrap;
               "
             >
               <input
@@ -315,100 +358,7 @@
           </div>
 
           <div id="exam-list">
-            <div class="exam-card">
-              <div class="exam-card-info">
-                <h4>Matematika — Bab 5: Integral</h4>
-                <div class="exam-card-meta">
-                  <span>📅 15 Jan 2024, 08:00–09:30</span>
-                  <span>⏱️ 90 menit</span>
-                  <span>📝 40 soal</span>
-                  <span>👥 35 siswa</span>
-                </div>
-                <div class="exam-card-meta">
-                  <span class="badge badge-success">Aktif</span>
-                  <span>🔑 Kode: <b>UJIAN2024</b></span>
-                </div>
-              </div>
-              <div class="exam-card-actions">
-                <button
-                  class="btn btn-sm btn-secondary"
-                  onclick="showMonitor()"
-                >
-                  👁️ Monitor
-                </button>
-                <a href="create-exam.html?edit=1" class="btn btn-sm btn-outline"
-                  >✏️ Edit</a
-                >
-                <button
-                  class="btn btn-sm btn-danger"
-                  onclick="deleteExam(this)"
-                >
-                  🗑️
-                </button>
-              </div>
-            </div>
-
-            <div class="exam-card">
-              <div class="exam-card-info">
-                <h4>Matematika — Bab 4: Turunan</h4>
-                <div class="exam-card-meta">
-                  <span>📅 10 Jan 2024, 10:00–11:30</span>
-                  <span>⏱️ 90 menit</span>
-                  <span>📝 35 soal</span>
-                  <span>👥 35 siswa</span>
-                </div>
-                <div class="exam-card-meta">
-                  <span class="badge badge-secondary">Selesai</span>
-                  <span>⭐ Rata-rata: <b>78.5</b></span>
-                </div>
-              </div>
-              <div class="exam-card-actions">
-                <a href="results.html" class="btn btn-sm btn-secondary"
-                  >📊 Hasil</a
-                >
-                <a href="create-exam.html?edit=2" class="btn btn-sm btn-outline"
-                  >✏️ Edit</a
-                >
-                <button
-                  class="btn btn-sm btn-danger"
-                  onclick="deleteExam(this)"
-                >
-                  🗑️
-                </button>
-              </div>
-            </div>
-
-            <div class="exam-card" style="border-left-color: #94a3b8">
-              <div class="exam-card-info">
-                <h4>Matematika — Bab 6: Statistika</h4>
-                <div class="exam-card-meta">
-                  <span>📅 20 Jan 2024, 08:00–09:30</span>
-                  <span>⏱️ 90 menit</span>
-                  <span>📝 40 soal</span>
-                  <span>👥 35 siswa</span>
-                </div>
-                <div class="exam-card-meta">
-                  <span class="badge badge-warning">Draft</span>
-                </div>
-              </div>
-              <div class="exam-card-actions">
-                <button
-                  class="btn btn-sm btn-success"
-                  onclick="activateExam(this)"
-                >
-                  ▶️ Aktifkan
-                </button>
-                <a href="create-exam.html?edit=3" class="btn btn-sm btn-outline"
-                  >✏️ Edit</a
-                >
-                <button
-                  class="btn btn-sm btn-danger"
-                  onclick="deleteExam(this)"
-                >
-                  🗑️
-                </button>
-              </div>
-            </div>
+            <!-- Skeleton will be shown here -->
           </div>
         </div>
 
@@ -431,28 +381,8 @@
                   <th>Status</th>
                 </tr>
               </thead>
-              <tbody>
-                <tr>
-                  <td><b>Andi Pratama</b> (XII IPA 1)</td>
-                  <td>Matematika — Integral</td>
-                  <td>Perpindahan tab terdeteksi</td>
-                  <td>08:23:15</td>
-                  <td><span class="badge badge-warning">Peringatan</span></td>
-                </tr>
-                <tr>
-                  <td><b>Siti Rahayu</b> (XII IPA 2)</td>
-                  <td>Matematika — Integral</td>
-                  <td>Keluar fullscreen</td>
-                  <td>08:45:02</td>
-                  <td><span class="badge badge-danger">Dihentikan</span></td>
-                </tr>
-                <tr>
-                  <td><b>Budi Santoso</b> (XII IPA 1)</td>
-                  <td>Matematika — Turunan</td>
-                  <td>Developer tools dibuka</td>
-                  <td>10:12:44</td>
-                  <td><span class="badge badge-warning">Peringatan</span></td>
-                </tr>
+              <tbody id="violations-tbody">
+                <!-- Skeleton will be shown here -->
               </tbody>
             </table>
           </div>
@@ -464,7 +394,7 @@
     <div class="modal-overlay" id="monitor-modal">
       <div class="modal" style="max-width: 700px">
         <div class="modal-header">
-          <div class="modal-title">👁️ Monitor Ujian — Matematika Integral</div>
+          <div class="modal-title">👁️ Monitor Ujian</div>
           <button class="modal-close" onclick="closeModal()">✕</button>
         </div>
         <div
@@ -473,7 +403,13 @@
         >
           <div class="stat-card" style="padding: 14px">
             <div>
-              <div class="stat-value" style="font-size: 1.4rem">35</div>
+              <div
+                class="stat-value"
+                style="font-size: 1.4rem"
+                id="monitor-total"
+              >
+                0
+              </div>
               <div class="stat-label">Total</div>
             </div>
           </div>
@@ -485,8 +421,9 @@
               <div
                 class="stat-value"
                 style="font-size: 1.4rem; color: var(--success)"
+                id="monitor-active"
               >
-                28
+                0
               </div>
               <div class="stat-label">Aktif</div>
             </div>
@@ -499,8 +436,9 @@
               <div
                 class="stat-value"
                 style="font-size: 1.4rem; color: var(--warning)"
+                id="monitor-finished"
               >
-                5
+                0
               </div>
               <div class="stat-label">Selesai</div>
             </div>
@@ -513,8 +451,9 @@
               <div
                 class="stat-value"
                 style="font-size: 1.4rem; color: var(--danger)"
+                id="monitor-violations"
               >
-                2
+                0
               </div>
               <div class="stat-label">Pelanggaran</div>
             </div>
@@ -530,30 +469,9 @@
                 <th>Status</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody id="monitor-tbody">
               <tr>
-                <td>Andi Pratama</td>
-                <td>25/40 soal</td>
-                <td>32 menit</td>
-                <td><span class="badge badge-success">Aktif</span></td>
-              </tr>
-              <tr>
-                <td>Siti Rahayu</td>
-                <td>—</td>
-                <td>—</td>
-                <td><span class="badge badge-danger">Dihentikan</span></td>
-              </tr>
-              <tr>
-                <td>Budi Santoso</td>
-                <td>38/40 soal</td>
-                <td>78 menit</td>
-                <td><span class="badge badge-success">Aktif</span></td>
-              </tr>
-              <tr>
-                <td>Dewi Lestari</td>
-                <td>40/40 soal</td>
-                <td>65 menit</td>
-                <td><span class="badge badge-warning">Selesai</span></td>
+                <td colspan="4" style="text-align: center">Memuat...</td>
               </tr>
             </tbody>
           </table>
@@ -562,6 +480,25 @@
     </div>
 
     <script>
+      // Sidebar toggle functionality
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+      if (hamburgerBtn) {
+        hamburgerBtn.addEventListener("click", () => {
+          sidebar.classList.toggle("sidebar-open");
+          sidebarOverlay.classList.toggle("sidebar-overlay-visible");
+        });
+      }
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener("click", () => {
+          sidebar.classList.remove("sidebar-open");
+          sidebarOverlay.classList.remove("sidebar-overlay-visible");
+        });
+      }
+
       document.addEventListener("DOMContentLoaded", () => {
         showSkeletonLoader();
         showStatsSkeletonLoader();
@@ -573,76 +510,58 @@
 
       function showSkeletonLoader() {
         const container = document.getElementById("exam-list");
-        container.innerHTML = `
-        <div class="skeleton-loader">
-          <div class="skeleton-line" style="width: 40%"></div>
-          <div class="skeleton-line" style="width: 60%"></div>
-          <div class="skeleton-line" style="width: 30%"></div>
-        </div>
-        <div class="skeleton-loader">
-          <div class="skeleton-line" style="width: 50%"></div>
-          <div class="skeleton-line" style="width: 70%"></div>
-          <div class="skeleton-line" style="width: 40%"></div>
-        </div>
-      `;
+        if (container) {
+          container.innerHTML = `
+            <div class="exam-card">
+              <div class="exam-card-info">
+                <div class="skeleton-loader">
+                  <div class="skeleton-line" style="width: 40%"></div>
+                  <div class="skeleton-line" style="width: 60%"></div>
+                  <div class="skeleton-line" style="width: 30%"></div>
+                </div>
+              </div>
+            </div>
+            <div class="exam-card">
+              <div class="exam-card-info">
+                <div class="skeleton-loader">
+                  <div class="skeleton-line" style="width: 50%"></div>
+                  <div class="skeleton-line" style="width: 70%"></div>
+                  <div class="skeleton-line" style="width: 40%"></div>
+                </div>
+              </div>
+            </div>
+          `;
+        }
       }
 
       function showViolationSkeletonLoader() {
-        const tbody = document.querySelector(
-          ".main-content .card:last-of-type table tbody"
-        );
-        if (!tbody) return;
-        tbody.innerHTML = `
-        <tr>
-          <td colspan="5">
-            <div class="skeleton-loader" style="margin: 8px 0;">
-              <div class="skeleton-line" style="width: 100%; height: 16px;"></div>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="5">
-            <div class="skeleton-loader" style="margin: 8px 0;">
-              <div class="skeleton-line" style="width: 100%; height: 16px;"></div>
-            </div>
-          </td>
-        </tr>
-        <tr>
-          <td colspan="5">
-            <div class="skeleton-loader" style="margin: 8px 0;">
-              <div class="skeleton-line" style="width: 100%; height: 16px;"></div>
-            </div>
-          </td>
-        </tr>
-      `;
+        const tbody = document.getElementById("violations-tbody");
+        if (tbody) {
+          tbody.innerHTML = `
+            <tr><td colspan="5"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%; height: 16px;"></div></div></td></tr>
+            <tr><td colspan="5"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%; height: 16px;"></div></div></td></tr>
+            <tr><td colspan="5"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%; height: 16px;"></div></div></td></tr>
+          `;
+        }
       }
 
       function showStatsSkeletonLoader() {
-        const statCards = document.querySelectorAll(".stat-card");
-        statCards.forEach((card) => {
-          const valueDiv = card.querySelector(".stat-value");
-          if (valueDiv) {
-            valueDiv.innerHTML = `<div class="skeleton-line" style="width: 60%; margin: 4px 0;"></div>`;
-          }
+        const statValues = document.querySelectorAll(".stat-value");
+        statValues.forEach((val) => {
+          val.textContent = "-";
         });
       }
 
       function showNavUserSkeletonLoader() {
         const navUser = document.querySelector(".nav-user");
-        if (!navUser) return;
-
-        const avatar = navUser.querySelector(".nav-avatar");
-        const nameSpan = navUser.querySelector("span");
-
-        if (avatar) {
-          avatar.innerHTML = `<div class="skeleton-avatar"></div>`;
-        }
-        if (nameSpan) {
-          nameSpan.innerHTML = `<div class="skeleton-line" style="width: 80%; height: 12px;"></div>`;
+        if (navUser) {
+          const nameSpan = navUser.querySelector("span");
+          if (nameSpan) nameSpan.textContent = "Memuat...";
         }
       }
 
       let allExams = [];
+      let currentMonitorExamId = null;
 
       async function fetchDashboardData() {
         try {
@@ -656,7 +575,6 @@
             allExams = data.exams;
             renderExams(allExams);
             updateStats(allExams);
-            fetchViolations();
           }
 
           // Fetch Teacher Stats (Total Siswa & Rata-rata Nilai)
@@ -668,12 +586,11 @@
           );
           const statsData = await statsRes.json();
           if (statsData.success) {
-            // Update stat cards with real data
             const statValues = document.querySelectorAll(".stat-value");
             if (statValues[2])
-              statValues[2].textContent = statsData.total_students;
+              statValues[2].textContent = statsData.total_students || 0;
             if (statValues[3])
-              statValues[3].textContent = statsData.average_score;
+              statValues[3].textContent = statsData.average_score || 0;
           }
 
           // Fetch Profile for name
@@ -690,16 +607,30 @@
               user.full_name + (user.gelar ? ", " + user.gelar : "");
 
             // Update Navbar
-            document.querySelector(".nav-user span").textContent =
-              fullNameWithGelar;
-            document.querySelector(".nav-avatar").textContent = user.full_name
-              .charAt(0)
-              .toUpperCase();
+            const navUserSpan = document.querySelector(".nav-user span");
+            if (navUserSpan) navUserSpan.textContent = fullNameWithGelar;
+            const navAvatar = document.querySelector(".nav-avatar");
+            if (navAvatar)
+              navAvatar.textContent = user.full_name.charAt(0).toUpperCase();
+
+            // Update Sidebar
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+            if (sidebarAvatar)
+              sidebarAvatar.textContent = user.full_name
+                .charAt(0)
+                .toUpperCase();
+            const sidebarAvatarName =
+              document.getElementById("sidebarAvatarName");
+            if (sidebarAvatarName)
+              sidebarAvatarName.textContent = fullNameWithGelar;
 
             // Update Welcome Subtitle
-            document.querySelector(
-              ".page-subtitle"
-            ).textContent = `Selamat datang, ${fullNameWithGelar} — ${user.subject}`;
+            const pageSubtitle = document.querySelector(".page-subtitle");
+            if (pageSubtitle) {
+              pageSubtitle.textContent = `Selamat datang, ${fullNameWithGelar} — ${
+                user.subject || "Guru"
+              }`;
+            }
           }
         } catch (error) {
           console.error("Error fetching dashboard data:", error);
@@ -716,9 +647,7 @@
           );
           const data = await response.json();
 
-          const tbody = document.querySelector(
-            ".main-content .card:last-of-type table tbody"
-          );
+          const tbody = document.getElementById("violations-tbody");
           if (!tbody) return;
 
           if (data.success) {
@@ -731,18 +660,18 @@
             tbody.innerHTML = data.violations
               .map(
                 (v) => `
-            <tr>
-              <td>${v.student_name}</td>
-              <td>${v.exam_name}</td>
-              <td>${v.reason}</td>
-              <td>${new Date(v.created_at).toLocaleTimeString("id-ID")}</td>
-              <td><span class="badge badge-${
-                v.violation_count >= 3 ? "danger" : "warning"
-              }">${
+              <tr>
+                <td><b>${v.student_name}</b></td>
+                <td>${v.exam_name}</td>
+                <td>${v.reason}</td>
+                <td>${new Date(v.created_at).toLocaleTimeString("id-ID")}</td>
+                <td><span class="badge badge-${
+                  v.violation_count >= 3 ? "danger" : "warning"
+                }">${
                   v.violation_count >= 3 ? "Dihentikan" : "Peringatan"
                 }</span></td>
-            </tr>
-          `
+              </tr>
+            `
               )
               .join("");
           } else {
@@ -751,9 +680,7 @@
           }
         } catch (error) {
           console.error("Error fetching violations:", error);
-          const tbody = document.querySelector(
-            ".main-content .card:last-of-type table tbody"
-          );
+          const tbody = document.getElementById("violations-tbody");
           if (tbody) {
             tbody.innerHTML =
               '<tr><td colspan="5" style="text-align:center;padding:40px;color:#64748b">Terjadi kesalahan saat memuat data pelanggaran.</td></tr>';
@@ -804,7 +731,7 @@
             exam.status === "active" ? "var(--success)" : "#94a3b8"
           }">
             <div class="exam-card-info">
-              <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px">
+              <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap;">
                 <span class="badge badge-info" style="font-size:0.7rem">📅 ${examDate}</span>
                 <h4>${exam.name}</h4>
               </div>
@@ -846,6 +773,21 @@
         `;
           })
           .join("");
+      }
+
+      function showMonitorForFirstExam() {
+        if (allExams && allExams.length > 0) {
+          const activeExam = allExams.find((e) => e.status === "active");
+          if (activeExam) {
+            showMonitor(activeExam.id);
+          } else if (allExams[0]) {
+            showMonitor(allExams[0].id);
+          } else {
+            alert("Belum ada ujian yang tersedia.");
+          }
+        } else {
+          alert("Belum ada ujian yang tersedia.");
+        }
       }
 
       async function duplicateExam(id) {
@@ -928,10 +870,8 @@
         const active = exams.filter((e) => e.status === "active").length;
 
         const statValues = document.querySelectorAll(".stat-value");
-        // Update Total Ujian dan Ujian Aktif (indices 0 dan 1)
         if (statValues[0]) statValues[0].textContent = total;
         if (statValues[1]) statValues[1].textContent = active;
-        // Indices 2 dan 3 (Total Siswa dan Rata-rata Nilai) akan di-update dari get_teacher_stats API
       }
 
       async function deleteExam(id) {
@@ -952,7 +892,7 @@
 
           if (result.success) {
             alert("🗑️ " + result.message);
-            fetchDashboardData(); // Refresh list
+            fetchDashboardData();
           } else {
             alert("❌ " + result.message);
           }
@@ -962,8 +902,16 @@
       }
 
       async function showMonitor(id) {
-        document.getElementById("monitor-modal").classList.add("active");
-        const tbody = document.querySelector("#monitor-modal table tbody");
+        currentMonitorExamId = id;
+        const modal = document.getElementById("monitor-modal");
+        modal.classList.add("active");
+
+        const examName = allExams.find((e) => e.id == id)?.name || "Ujian";
+        document.querySelector(
+          "#monitor-modal .modal-title"
+        ).textContent = `👁️ Monitor Ujian — ${examName}`;
+
+        const tbody = document.getElementById("monitor-tbody");
         tbody.innerHTML =
           '<tr><td colspan="4" style="text-align:center">Memuat...</td></tr>';
 
@@ -975,15 +923,16 @@
 
           if (data.success) {
             // Update Modal Stats
-            const statVals = document.querySelectorAll(
-              "#monitor-modal .stat-value"
-            );
-            statVals[0].textContent = data.stats.total;
-            statVals[1].textContent = data.participants.length;
-            statVals[2].textContent = data.stats.finished;
-            statVals[3].textContent = data.stats.violation;
+            document.getElementById("monitor-total").textContent =
+              data.stats.total || 0;
+            document.getElementById("monitor-active").textContent =
+              data.participants?.length || 0;
+            document.getElementById("monitor-finished").textContent =
+              data.stats.finished || 0;
+            document.getElementById("monitor-violations").textContent =
+              data.stats.violation || 0;
 
-            if (data.participants.length === 0) {
+            if (!data.participants || data.participants.length === 0) {
               tbody.innerHTML =
                 '<tr><td colspan="4" style="text-align:center;padding:20px">Belum ada siswa yang bergabung.</td></tr>';
               return;
@@ -992,38 +941,44 @@
             tbody.innerHTML = data.participants
               .map(
                 (p) => `
-            <tr>
-              <td>${p.full_name}</td>
-              <td>${p.score || "—"} (Skor)</td>
-              <td>${
-                p.submitted_at
-                  ? new Date(p.submitted_at).toLocaleTimeString("id-ID")
-                  : "—"
-              }</td>
-              <td style="display:flex; align-items:center; gap:10px">
-                <span class="badge badge-${
-                  p.is_forced == 1 ? "danger" : "success"
-                }">
-                  ${p.is_forced == 1 ? "Diputus" : "Selesai"}
-                </span>
-                ${
-                  p.v_count > 0
-                    ? `<span style="color:red; font-size:0.7rem">⚠️ ${p.v_count}x</span>`
-                    : ""
-                }
-                
-                ${
-                  p.is_forced == 1
-                    ? `<button class="btn btn-sm btn-success" style="padding:2px 8px; font-size:0.7rem" onclick="grantTolerance(${id}, ${p.student_id}, '${p.full_name}')">🔓 Toleransi</button>`
-                    : ""
-                }
-              </td>
-            </tr>
-          `
+              <tr>
+                <td>${p.full_name}</td>
+                <td>${p.score || "—"} (Skor)</td>
+                <td>${
+                  p.submitted_at
+                    ? new Date(p.submitted_at).toLocaleTimeString("id-ID")
+                    : "—"
+                }</td>
+                <td style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                  <span class="badge badge-${
+                    p.is_forced == 1 ? "danger" : "success"
+                  }">
+                    ${p.is_forced == 1 ? "Diputus" : "Selesai"}
+                  </span>
+                  ${
+                    p.v_count > 0
+                      ? `<span style="color:red; font-size:0.7rem">⚠️ ${p.v_count}x</span>`
+                      : ""
+                  }
+                  ${
+                    p.is_forced == 1
+                      ? `<button class="btn btn-sm btn-success" style="padding:2px 8px; font-size:0.7rem" onclick="grantTolerance(${id}, ${p.student_id}, '${p.full_name}')">🔓 Toleransi</button>`
+                      : ""
+                  }
+                </td>
+              </tr>
+            `
               )
               .join("");
+          } else {
+            tbody.innerHTML =
+              '<tr><td colspan="4" style="text-align:center;color:#64748b">Gagal memuat data monitor.</td></tr>';
           }
-        } catch (error) {}
+        } catch (error) {
+          console.error("Error loading monitor:", error);
+          tbody.innerHTML =
+            '<tr><td colspan="4" style="text-align:center;color:#64748b">Terjadi kesalahan.</td></tr>';
+        }
       }
 
       async function grantTolerance(examId, studentId, name) {
@@ -1048,7 +1003,7 @@
 
           if (result.success) {
             alert("✅ " + result.message);
-            showMonitor(examId); // Refresh modal
+            showMonitor(examId);
           } else {
             alert("❌ " + result.message);
           }
@@ -1057,6 +1012,7 @@
 
       function closeModal() {
         document.getElementById("monitor-modal").classList.remove("active");
+        currentMonitorExamId = null;
       }
     </script>
   </body>

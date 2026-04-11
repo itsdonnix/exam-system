@@ -1,136 +1,248 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Pengaturan — ExamSafe</title>
-  <link rel="stylesheet" href="../css/style.css">
-</head>
-<body>
-  <nav class="navbar">
-    <div class="navbar-brand">🎓 Exam<span>Safe</span></div>
-    <div class="navbar-nav">
-      <a href="dashboard.html" class="nav-link">Dashboard</a>
-      <a href="create-exam.html" class="nav-link">Buat Ujian</a>
-      <a href="results.html" class="nav-link">Hasil Ujian</a>
-      <div class="nav-user">
-        <div class="nav-avatar"></div>
-        <span></span>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Pengaturan — ExamSafe</title>
+    <link rel="stylesheet" href="../css/style.css" />
+  </head>
+  <body>
+    <nav class="navbar">
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button
+          class="hamburger-btn"
+          id="hamburgerBtn"
+          aria-label="Toggle menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <div class="navbar-brand">
+          🎓 Exam<span>Safe</span>
+          <span
+            style="
+              font-size: 0.75rem;
+              background: rgba(255, 255, 255, 0.2);
+              padding: 2px 8px;
+              border-radius: 50px;
+              margin-left: 8px;
+            "
+            >GURU</span
+          >
+        </div>
       </div>
+      <div class="navbar-nav">
+        <div class="nav-user">
+          <div class="nav-avatar"></div>
+          <span>Memuat...</span>
+        </div>
         <a
           href="../php/logout.php"
           class="btn btn-sm btn-outline"
           style="color: #fff; border-color: rgba(255, 255, 255, 0.4)"
           >Keluar</a
         >
-    </div>
-  </nav>
+      </div>
+    </nav>
 
-  <div class="layout">
-    <aside class="sidebar">
-      <ul class="sidebar-menu">
-        <li><a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a></li>
-        <li><a href="create-exam.html"><span class="icon">➕</span> Buat Ujian Baru</a></li>
-        <li><a href="results.html"><span class="icon">📊</span> Hasil Ujian</a></li>
-        <li><a href="students.html"><span class="icon">👥</span> Data Siswa</a></li>
-        <li><a href="settings.html" class="active"><span class="icon">⚙️</span> Pengaturan</a></li>
-      </ul>
-    </aside>
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
 
-    <main class="main-content">
-      <div class="page-header">
-        <div>
-          <div class="page-title">⚙️ Pengaturan Akun</div>
-          <div class="page-subtitle">Kelola profil dan keamanan akun Anda</div>
+    <div class="layout">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-avatar-section">
+          <div
+            class="sidebar-avatar"
+            id="sidebarAvatar"
+            style="background: var(--accent)"
+          >
+            G
+          </div>
+          <div class="sidebar-avatar-name" id="sidebarAvatarName">
+            Memuat...
+          </div>
+          <div class="sidebar-avatar-role" id="sidebarAvatarRole">Guru</div>
         </div>
-      </div>
+        <ul class="sidebar-menu">
+          <li>
+            <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
+          </li>
+          <li>
+            <a href="create-exam.html"
+              ><span class="icon">➕</span> Buat Ujian Baru</a
+            >
+          </li>
+          <li>
+            <a href="question-bank.html"
+              ><span class="icon">📚</span> Bank Soal</a
+            >
+          </li>
+          <li>
+            <a href="results.html"><span class="icon">📊</span> Hasil Ujian</a>
+          </li>
+          <li>
+            <a href="students.html"><span class="icon">👥</span> Data Siswa</a>
+          </li>
+          <li>
+            <a href="settings.html" class="active"
+              ><span class="icon">⚙️</span> Pengaturan</a
+            >
+          </li>
+        </ul>
+      </aside>
 
-      <div class="card">
-        <h3>Profil Guru</h3>
-        <p style="margin-bottom:20px; color:#64748b">Ubah data profil Anda di bawah ini.</p>
-        
-        <div id="alert-settings"></div>
-
-        <form id="settings-form" onsubmit="saveProfile(event)">
-          <div class="form-group">
-            <label>Nama Lengkap (Termasuk Gelar)</label>
-            <input type="text" class="form-control" id="profile-name" required>
+      <main class="main-content">
+        <div class="page-header">
+          <div>
+            <div class="page-title">⚙️ Pengaturan Akun</div>
+            <div class="page-subtitle">
+              Kelola profil dan keamanan akun Anda
+            </div>
           </div>
-          <div class="form-group">
-            <label>Email .id.Belajar</label>
-            <input type="email" class="form-control" id="profile-email" required>
-          </div>
-          <div class="form-group">
-            <label>Nomor HP</label>
-            <input type="tel" class="form-control" id="profile-phone">
-          </div>
-          <hr style="margin:20px 0; border-top:1px solid #e2e8f0">
-          <div class="form-group">
-            <label>Ganti Password (Opsional)</label>
-            <input type="password" class="form-control" id="new-password" placeholder="Biarkan kosong jika tidak ingin ganti">
-          </div>
-          <button type="submit" class="btn btn-primary">💾 Simpan Perubahan</button>
-        </form>
-      </div>
-    </main>
-  </div>
+        </div>
 
-  <script>
-    document.addEventListener('DOMContentLoaded', fetchProfile);
+        <div class="card">
+          <h3>Profil Guru</h3>
+          <p style="margin-bottom: 20px; color: #64748b">
+            Ubah data profil Anda di bawah ini.
+          </p>
 
-    async function fetchProfile() {
-      try {
-        const response = await fetch('../php/exam_api.php?action=get_profile');
-        const data = await response.json();
-        
-        if (data.success) {
-          const user = data.user;
-          document.getElementById('profile-name').value = user.full_name;
-          document.getElementById('profile-email').value = user.email;
-          document.getElementById('profile-phone').value = user.phone || '';
-          
-          // Update navbar avatar
-          const fullNameWithGelar = user.full_name + (user.gelar ? ', ' + user.gelar : '');
-          document.querySelector('.nav-user span').textContent = fullNameWithGelar;
-          document.querySelector('.nav-avatar').textContent = user.full_name.charAt(0).toUpperCase();
-        }
-      } catch (error) {
-        console.error('Error fetching profile:', error);
-      }
-    }
+          <div id="alert-settings"></div>
 
-    async function saveProfile(e) {
-      e.preventDefault();
-      const alertEl = document.getElementById('alert-settings');
-      alertEl.innerHTML = '<div class="alert alert-info">Menyimpan...</div>';
+          <form id="settings-form" onsubmit="saveProfile(event)">
+            <div class="form-group">
+              <label>Nama Lengkap (Termasuk Gelar)</label>
+              <input
+                type="text"
+                class="form-control"
+                id="profile-name"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Email .id.Belajar</label>
+              <input
+                type="email"
+                class="form-control"
+                id="profile-email"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Nomor HP</label>
+              <input type="tel" class="form-control" id="profile-phone" />
+            </div>
+            <hr style="margin: 20px 0; border-top: 1px solid #e2e8f0" />
+            <div class="form-group">
+              <label>Ganti Password (Opsional)</label>
+              <input
+                type="password"
+                class="form-control"
+                id="new-password"
+                placeholder="Biarkan kosong jika tidak ingin ganti"
+              />
+            </div>
+            <button type="submit" class="btn btn-primary">
+              💾 Simpan Perubahan
+            </button>
+          </form>
+        </div>
+      </main>
+    </div>
 
-      const formData = {
-        action: 'update_profile',
-        full_name: document.getElementById('profile-name').value,
-        email: document.getElementById('profile-email').value,
-        phone: document.getElementById('profile-phone').value,
-        new_password: document.getElementById('new-password').value
-      };
+    <script>
+      // Sidebar toggle functionality
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
 
-      try {
-        const response = await fetch('../php/exam_api.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
+      if (hamburgerBtn) {
+        hamburgerBtn.addEventListener("click", () => {
+          sidebar.classList.toggle("sidebar-open");
+          sidebarOverlay.classList.toggle("sidebar-overlay-visible");
         });
-        const result = await response.json();
-        
-        if (result.success) {
-          alertEl.innerHTML = '<div class="alert alert-success">✅ Profil berhasil diperbarui!</div>';
-          if (formData.new_password) document.getElementById('new-password').value = '';
-          fetchProfile(); // Refresh display
-        } else {
-          alertEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
-        }
-      } catch (error) {
-        console.error('Save profile error:', error);
       }
-    }
-  </script>
-</body>
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener("click", () => {
+          sidebar.classList.remove("sidebar-open");
+          sidebarOverlay.classList.remove("sidebar-overlay-visible");
+        });
+      }
+
+      document.addEventListener("DOMContentLoaded", fetchProfile);
+
+      async function fetchProfile() {
+        try {
+          const response = await fetch(
+            "../php/exam_api.php?action=get_profile"
+          );
+          const data = await response.json();
+
+          if (data.success) {
+            const user = data.user;
+            const fullNameWithGelar =
+              user.full_name + (user.gelar ? ", " + user.gelar : "");
+
+            document.getElementById("profile-name").value = user.full_name;
+            document.getElementById("profile-email").value = user.email;
+            document.getElementById("profile-phone").value = user.phone || "";
+
+            // Update navbar avatar
+            document.querySelector(".nav-user span").textContent =
+              fullNameWithGelar;
+            document.querySelector(".nav-avatar").textContent = user.full_name
+              .charAt(0)
+              .toUpperCase();
+
+            // Update sidebar
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+            if (sidebarAvatar)
+              sidebarAvatar.textContent = user.full_name
+                .charAt(0)
+                .toUpperCase();
+            const sidebarAvatarName =
+              document.getElementById("sidebarAvatarName");
+            if (sidebarAvatarName)
+              sidebarAvatarName.textContent = fullNameWithGelar;
+          }
+        } catch (error) {
+          console.error("Error fetching profile:", error);
+        }
+      }
+
+      async function saveProfile(e) {
+        e.preventDefault();
+        const alertEl = document.getElementById("alert-settings");
+        alertEl.innerHTML = '<div class="alert alert-info">Menyimpan...</div>';
+
+        const formData = {
+          action: "update_profile",
+          full_name: document.getElementById("profile-name").value,
+          email: document.getElementById("profile-email").value,
+          phone: document.getElementById("profile-phone").value,
+          new_password: document.getElementById("new-password").value,
+        };
+
+        try {
+          const response = await fetch("../php/exam_api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData),
+          });
+          const result = await response.json();
+
+          if (result.success) {
+            alertEl.innerHTML =
+              '<div class="alert alert-success">✅ Profil berhasil diperbarui!</div>';
+            if (formData.new_password)
+              document.getElementById("new-password").value = "";
+            fetchProfile();
+          } else {
+            alertEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
+          }
+        } catch (error) {
+          console.error("Save profile error:", error);
+        }
+      }
+    </script>
+  </body>
 </html>

@@ -244,12 +244,29 @@
   </head>
   <body>
     <nav class="navbar">
-      <div class="navbar-brand">🎓 Exam<span>Safe</span></div>
+      <div style="display: flex; align-items: center; gap: 12px">
+        <button
+          class="hamburger-btn"
+          id="hamburgerBtn"
+          aria-label="Toggle menu"
+        >
+          <span></span><span></span><span></span>
+        </button>
+        <div class="navbar-brand">
+          🎓 Exam<span>Safe</span>
+          <span
+            style="
+              font-size: 0.75rem;
+              background: rgba(255, 255, 255, 0.2);
+              padding: 2px 8px;
+              border-radius: 50px;
+              margin-left: 8px;
+            "
+            >GURU</span
+          >
+        </div>
+      </div>
       <div class="navbar-nav">
-        <a href="dashboard.html" class="nav-link">Dashboard</a>
-        <a href="create-exam.html" class="nav-link active">Buat Ujian</a>
-        <a href="question-bank.html" class="nav-link">Bank Soal</a>
-        <a href="results.html" class="nav-link">Hasil Ujian</a>
         <div class="nav-user">
           <div class="nav-avatar">G</div>
           <span>Memuat...</span>
@@ -263,8 +280,23 @@
       </div>
     </nav>
 
+    <div class="sidebar-overlay" id="sidebarOverlay"></div>
+
     <div class="layout">
-      <aside class="sidebar">
+      <aside class="sidebar" id="sidebar">
+        <div class="sidebar-avatar-section">
+          <div
+            class="sidebar-avatar"
+            id="sidebarAvatar"
+            style="background: var(--accent)"
+          >
+            G
+          </div>
+          <div class="sidebar-avatar-name" id="sidebarAvatarName">
+            Memuat...
+          </div>
+          <div class="sidebar-avatar-role" id="sidebarAvatarRole">Guru</div>
+        </div>
         <ul class="sidebar-menu">
           <li>
             <a href="dashboard.html"><span class="icon">🏠</span> Dashboard</a>
@@ -1050,6 +1082,25 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
     </div>
 
     <script>
+      // Sidebar toggle functionality
+      const hamburgerBtn = document.getElementById("hamburgerBtn");
+      const sidebar = document.getElementById("sidebar");
+      const sidebarOverlay = document.getElementById("sidebarOverlay");
+
+      if (hamburgerBtn) {
+        hamburgerBtn.addEventListener("click", () => {
+          sidebar.classList.toggle("sidebar-open");
+          sidebarOverlay.classList.toggle("sidebar-overlay-visible");
+        });
+      }
+
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener("click", () => {
+          sidebar.classList.remove("sidebar-open");
+          sidebarOverlay.classList.remove("sidebar-overlay-visible");
+        });
+      }
+
       let questionCount = 0;
       let questions = [];
       let allSubjects = [];
@@ -1234,6 +1285,25 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
               console.error(
                 "❌ CRITICAL: navSpan element not found after all methods!"
               );
+            }
+
+            // Update Sidebar Avatar and Name
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+            const sidebarAvatarName =
+              document.getElementById("sidebarAvatarName");
+            const sidebarAvatarRole =
+              document.getElementById("sidebarAvatarRole");
+
+            if (sidebarAvatar) {
+              sidebarAvatar.textContent = user.full_name
+                .charAt(0)
+                .toUpperCase();
+            }
+            if (sidebarAvatarName) {
+              sidebarAvatarName.textContent = fullNameWithGelar;
+            }
+            if (sidebarAvatarRole) {
+              sidebarAvatarRole.textContent = user.role || "Guru"; // Assuming default role is Guru
             }
           } else {
             console.error("❌ Profile failed:", profileData.message);
