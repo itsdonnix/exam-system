@@ -450,14 +450,14 @@ $csrf_token = generateCSRFToken();
                         <label>NISN / Username</label>
                         <div class="input-icon-wrap">
                             <span class="icon">👤</span>
-                            <input type="text" class="form-control" name="username" placeholder="Masukkan NISN" required>
+                            <input type="text" class="form-control" name="username" id="username-siswa" placeholder="Masukkan NISN" required autofocus>
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Password</label>
                         <div class="input-icon-wrap">
                             <span class="icon">🔒</span>
-                            <input type="password" class="form-control" name="password" placeholder="Masukkan password" required>
+                            <input type="password" class="form-control" name="password" id="password-siswa" placeholder="Masukkan password" required>
                         </div>
                     </div>
                 </div>
@@ -470,14 +470,14 @@ $csrf_token = generateCSRFToken();
                         <label>NIP / Email .id.Belajar</label>
                         <div class="input-icon-wrap">
                             <span class="icon">📧</span>
-                            <input type="text" class="form-control" name="username" placeholder="Masukkan NIP atau Email">
+                            <input type="text" class="form-control" name="username" id="username-guru" placeholder="Masukkan NIP atau Email">
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Password</label>
                         <div class="input-icon-wrap">
                             <span class="icon">🔒</span>
-                            <input type="password" class="form-control" name="password" placeholder="Masukkan password">
+                            <input type="password" class="form-control" name="password" id="password-guru" placeholder="Masukkan password">
                         </div>
                     </div>
                 </div>
@@ -490,14 +490,14 @@ $csrf_token = generateCSRFToken();
                         <label>Username Admin</label>
                         <div class="input-icon-wrap">
                             <span class="icon">⚙️</span>
-                            <input type="text" class="form-control" name="username" placeholder="Username admin">
+                            <input type="text" class="form-control" name="username" id="username-admin" placeholder="Username admin">
                         </div>
                     </div>
                     <div class="form-group">
                         <label>Password</label>
                         <div class="input-icon-wrap">
                             <span class="icon">🔒</span>
-                            <input type="password" class="form-control" name="password" placeholder="Masukkan password">
+                            <input type="password" class="form-control" name="password" id="password-admin" placeholder="Masukkan password">
                         </div>
                     </div>
                 </div>
@@ -542,6 +542,12 @@ $csrf_token = generateCSRFToken();
                     inputs.forEach(input => input.disabled = true);
                 }
             });
+
+            // Set focus to the username field of the active role
+            const activeUsernameField = document.getElementById(`username-${role}`);
+            if (activeUsernameField) {
+                setTimeout(() => activeUsernameField.focus(), 50);
+            }
         }
 
         document.querySelectorAll('.role-tab').forEach(tab => {
