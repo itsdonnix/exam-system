@@ -1,482 +1,839 @@
-<!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none">
-  <title>Ujian — ExamSafe</title>
-  <link rel="stylesheet" href="../css/style.css">
-  <style>
-    body { 
-      background: #f8fafc; 
-      user-select: none; 
-      -webkit-user-select: none; 
-      overflow-x: hidden;
-      font-family: 'Poppins', sans-serif;
-    }
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none"
+    />
+    <title>Ujian — ExamSafe</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      body {
+        background: #f8fafc;
+        user-select: none;
+        -webkit-user-select: none;
+        overflow-x: hidden;
+        font-family: "Poppins", sans-serif;
+      }
 
-    /* MODERN HEADER */
-    .exam-header {
-      background: #fff;
-      color: #1e293b;
-      padding: 0 16px;
-      height: 64px;
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      position: fixed;
-      top: 0; left: 0; right: 0;
-      z-index: 200;
-      box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .header-left { display: flex; align-items: center; gap: 12px; }
-    .header-logo {
-      width: 40px; height: 40px;
-      background: #2563eb;
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      color: #fff; font-weight: 800; font-size: 1.2rem;
-    }
-    .header-info h1 { font-size: 0.95rem; font-weight: 700; color: #1e293b; margin: 0; line-height: 1.2; }
-    .header-info p { font-size: 0.72rem; color: #64748b; margin: 0; }
+      /* MODERN HEADER */
+      .exam-header {
+        background: #fff;
+        color: #1e293b;
+        padding: 0 16px;
+        height: 64px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        z-index: 200;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .header-left {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .header-logo {
+        width: 40px;
+        height: 40px;
+        background: #2563eb;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #fff;
+        font-weight: 800;
+        font-size: 1.2rem;
+      }
+      .header-info h1 {
+        font-size: 0.95rem;
+        font-weight: 700;
+        color: #1e293b;
+        margin: 0;
+        line-height: 1.2;
+      }
+      .header-info p {
+        font-size: 0.72rem;
+        color: #64748b;
+        margin: 0;
+      }
 
-    .header-right { display: flex; align-items: center; gap: 12px; }
-    .timer-pill {
-      background: #fee2e2;
-      color: #dc2626;
-      padding: 6px 14px;
-      border-radius: 50px;
-      font-size: 0.9rem;
-      font-weight: 700;
-      display: flex; align-items: center; gap: 6px;
-      border: 1px solid #fecaca;
-    }
-    .timer-pill.warning { background: #fef3c7; color: #d97706; border-color: #fde68a; animation: pulse 1s infinite; }
+      .header-right {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+      }
+      .timer-pill {
+        background: #fee2e2;
+        color: #dc2626;
+        padding: 6px 14px;
+        border-radius: 50px;
+        font-size: 0.9rem;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        border: 1px solid #fecaca;
+      }
+      .timer-pill.warning {
+        background: #fef3c7;
+        color: #d97706;
+        border-color: #fde68a;
+        animation: pulse 1s infinite;
+      }
 
-    /* TOP NAVIGATION SCROLL */
-    .q-nav-container {
-      position: fixed;
-      top: 64px; left: 0; right: 0;
-      background: #fff;
-      padding: 12px 0;
-      z-index: 150;
-      border-bottom: 1px solid #e2e8f0;
-    }
-    .q-nav-scroll {
-      display: flex;
-      gap: 10px;
-      overflow-x: auto;
-      padding: 0 16px;
-      scrollbar-width: none;
-      -ms-overflow-style: none;
-    }
-    .q-nav-scroll::-webkit-scrollbar { display: none; }
-    
-    .q-nav-btn {
-      flex: 0 0 42px;
-      height: 42px;
-      border-radius: 10px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700;
-      font-size: 0.9rem;
-      border: 2px solid #e2e8f0;
-      background: #f8fafc;
-      color: #64748b;
-      cursor: pointer;
-      transition: all 0.2s;
-    }
-    .q-nav-btn.answered { background: #dcfce7; color: #16a34a; border-color: #bbf7d0; }
-    .q-nav-btn.current { background: #2563eb; color: #fff; border-color: #2563eb; box-shadow: 0 4px 12px rgba(37,99,235,0.2); }
-    .q-nav-btn.marked { background: #fef3c7; color: #d97706; border-color: #fde68a; }
+      /* TOP NAVIGATION SCROLL */
+      .q-nav-container {
+        position: fixed;
+        top: 64px;
+        left: 0;
+        right: 0;
+        background: #fff;
+        padding: 12px 0;
+        z-index: 150;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .q-nav-scroll {
+        display: flex;
+        gap: 10px;
+        overflow-x: auto;
+        padding: 0 16px;
+        scrollbar-width: none;
+        -ms-overflow-style: none;
+      }
+      .q-nav-scroll::-webkit-scrollbar {
+        display: none;
+      }
 
-    /* MAIN CONTENT */
-    .exam-container {
-      margin-top: 132px;
-      margin-bottom: 80px;
-      padding: 16px;
-      max-width: 800px;
-      margin-left: auto;
-      margin-right: auto;
-    }
+      .q-nav-btn {
+        flex: 0 0 42px;
+        height: 42px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+        border: 2px solid #e2e8f0;
+        background: #f8fafc;
+        color: #64748b;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .q-nav-btn.answered {
+        background: #dcfce7;
+        color: #16a34a;
+        border-color: #bbf7d0;
+      }
+      .q-nav-btn.current {
+        background: #2563eb;
+        color: #fff;
+        border-color: #2563eb;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.2);
+      }
+      .q-nav-btn.marked {
+        background: #fef3c7;
+        color: #d97706;
+        border-color: #fde68a;
+      }
 
-    .question-card {
-      background: #fff;
-      border-radius: 16px;
-      padding: 24px;
-      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.1), 0 2px 4px -1px rgba(0,0,0,0.06);
-      margin-bottom: 24px;
-    }
-    .q-meta { display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; }
-    .q-number { font-weight: 800; color: #2563eb; font-size: 1.1rem; }
-    .q-type { font-size: 0.75rem; color: #64748b; background: #f1f5f9; padding: 4px 10px; border-radius: 50px; font-weight: 600; }
+      /* MAIN CONTENT */
+      .exam-container {
+        margin-top: 132px;
+        margin-bottom: 80px;
+        padding: 16px;
+        max-width: 800px;
+        margin-left: auto;
+        margin-right: auto;
+      }
 
-    .q-text { font-size: 1.05rem; font-weight: 500; color: #1e293b; line-height: 1.6; margin-bottom: 24px; }
-    
-    .options-list { list-style: none; display: flex; flex-direction: column; gap: 12px; }
-    .option-item {
-      display: flex; align-items: center; gap: 14px;
-      padding: 16px;
-      border: 2px solid #e2e8f0;
-      border-radius: 14px;
-      cursor: pointer;
-      transition: all 0.2s;
-      background: #fff;
-    }
-    .option-item:hover { border-color: #cbd5e1; background: #f8fafc; }
-    .option-item.selected { border-color: #2563eb; background: #eff6ff; }
-    .opt-letter {
-      width: 32px; height: 32px;
-      border-radius: 8px;
-      display: flex; align-items: center; justify-content: center;
-      background: #f1f5f9;
-      color: #64748b;
-      font-weight: 700;
-      font-size: 0.9rem;
-      transition: all 0.2s;
-    }
-    .option-item.selected .opt-letter { background: #2563eb; color: #fff; }
-    .opt-text { flex: 1; font-size: 0.95rem; color: #334155; }
-    .option-item input { display: none; }
+      .question-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 24px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
+          0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        margin-bottom: 24px;
+      }
+      .q-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 16px;
+      }
+      .q-number {
+        font-weight: 800;
+        color: #2563eb;
+        font-size: 1.1rem;
+      }
+      .q-type {
+        font-size: 0.75rem;
+        color: #64748b;
+        background: #f1f5f9;
+        padding: 4px 10px;
+        border-radius: 50px;
+        font-weight: 600;
+      }
 
-    /* BOTTOM BAR */
-    .bottom-nav {
-      position: fixed;
-      bottom: 0; left: 0; right: 0;
-      background: #fff;
-      height: 72px;
-      display: flex; align-items: center; justify-content: space-between;
-      padding: 0 16px;
-      z-index: 200;
-      box-shadow: 0 -4px 12px rgba(0,0,0,0.05);
-      border-top: 1px solid #e2e8f0;
-    }
-    .nav-btn {
-      height: 46px;
-      border-radius: 12px;
-      display: flex; align-items: center; justify-content: center;
-      gap: 8px;
-      font-weight: 600;
-      font-size: 0.95rem;
-      padding: 0 20px;
-      cursor: pointer;
-      transition: all 0.2s;
-      border: none;
-    }
-    .btn-prev { background: #f1f5f9; color: #475569; }
-    .btn-next { background: #2563eb; color: #fff; }
-    .btn-next:disabled { background: #94a3b8; opacity: 0.7; }
-    .btn-finish { background: #16a34a; color: #fff; }
-    .btn-ragu { background: #fef3c7; color: #d97706; padding: 0 16px; }
+      .q-text {
+        font-size: 1.05rem;
+        font-weight: 500;
+        color: #1e293b;
+        line-height: 1.6;
+        margin-bottom: 24px;
+      }
 
-    /* VIOLATION OVERLAY */
-    #violation-overlay {
-      position: fixed; inset: 0;
-      background: rgba(239,68,68,0.98);
-      color: #fff;
-      display: none;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      z-index: 9999;
-      text-align: center;
-      padding: 40px;
-    }
-    #violation-overlay.show { display: flex; }
+      .options-list {
+        list-style: none;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+      .option-item {
+        display: flex;
+        align-items: center;
+        gap: 14px;
+        padding: 16px;
+        border: 2px solid #e2e8f0;
+        border-radius: 14px;
+        cursor: pointer;
+        transition: all 0.2s;
+        background: #fff;
+      }
+      .option-item:hover {
+        border-color: #cbd5e1;
+        background: #f8fafc;
+      }
+      .option-item.selected {
+        border-color: #2563eb;
+        background: #eff6ff;
+      }
+      .opt-letter {
+        width: 32px;
+        height: 32px;
+        border-radius: 8px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: #f1f5f9;
+        color: #64748b;
+        font-weight: 700;
+        font-size: 0.9rem;
+        transition: all 0.2s;
+      }
+      .option-item.selected .opt-letter {
+        background: #2563eb;
+        color: #fff;
+      }
+      .opt-text {
+        flex: 1;
+        font-size: 0.95rem;
+        color: #334155;
+      }
+      .option-item input {
+        display: none;
+      }
 
-    #fs-prompt {
-      position: fixed; inset: 0;
-      background: #fff;
-      z-index: 10000;
-      display: flex; flex-direction: column; align-items: center; justify-content: center;
-      text-align: center; padding: 32px;
-    }
+      /* BOTTOM BAR */
+      .bottom-nav {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: #fff;
+        height: 72px;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 0 16px;
+        z-index: 200;
+        box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
+        border-top: 1px solid #e2e8f0;
+      }
+      .nav-btn {
+        height: 46px;
+        border-radius: 12px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-weight: 600;
+        font-size: 0.95rem;
+        padding: 0 20px;
+        cursor: pointer;
+        transition: all 0.2s;
+        border: none;
+      }
+      .btn-prev {
+        background: #f1f5f9;
+        color: #475569;
+      }
+      .btn-next {
+        background: #2563eb;
+        color: #fff;
+      }
+      .btn-next:disabled {
+        background: #94a3b8;
+        opacity: 0.7;
+      }
+      .btn-finish {
+        background: #16a34a;
+        color: #fff;
+      }
+      .btn-ragu {
+        background: #fef3c7;
+        color: #d97706;
+        padding: 0 16px;
+      }
 
-    @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:0.7} }
+      /* VIOLATION OVERLAY */
+      #violation-overlay {
+        position: fixed;
+        inset: 0;
+        background: rgba(239, 68, 68, 0.98);
+        color: #fff;
+        display: none;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        z-index: 9999;
+        text-align: center;
+        padding: 40px;
+      }
+      #violation-overlay.show {
+        display: flex;
+      }
 
-    /* Grid layout for question selection modal */
-    .nav-grid-modal {
-      position: fixed; inset: 0;
-      background: rgba(0,0,0,0.5);
-      z-index: 300;
-      display: none;
-      align-items: center; justify-content: center;
-      padding: 20px;
-    }
-    .nav-grid-content {
-      background: #fff;
-      border-radius: 20px;
-      width: 100%; max-width: 400px;
-      padding: 24px;
-      box-shadow: 0 20px 25px -5px rgba(0,0,0,0.1);
-    }
-    .grid-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
-    .grid-title { font-weight: 700; font-size: 1.1rem; }
-    .grid-items { display: grid; grid-template-columns: repeat(5, 1fr); gap: 10px; }
+      #fs-prompt {
+        position: fixed;
+        inset: 0;
+        background: #fff;
+        z-index: 10000;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        padding: 32px;
+      }
 
-    @media (max-width: 480px) {
-      .grid-items { grid-template-columns: repeat(4, 1fr); }
-      .nav-btn span { display: none; }
-      .nav-btn { padding: 0 16px; }
-    }
-  </style>
-</head>
-<body>
+      @keyframes pulse {
+        0%,
+        100% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.7;
+        }
+      }
 
-<!-- ZOOM MODAL -->
-<div id="zoom-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.85); z-index:10000; align-items:center; justify-content:center; cursor:zoom-out;" onclick="ExamEngine.closeZoom()">
-  <img id="zoom-img" src="" style="max-width:95%; max-height:95%; object-fit:contain; border-radius:8px;">
-</div>
+      /* Grid layout for question selection modal */
+      .nav-grid-modal {
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 300;
+        display: none;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .nav-grid-content {
+        background: #fff;
+        border-radius: 20px;
+        width: 100%;
+        max-width: 400px;
+        padding: 24px;
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
+      }
+      .grid-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+      }
+      .grid-title {
+        font-weight: 700;
+        font-size: 1.1rem;
+      }
+      .grid-items {
+        display: grid;
+        grid-template-columns: repeat(5, 1fr);
+        gap: 10px;
+      }
 
-<!-- FULLSCREEN PROMPT -->
-<div id="fs-prompt">
-  <div style="font-size:4rem;margin-bottom:24px">🔒</div>
-  <h2 style="font-weight:800;margin-bottom:12px">Mode Ujian Aman</h2>
-  <p style="color:#64748b;margin-bottom:32px">Ujian ini memerlukan mode layar penuh untuk menjaga integritas dan keamanan.</p>
-  <button class="btn btn-primary btn-lg btn-block" onclick="startExam()">
-    Mulai Ujian Sekarang
-  </button>
-</div>
-
-<!-- VIOLATION OVERLAY -->
-<div id="violation-overlay">
-  <div style="font-size:4rem;margin-bottom:16px">⚠️</div>
-  <h2>Pelanggaran Terdeteksi!</h2>
-  <p id="violation-msg">Aktivitas mencurigakan terdeteksi</p>
-  <div id="violation-count" style="margin:20px 0; background:rgba(255,255,255,0.2); padding:10px 24px; border-radius:50px; font-weight:700">Pelanggaran 1/3</div>
-  <p style="font-size:0.85rem;opacity:0.8">Pengawas telah diberitahu. Jangan ulangi!</p>
-</div>
-
-<!-- EXAM HEADER -->
-<div class="exam-header" id="exam-header" style="display:none">
-  <div class="header-left">
-    <div class="header-logo">E</div>
-    <div class="header-info">
-      <h1 id="exam-subject-display">Memuat...</h1>
-      <p id="exam-student-display">Siswa: ---</p>
+      @media (max-width: 480px) {
+        .grid-items {
+          grid-template-columns: repeat(4, 1fr);
+        }
+        .nav-btn span {
+          display: none;
+        }
+        .nav-btn {
+          padding: 0 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <!-- ZOOM MODAL -->
+    <div
+      id="zoom-modal"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: rgba(0, 0, 0, 0.85);
+        z-index: 10000;
+        align-items: center;
+        justify-content: center;
+        cursor: zoom-out;
+      "
+      onclick="ExamEngine.closeZoom()"
+    >
+      <img
+        id="zoom-img"
+        src=""
+        style="
+          max-width: 95%;
+          max-height: 95%;
+          object-fit: contain;
+          border-radius: 8px;
+        "
+      />
     </div>
-  </div>
-  <div class="header-right">
-    <div id="exam-timer" class="timer-pill">⏱️ 00:00</div>
-    <div onclick="toggleGrid()" style="cursor:pointer; background:#f1f5f9; width:40px; height:40px; border-radius:10px; display:flex; align-items:center; justify-content:center; color:#475569">
-      ☰
-    </div>
-  </div>
-</div>
 
-<!-- TOP NAV SCROLL -->
-<div class="q-nav-container" id="q-nav-container" style="display:none">
-  <div class="q-nav-scroll" id="q-nav-scroll">
-    <!-- Buttons injected here -->
-  </div>
-</div>
-
-<!-- EXAM CONTENT -->
-<div class="exam-container" id="exam-content" style="display:none">
-  <div id="questions-container"></div>
-</div>
-
-<!-- BOTTOM NAV -->
-<div class="bottom-nav" id="bottom-nav" style="display:none">
-  <button class="nav-btn btn-prev" onclick="ExamEngine.prevQuestion()">
-    <span>Sebelumnya</span>
-  </button>
-  <button class="nav-btn btn-ragu" id="btn-mark" onclick="toggleMark()">
-    <span>Ragu-ragu</span>
-  </button>
-  <button class="nav-btn btn-next" id="btn-next-main" onclick="ExamEngine.nextQuestion()">
-    <span>Selanjutnya</span>
-  </button>
-</div>
-
-<!-- NAV GRID MODAL -->
-<div class="nav-grid-modal" id="nav-grid-modal" onclick="toggleGrid()">
-  <div class="nav-grid-content" onclick="event.stopPropagation()">
-    <div class="grid-header">
-      <div class="grid-title">Navigasi Soal</div>
-      <div onclick="toggleGrid()" style="cursor:pointer; font-size:1.5rem">&times;</div>
-    </div>
-    <div class="grid-items" id="modal-nav-grid">
-      <!-- Grid items injected here -->
-    </div>
-    <div style="margin-top:24px; border-top:1px solid #eee; padding-top:20px">
-      <button class="btn btn-success btn-block" onclick="ExamEngine.submitExam()">
-        Kumpulkan Ujian
+    <!-- FULLSCREEN PROMPT -->
+    <div id="fs-prompt">
+      <div style="font-size: 4rem; margin-bottom: 24px">🔒</div>
+      <h2 style="font-weight: 800; margin-bottom: 12px">Mode Ujian Aman</h2>
+      <p style="color: #64748b; margin-bottom: 32px">
+        Ujian ini memerlukan mode layar penuh untuk menjaga integritas dan
+        keamanan.
+      </p>
+      <button class="btn btn-primary btn-lg btn-block" onclick="startExam()">
+        Mulai Ujian Sekarang
       </button>
     </div>
-  </div>
-</div>
 
-<!-- RESULT SCREEN (Keep existing or slightly update) -->
-<div id="exam-result" style="display:none; position:fixed; inset:0; background:#fff; z-index:5000; flex-direction:column; align-items:center; justify-content:center; padding:32px; text-align:center">
-  <div style="font-size:4rem; margin-bottom:20px">✅</div>
-  <h2 style="font-weight:800; font-size:2rem; margin-bottom:8px" id="result-score-title">Ujian Selesai</h2>
-  <div id="result-score" style="font-size:5rem; font-weight:900; color:#2563eb; line-height:1; margin-bottom:8px">0</div>
-  <p style="color:#64748b; margin-bottom:32px">Nilai Anda</p>
-  
-  <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px; width:100%; max-width:300px; margin-bottom:40px">
-    <div style="background:#f8fafc; padding:16px; border-radius:16px">
-      <div id="result-correct" style="font-weight:800; font-size:1.2rem; color:#16a34a">0</div>
-      <div style="font-size:0.75rem; color:#64748b">Benar</div>
+    <!-- VIOLATION OVERLAY -->
+    <div id="violation-overlay">
+      <div style="font-size: 4rem; margin-bottom: 16px">⚠️</div>
+      <h2>Pelanggaran Terdeteksi!</h2>
+      <p id="violation-msg">Aktivitas mencurigakan terdeteksi</p>
+      <div
+        id="violation-count"
+        style="
+          margin: 20px 0;
+          background: rgba(255, 255, 255, 0.2);
+          padding: 10px 24px;
+          border-radius: 50px;
+          font-weight: 700;
+        "
+      >
+        Pelanggaran 1/3
+      </div>
+      <p style="font-size: 0.85rem; opacity: 0.8">
+        Pengawas telah diberitahu. Jangan ulangi!
+      </p>
     </div>
-    <div style="background:#f8fafc; padding:16px; border-radius:16px">
-      <div id="result-total" style="font-weight:800; font-size:1.2rem; color:#1e293b">0</div>
-      <div style="font-size:0.75rem; color:#64748b">Total Soal</div>
+
+    <!-- EXAM HEADER -->
+    <div class="exam-header" id="exam-header" style="display: none">
+      <div class="header-left">
+        <div class="header-logo">E</div>
+        <div class="header-info">
+          <h1 id="exam-subject-display">Memuat...</h1>
+          <p id="exam-student-display">Siswa: ---</p>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="exam-timer" class="timer-pill">⏱️ 00:00</div>
+        <div
+          onclick="toggleGrid()"
+          style="
+            cursor: pointer;
+            background: #f1f5f9;
+            width: 40px;
+            height: 40px;
+            border-radius: 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #475569;
+          "
+        >
+          ☰
+        </div>
+      </div>
     </div>
-  </div>
 
-  <a href="../student/dashboard.html" class="btn btn-primary btn-block" style="max-width:300px">
-    Kembali ke Dashboard
-  </a>
-</div>
+    <!-- TOP NAV SCROLL -->
+    <div class="q-nav-container" id="q-nav-container" style="display: none">
+      <div class="q-nav-scroll" id="q-nav-scroll">
+        <!-- Buttons injected here -->
+      </div>
+    </div>
 
-<script src="../js/security.js"></script>
-<script src="../js/exam.js"></script>
-<script>
-  const params = new URLSearchParams(window.location.search);
-  const examId = params.get('exam_id');
+    <!-- EXAM CONTENT -->
+    <div class="exam-container" id="exam-content" style="display: none">
+      <div id="questions-container"></div>
+    </div>
 
-  if (!examId) {
-    alert('ID Ujian tidak ditemukan!');
-    window.location.href = 'dashboard.html';
-  }
+    <!-- BOTTOM NAV -->
+    <div class="bottom-nav" id="bottom-nav" style="display: none">
+      <button class="nav-btn btn-prev" onclick="ExamEngine.prevQuestion()">
+        <span>Sebelumnya</span>
+      </button>
+      <button class="nav-btn btn-ragu" id="btn-mark" onclick="toggleMark()">
+        <span>Ragu-ragu</span>
+      </button>
+      <button
+        class="nav-btn btn-next"
+        id="btn-next-main"
+        onclick="ExamEngine.nextQuestion()"
+      >
+        <span>Selanjutnya</span>
+      </button>
+    </div>
 
-  // Handle Mark for Review (Ragu-ragu)
-  let markedQuestions = new Set();
-  function toggleMark() {
-    const idx = ExamEngine.currentQuestion;
-    if (markedQuestions.has(idx)) {
-      markedQuestions.delete(idx);
-    } else {
-      markedQuestions.add(idx);
-    }
-    updateNavUI();
-  }
+    <!-- NAV GRID MODAL -->
+    <div class="nav-grid-modal" id="nav-grid-modal" onclick="toggleGrid()">
+      <div class="nav-grid-content" onclick="event.stopPropagation()">
+        <div class="grid-header">
+          <div class="grid-title">Navigasi Soal</div>
+          <div
+            onclick="toggleGrid()"
+            style="cursor: pointer; font-size: 1.5rem"
+          >
+            &times;
+          </div>
+        </div>
+        <div class="grid-items" id="modal-nav-grid">
+          <!-- Grid items injected here -->
+        </div>
+        <div
+          style="
+            margin-top: 24px;
+            border-top: 1px solid #eee;
+            padding-top: 20px;
+          "
+        >
+          <button
+            class="btn btn-success btn-block"
+            onclick="ExamEngine.submitExam()"
+          >
+            Kumpulkan Ujian
+          </button>
+        </div>
+      </div>
+    </div>
 
-  function toggleGrid() {
-    const modal = document.getElementById('nav-grid-modal');
-    modal.style.display = modal.style.display === 'flex' ? 'none' : 'flex';
-  }
+    <!-- RESULT SCREEN -->
+    <div
+      id="exam-result"
+      style="
+        display: none;
+        position: fixed;
+        inset: 0;
+        background: #fff;
+        z-index: 5000;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        padding: 32px;
+        text-align: center;
+      "
+    >
+      <div style="font-size: 4rem; margin-bottom: 20px">✅</div>
+      <h2
+        style="font-weight: 800; font-size: 2rem; margin-bottom: 8px"
+        id="result-score-title"
+      >
+        Ujian Selesai
+      </h2>
+      <div
+        id="result-score"
+        style="
+          font-size: 5rem;
+          font-weight: 900;
+          color: #2563eb;
+          line-height: 1;
+          margin-bottom: 8px;
+        "
+      >
+        0
+      </div>
+      <p style="color: #64748b; margin-bottom: 32px">Nilai Anda</p>
 
-  function startExam() {
-    document.getElementById('fs-prompt').style.display = 'none';
-    document.getElementById('exam-header').style.display = 'flex';
-    document.getElementById('q-nav-container').style.display = 'block';
-    document.getElementById('exam-content').style.display = 'block';
-    document.getElementById('bottom-nav').style.display = 'flex';
+      <div
+        style="
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 16px;
+          width: 100%;
+          max-width: 300px;
+          margin-bottom: 40px;
+        "
+      >
+        <div style="background: #f8fafc; padding: 16px; border-radius: 16px">
+          <div
+            id="result-correct"
+            style="font-weight: 800; font-size: 1.2rem; color: #16a34a"
+          >
+            0
+          </div>
+          <div style="font-size: 0.75rem; color: #64748b">Benar</div>
+        </div>
+        <div style="background: #f8fafc; padding: 16px; border-radius: 16px">
+          <div
+            id="result-total"
+            style="font-weight: 800; font-size: 1.2rem; color: #1e293b"
+          >
+            0
+          </div>
+          <div style="font-size: 0.75rem; color: #64748b">Total Soal</div>
+        </div>
+      </div>
 
-    try {
-      const el = document.documentElement;
-      if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
-    } catch (e) {}
+      <a
+        href="../student/dashboard.html"
+        class="btn btn-primary btn-block"
+        style="max-width: 300px"
+      >
+        Kembali ke Dashboard
+      </a>
+    </div>
 
-    ExamEngine.init(examId).then(() => {
-      // Sync UI after load
-      const subDisp = document.getElementById('exam-subject-display');
-      const stdDisp = document.getElementById('exam-student-display');
-      const subj = document.getElementById('exam-subject-title');
-      const name = document.getElementById('exam-student-name');
-      
-      if (subDisp && subj) subDisp.textContent = subj.textContent.split(' — ')[0];
-      if (stdDisp && name) stdDisp.textContent = name.textContent.split(' | ')[0];
+    <script>
+      // ===== DEBUG MODE: DISABLE ALL VIOLATION DETECTORS =====
+      window.DEBUG_DISABLE_VIOLATIONS = true;
+    </script>
+    <script src="../js/security.js"></script>
+    <script src="../js/exam.js"></script>
+    <script>
+      if (
+        "DEBUG_DISABLE_VIOLATIONS" in window &&
+        window.DEBUG_DISABLE_VIOLATIONS
+      ) {
+        console.log(
+          "%c🔧 DEBUG MODE ACTIVE - Violation detectors DISABLED",
+          "background: #f59e0b; color: #000; font-size: 14px; padding: 4px 8px; border-radius: 4px;"
+        );
 
-      buildNav();
-    });
-  }
+        window.reportViolation = function (examId, reason, count) {
+          console.log(
+            "%c🚫 VIOLATION BLOCKED (Debug Mode):",
+            "color: #f59e0b",
+            { examId, reason, count }
+          );
+          return Promise.resolve({
+            success: true,
+            message: "Debug: Violation ignored",
+          });
+        };
 
-  function buildNav() {
-    const scrollContainer = document.getElementById('q-nav-scroll');
-    const gridContainer = document.getElementById('modal-nav-grid');
-    scrollContainer.innerHTML = '';
-    gridContainer.innerHTML = '';
+        if (typeof window.violationCount !== "undefined") {
+          window.violationCount = 0;
+        }
 
-    ExamEngine.questions.forEach((_, i) => {
-      const btn = document.createElement('button');
-      btn.className = 'q-nav-btn';
-      btn.id = `nav-q${i}`;
-      btn.textContent = i + 1;
-      btn.onclick = () => {
-        ExamEngine.goToQuestion(i);
-        if (document.getElementById('nav-grid-modal').style.display === 'flex') toggleGrid();
+        const originalAddEventListener = EventTarget.prototype.addEventListener;
+        EventTarget.prototype.addEventListener = function (
+          type,
+          listener,
+          options
+        ) {
+          const violationEvents = [
+            "visibilitychange",
+            "blur",
+            "copy",
+            "cut",
+            "paste",
+            "contextmenu",
+            "keydown",
+          ];
+          if (violationEvents.includes(type)) {
+            console.log(
+              `%c🔇 Security event '${type}' ignored in debug mode`,
+              "color: #6b7280"
+            );
+            return;
+          }
+          return originalAddEventListener.call(this, type, listener, options);
+        };
+
+        document.removeEventListener(
+          "fullscreenchange",
+          window.handleFullscreenChange
+        );
+        document.removeEventListener(
+          "webkitfullscreenchange",
+          window.handleFullscreenChange
+        );
+
+        window.forceSubmitOnViolation = function () {
+          console.log(
+            "%c⏸️ Force submit prevented in debug mode",
+            "color: #f59e0b"
+          );
+          return false;
+        };
+      }
+
+      const params = new URLSearchParams(window.location.search);
+      const examId = params.get("exam_id");
+
+      if (!examId) {
+        alert("ID Ujian tidak ditemukan!");
+        window.location.href = "dashboard.html";
+      }
+
+      let markedQuestions = new Set();
+      function toggleMark() {
+        const idx = ExamEngine.currentQuestion;
+        if (markedQuestions.has(idx)) {
+          markedQuestions.delete(idx);
+        } else {
+          markedQuestions.add(idx);
+        }
+        updateNavUI();
+      }
+
+      function toggleGrid() {
+        const modal = document.getElementById("nav-grid-modal");
+        modal.style.display = modal.style.display === "flex" ? "none" : "flex";
+      }
+
+      function startExam() {
+        document.getElementById("fs-prompt").style.display = "none";
+        document.getElementById("exam-header").style.display = "flex";
+        document.getElementById("q-nav-container").style.display = "block";
+        document.getElementById("exam-content").style.display = "block";
+        document.getElementById("bottom-nav").style.display = "flex";
+
+        try {
+          const el = document.documentElement;
+          if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
+        } catch (e) {}
+
+        ExamEngine.init(examId).then(() => {
+          const subDisp = document.getElementById("exam-subject-display");
+          const stdDisp = document.getElementById("exam-student-display");
+          const subj = document.getElementById("exam-subject-title");
+          const name = document.getElementById("exam-student-name");
+
+          if (subDisp && subj)
+            subDisp.textContent = subj.textContent.split(" — ")[0];
+          if (stdDisp && name)
+            stdDisp.textContent = name.textContent.split(" | ")[0];
+
+          buildNav();
+        });
+      }
+
+      function buildNav() {
+        const scrollContainer = document.getElementById("q-nav-scroll");
+        const gridContainer = document.getElementById("modal-nav-grid");
+        scrollContainer.innerHTML = "";
+        gridContainer.innerHTML = "";
+
+        ExamEngine.questions.forEach((_, i) => {
+          const btn = document.createElement("button");
+          btn.className = "q-nav-btn";
+          btn.id = `nav-q${i}`;
+          btn.textContent = i + 1;
+          btn.onclick = () => {
+            ExamEngine.goToQuestion(i);
+            if (
+              document.getElementById("nav-grid-modal").style.display === "flex"
+            )
+              toggleGrid();
+          };
+          scrollContainer.appendChild(btn);
+
+          const gridBtn = btn.cloneNode(true);
+          gridBtn.id = `modal-nav-q${i}`;
+          gridBtn.onclick = btn.onclick;
+          gridContainer.appendChild(gridBtn);
+        });
+        updateNavUI();
+      }
+
+      function updateNavUI() {
+        ExamEngine.questions.forEach((q, i) => {
+          const isAnswered = ExamEngine.answers[q.id] !== undefined;
+          const isCurrent = ExamEngine.currentQuestion === i;
+          const isMarked = markedQuestions.has(i);
+
+          const btns = [
+            document.getElementById(`nav-q${i}`),
+            document.getElementById(`modal-nav-q${i}`),
+          ];
+
+          btns.forEach((btn) => {
+            if (!btn) return;
+            btn.className = "q-nav-btn";
+            if (isAnswered) btn.classList.add("answered");
+            if (isMarked) btn.classList.add("marked");
+            if (isCurrent) btn.classList.add("current");
+          });
+        });
+
+        const nextBtn = document.getElementById("btn-next-main");
+        const markBtn = document.getElementById("btn-mark");
+
+        if (ExamEngine.currentQuestion === ExamEngine.questions.length - 1) {
+          nextBtn.innerHTML = "<span>Selesai</span>";
+          nextBtn.className = "nav-btn btn-finish";
+          nextBtn.disabled = false;
+          nextBtn.style.opacity = "1";
+          nextBtn.style.cursor = "pointer";
+          nextBtn.onclick = () => ExamEngine.submitExam();
+        } else {
+          nextBtn.innerHTML = "<span>Selanjutnya</span>";
+          nextBtn.className = "nav-btn btn-next";
+          nextBtn.disabled = false;
+          nextBtn.style.opacity = "1";
+          nextBtn.style.cursor = "pointer";
+          nextBtn.onclick = () => ExamEngine.nextQuestion();
+        }
+
+        if (markedQuestions.has(ExamEngine.currentQuestion)) {
+          markBtn.style.background = "#fde68a";
+          markBtn.style.borderColor = "#f59e0b";
+        } else {
+          markBtn.style.background = "#fef3c7";
+          markBtn.style.borderColor = "transparent";
+        }
+
+        const curBtn = document.getElementById(
+          `nav-q${ExamEngine.currentQuestion}`
+        );
+        if (curBtn) {
+          curBtn.scrollIntoView({
+            behavior: "smooth",
+            block: "nearest",
+            inline: "center",
+          });
+        }
+      }
+
+      const originalGoTo = ExamEngine.goToQuestion;
+      ExamEngine.goToQuestion = function (idx) {
+        originalGoTo.call(this, idx);
+        updateNavUI();
       };
-      scrollContainer.appendChild(btn);
 
-      const gridBtn = btn.cloneNode(true);
-      gridBtn.id = `modal-nav-q${i}`;
-      gridBtn.onclick = btn.onclick;
-      gridContainer.appendChild(gridBtn);
-    });
-    updateNavUI();
-  }
-
-  function updateNavUI() {
-    ExamEngine.questions.forEach((q, i) => {
-      const isAnswered = ExamEngine.answers[q.id] !== undefined;
-      const isCurrent = ExamEngine.currentQuestion === i;
-      const isMarked = markedQuestions.has(i);
-
-      const btns = [
-        document.getElementById(`nav-q${i}`),
-        document.getElementById(`modal-nav-q${i}`)
-      ];
-
-      btns.forEach(btn => {
-        if (!btn) return;
-        btn.className = 'q-nav-btn';
-        if (isAnswered) btn.classList.add('answered');
-        if (isMarked) btn.classList.add('marked');
-        if (isCurrent) btn.classList.add('current');
-      });
-    });
-
-    // Update Bottom Nav Buttons
-    const nextBtn = document.getElementById('btn-next-main');
-    const markBtn = document.getElementById('btn-mark');
-    
-    if (ExamEngine.currentQuestion === ExamEngine.questions.length - 1) {
-      nextBtn.innerHTML = '<span>Selesai</span>';
-      nextBtn.className = 'nav-btn btn-finish';
-      nextBtn.disabled = false;
-      nextBtn.style.opacity = '1';
-      nextBtn.style.cursor = 'pointer';
-      nextBtn.onclick = () => ExamEngine.submitExam();
-    } else {
-      nextBtn.innerHTML = '<span>Selanjutnya</span>';
-      nextBtn.className = 'nav-btn btn-next';
-      nextBtn.disabled = false;
-      nextBtn.style.opacity = '1';
-      nextBtn.style.cursor = 'pointer';
-      nextBtn.onclick = () => ExamEngine.nextQuestion();
-    }
-
-    // Update mark button state
-    if (markedQuestions.has(ExamEngine.currentQuestion)) {
-      markBtn.style.background = '#fde68a';
-      markBtn.style.borderColor = '#f59e0b';
-    } else {
-      markBtn.style.background = '#fef3c7';
-      markBtn.style.borderColor = 'transparent';
-    }
-
-    // Scroll top nav to current
-    const curBtn = document.getElementById(`nav-q${ExamEngine.currentQuestion}`);
-    if (curBtn) {
-      curBtn.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'center' });
-    }
-  }
-
-  // Override ExamEngine.goToQuestion to update our UI
-  const originalGoTo = ExamEngine.goToQuestion;
-  ExamEngine.goToQuestion = function(idx) {
-    originalGoTo.call(this, idx);
-    updateNavUI();
-  };
-
-  // Override updateProgress to sync our UI
-  const originalUpdateProgress = ExamEngine.updateProgress;
-  ExamEngine.updateProgress = function() {
-    originalUpdateProgress.call(this);
-    updateNavUI();
-  };
-</script>
-</body>
+      const originalUpdateProgress = ExamEngine.updateProgress;
+      ExamEngine.updateProgress = function () {
+        originalUpdateProgress.call(this);
+        updateNavUI();
+      };
+    </script>
+  </body>
 </html>
