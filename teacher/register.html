@@ -112,14 +112,21 @@
         <div class="alert alert-info">
           ℹ️ Akun Anda akan diverifikasi oleh admin sekolah sebelum dapat digunakan. Proses verifikasi 1-2 hari kerja.
         </div>
-        <div style="display:flex;gap:8px">
-          <button class="btn btn-outline" onclick="nextStep(2)" style="flex:1">← Kembali</button>
-          <button class="btn btn-success" onclick="submitRegister()" style="flex:2">✅ Daftar Sekarang</button>
-        </div>
-      </div>
 
-      <div style="text-align:center;margin-top:20px;font-size:0.85rem;color:#64748b">
-        Sudah punya akun? <a href="../index.html" style="color:var(--primary-light);font-weight:600">Login di sini</a>
+        <div
+          style="
+            text-align: center;
+            margin-top: 20px;
+            font-size: 0.85rem;
+            color: #64748b;
+          "
+        >
+          Sudah punya akun?
+          <a
+            href="../index.php"
+            style="color: var(--primary-light); font-weight: 600"
+            >Login di sini</a
+          >
       </div>
     </div>
   </div>
@@ -219,7 +226,7 @@
               <div style="font-size:4rem;margin-bottom:16px">🎉</div>
               <h3 style="color:var(--success);margin-bottom:8px">Pendaftaran Berhasil!</h3>
               <p style="color:#64748b;margin-bottom:20px">Akun Anda sedang menunggu verifikasi admin. Kami akan mengirim email konfirmasi ke <b>${result.email}</b></p>
-              <a href="../index.html" class="btn btn-primary btn-block">← Kembali ke Login</a>
+              <a href="../index.php" class="btn btn-primary btn-block">← Kembali ke Login</a>
             </div>
           `;
           document.querySelectorAll('.dot').forEach(d => d.className = 'dot done');
