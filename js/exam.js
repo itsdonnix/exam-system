@@ -5,13 +5,23 @@
 
 const ExamEngine = {
   escapeHtml(str) {
+    if (!str) return "";
     const div = document.createElement("div");
     div.appendChild(document.createTextNode(str));
     return div.innerHTML;
   },
+
+  decodeHtml(str) {
+    if (!str) return "";
+    const txt = document.createElement("textarea");
+    txt.innerHTML = str;
+    return txt.value;
+  },
+
   escapeUrl(url) {
     return encodeURI(url);
   },
+
   examId: null,
   duration: 90, // menit
   timeLeft: 0, // detik
@@ -121,7 +131,8 @@ const ExamEngine = {
     // Render all questions but hide them except the current one
     container.innerHTML = this.questions
       .map((q, idx) => {
-        const qText = q.question_text || q.text || "Teks soal tidak tersedia";
+        let qText = q.question_text || q.text || "Teks soal tidak tersedia";
+        qText = this.decodeHtml(qText);
         const qType = q.question_type || q.type || "multiple";
 
         let typeLabel = "Pilihan Ganda";
@@ -140,6 +151,19 @@ const ExamEngine = {
             options = [];
           }
         }
+
+        options = options.map((opt) => {
+          if (typeof opt === "string") {
+            return this.decodeHtml(opt);
+          } else if (typeof opt === "object" && opt !== null) {
+            return {
+              ...opt,
+              text: opt.text ? this.decodeHtml(opt.text) : "",
+              image: opt.image || "",
+            };
+          }
+          return opt;
+        });
 
         if (qType === "truefalse" && options.length === 0) {
           options = ["Benar", "Salah"];
@@ -241,7 +265,7 @@ const ExamEngine = {
       if (qType === "multiple" || qType === "truefalse") {
         document.querySelectorAll(`[name="q${idx}"]`).forEach((radio) => {
           radio.addEventListener("change", () => {
-            let val = radio.value; // Store as string ("0", "1", "true", "false")
+            let val = radio.value;
             if (qType === "truefalse") {
               val = radio.value === "0" ? "true" : "false";
             }
@@ -263,7 +287,7 @@ const ExamEngine = {
               delete this.answers[qId];
             }
             this.updateProgress();
-            this.highlightSelected(idx, parseInt(cb.value)); // Visual only for the last clicked
+            this.highlightSelected(idx, parseInt(cb.value));
           });
         });
       } else {
@@ -346,7 +370,6 @@ const ExamEngine = {
     if (modal && img) {
       img.src = url;
       modal.style.display = "flex";
-      // Mencegah deteksi pelanggaran (jika ada script monitor yang melacak klik/interaksi)
       event.stopPropagation();
     }
   },
@@ -369,13 +392,11 @@ const ExamEngine = {
   },
 
   goToQuestion(idx) {
-    // Hide current
     const currentCard = document.getElementById(
       `qcard-${this.currentQuestion}`
     );
     if (currentCard) currentCard.style.display = "none";
 
-    // Show new
     this.currentQuestion = idx;
     const nextCard = document.getElementById(`qcard-${this.currentQuestion}`);
     if (nextCard) {
@@ -412,11 +433,9 @@ const ExamEngine = {
         delete this.answers[q.id];
       }
     } else {
-      // Remove selected from all options in this question
       document
         .querySelectorAll(`[id^="opt-${qIdx}-"]`)
         .forEach((el) => el.classList.remove("selected"));
-      // Select clicked
       if (optEl) optEl.classList.add("selected");
       if (inputEl) inputEl.checked = true;
 
@@ -444,10 +463,6 @@ const ExamEngine = {
   },
 
   updateProgress() {
-    const answered = Object.keys(this.answers).length;
-    const total = this.questions.length;
-
-    // This will trigger updateNavUI from the exam.html script
     if (typeof updateNavUI === "function") {
       updateNavUI();
     }
@@ -495,7 +510,6 @@ const ExamEngine = {
       const data = await response.json();
 
       if (data.success) {
-        // Show result from server if permitted
         const examContent = document.getElementById("exam-content");
         if (examContent) examContent.style.display = "none";
 
