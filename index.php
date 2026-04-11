@@ -8,13 +8,6 @@ ob_start();
 
 session_start();
 
-// Debug: Check if session ID exists
-// if (session_status() === PHP_SESSION_ACTIVE) {
-//     error_log("Session active. ID: " . session_id());
-// } else {
-//     error_log("Session NOT active");
-// }
-
 require_once 'includes/auth.php';
 require_once 'includes/csrf.php';
 require_once 'php/db.php';
@@ -30,9 +23,6 @@ if (isLoggedIn() && !isSessionExpired(3600)) {
     header("Location: $redirect");
     exit;
 }
-// elseif (isSessionExpired(3600)) {
-// clearSession();
-// }
 
 // Handle login form submission
 $error = $_SESSION['error'] ?? '';
@@ -300,18 +290,6 @@ $csrf_token = generateCSRFToken();
             padding-left: 42px;
         }
 
-        .forgot-link {
-            font-size: 0.85rem;
-            color: #2563eb;
-            float: right;
-            margin-top: -12px;
-            margin-bottom: 16px;
-        }
-
-        .forgot-link:hover {
-            text-decoration: underline;
-        }
-
         .register-link {
             text-align: center;
             margin-top: 20px;
@@ -322,36 +300,6 @@ $csrf_token = generateCSRFToken();
         .register-link a {
             color: #2563eb;
             font-weight: 600;
-        }
-
-        .register-link a:hover {
-            text-decoration: underline;
-        }
-
-        .divider-text {
-            text-align: center;
-            position: relative;
-            margin: 20px 0;
-            color: #94a3b8;
-            font-size: 0.85rem;
-        }
-
-        .divider-text::before,
-        .divider-text::after {
-            content: '';
-            position: absolute;
-            top: 50%;
-            width: 40%;
-            height: 1px;
-            background: #e2e8f0;
-        }
-
-        .divider-text::before {
-            left: 0;
-        }
-
-        .divider-text::after {
-            right: 0;
         }
 
         .info-box {
