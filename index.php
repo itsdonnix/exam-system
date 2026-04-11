@@ -12,6 +12,20 @@ require_once 'includes/auth.php';
 require_once 'includes/csrf.php';
 require_once 'php/db.php';
 
+// Function to send JSON response (for AJAX requests)
+function sendJsonResponse($success, $code, $message, $data = [])
+{
+    $response = array_merge([
+        'success' => $success,
+        'code' => $code,
+        'message' => $message
+    ], $data);
+
+    header('Content-Type: application/json');
+    echo json_encode($response);
+    exit;
+}
+
 // Check if already logged in
 if (isLoggedIn() && !isSessionExpired(3600)) {
     $redirect = match ($_SESSION['role']) {
@@ -20,97 +34,163 @@ if (isLoggedIn() && !isSessionExpired(3600)) {
         'admin' => 'admin/dashboard.html',
         default => 'index.php'
     };
+
+    // For AJAX requests, return JSON
+    if (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+        sendJsonResponse(true, 200, 'Already logged in', ['redirect' => $redirect]);
+    }
+
     header("Location: $redirect");
     exit;
 }
 
-// Handle login form submission
-$error = $_SESSION['error'] ?? '';
-$success = $_SESSION['success'] ?? '';
-unset($_SESSION['error'], $_SESSION['success']);
+// Detect AJAX request
+$isAjax = (!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') ||
+    (isset($_SERVER['HTTP_ACCEPT']) && strpos($_SERVER['HTTP_ACCEPT'], 'application/json') !== false);
+
+// Handle login logic (both AJAX and traditional POST)
+$error = null;
+$success = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // Verify CSRF token
-    if (!verifyCSRFToken($_POST['csrf_token'] ?? '', $_SESSION['csrf_token'])) {
-        $error = 'Token keamanan tidak valid. Silakan refresh halaman.';
+    // Get CSRF token from POST or JSON body
+    $csrf_token = null;
+    $role = null;
+    $username = null;
+    $password = null;
+    $remember = false;
+
+    if ($isAjax) {
+        // Handle JSON input for AJAX
+        $input = json_decode(file_get_contents('php://input'), true);
+        if ($input) {
+            $csrf_token = $input['csrf_token'] ?? '';
+            $role = $input['role'] ?? '';
+            $username = trim($input['username'] ?? '');
+            $password = $input['password'] ?? '';
+            $remember = $input['remember'] ?? false;
+        }
     } else {
+        // Handle traditional form POST
+        $csrf_token = $_POST['csrf_token'] ?? '';
         $role = $_POST['role'] ?? '';
         $username = trim($_POST['username'] ?? '');
         $password = $_POST['password'] ?? '';
         $remember = isset($_POST['remember']) ? true : false;
+    }
 
-        if (empty($role) || empty($username) || empty($password)) {
-            $error = 'Semua field harus diisi.';
-        } else {
-            try {
-                $db = getDB();
+    // Verify CSRF token
+    if (!verifyCSRFToken($csrf_token, $_SESSION['csrf_token'])) {
+        $error = 'Token keamanan tidak valid. Silakan refresh halaman.';
+        if ($isAjax) {
+            sendJsonResponse(false, 400, $error);
+        }
+    } elseif (empty($role) || empty($username) || empty($password)) {
+        $error = 'Semua field harus diisi.';
+        if ($isAjax) {
+            sendJsonResponse(false, 400, $error);
+        }
+    } else {
+        try {
+            $db = getDB();
 
-                // Rate limiting check
-                $ip = $_SERVER['REMOTE_ADDR'];
-                $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM login_attempts WHERE ip = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)");
-                $stmt->execute([$ip]);
-                $attempts = $stmt->fetch()['cnt'];
+            // Rate limiting check
+            $ip = $_SERVER['REMOTE_ADDR'];
+            $stmt = $db->prepare("SELECT COUNT(*) as cnt FROM login_attempts WHERE ip = ? AND created_at > DATE_SUB(NOW(), INTERVAL 1 MINUTE)");
+            $stmt->execute([$ip]);
+            $attempts = $stmt->fetch()['cnt'];
 
-                if ($attempts >= 5) {
-                    $error = 'Terlalu banyak percobaan login. Coba lagi dalam 1 menit.';
+            if ($attempts >= 5) {
+                $error = 'Terlalu banyak percobaan login. Coba lagi dalam 1 menit.';
+                if ($isAjax) {
+                    sendJsonResponse(false, 429, $error);
+                }
+            } else {
+                // Find user
+                $table = match ($role) {
+                    'siswa' => 'students',
+                    'guru' => 'teachers',
+                    'admin' => 'admins',
+                    default => null
+                };
+
+                if (!$table) {
+                    $error = 'Role tidak valid';
+                    if ($isAjax) {
+                        sendJsonResponse(false, 400, $error);
+                    }
                 } else {
-                    // Find user
-                    $table = match ($role) {
-                        'siswa' => 'students',
-                        'guru' => 'teachers',
-                        'admin' => 'admins',
-                        default => null
-                    };
-
-                    if (!$table) {
-                        $error = 'Role tidak valid';
+                    if ($role === 'guru') {
+                        $stmt = $db->prepare("SELECT * FROM teachers WHERE (nip = ? OR email = ?) AND is_active = 1 LIMIT 1");
+                        $stmt->execute([$username, $username]);
+                    } elseif ($role === 'siswa') {
+                        $stmt = $db->prepare("SELECT * FROM students WHERE (username = ? OR nisn = ? OR email = ?) AND is_active = 1 LIMIT 1");
+                        $stmt->execute([$username, $username, $username]);
                     } else {
-                        if ($role === 'guru') {
-                            $stmt = $db->prepare("SELECT * FROM teachers WHERE (nip = ? OR email = ?) AND is_active = 1 LIMIT 1");
-                            $stmt->execute([$username, $username]);
-                        } elseif ($role === 'siswa') {
-                            $stmt = $db->prepare("SELECT * FROM students WHERE (username = ? OR nisn = ? OR email = ?) AND is_active = 1 LIMIT 1");
-                            $stmt->execute([$username, $username, $username]);
-                        } else {
-                            $stmt = $db->prepare("SELECT * FROM admins WHERE (username = ? OR email = ?) AND is_active = 1 LIMIT 1");
-                            $stmt->execute([$username, $username]);
+                        $stmt = $db->prepare("SELECT * FROM admins WHERE (username = ? OR email = ?) AND is_active = 1 LIMIT 1");
+                        $stmt->execute([$username, $username]);
+                    }
+
+                    $user = $stmt->fetch();
+
+                    if (!$user || !password_verify($password, $user['password'])) {
+                        // Log failed attempt
+                        $db->prepare("INSERT INTO login_attempts (ip, username, created_at) VALUES (?, ?, NOW())")->execute([$ip, $username]);
+                        $error = 'Username atau password salah';
+                        if ($isAjax) {
+                            sendJsonResponse(false, 401, $error);
                         }
-
-                        $user = $stmt->fetch();
-
-                        if (!$user || !password_verify($password, $user['password'])) {
-                            // Log failed attempt
-                            $db->prepare("INSERT INTO login_attempts (ip, username, created_at) VALUES (?, ?, NOW())")->execute([$ip, $username]);
-                            $error = 'Username atau password salah';
+                    } else {
+                        // Check approval for teachers
+                        if ($role === 'guru' && $user['approval_status'] !== 'approved') {
+                            $error = 'Akun Anda belum disetujui admin. Harap tunggu verifikasi.';
+                            if ($isAjax) {
+                                sendJsonResponse(false, 403, $error);
+                            }
                         } else {
-                            // Check approval for teachers
-                            if ($role === 'guru' && $user['approval_status'] !== 'approved') {
-                                $error = 'Akun Anda belum disetujui admin. Harap tunggu verifikasi.';
+                            // Clear login attempts
+                            $db->prepare("DELETE FROM login_attempts WHERE ip = ?")->execute([$ip]);
+
+                            // Set session
+                            setSession($user, $role);
+
+                            // Handle Remember Me
+                            if ($remember) {
+                                $token = bin2hex(random_bytes(32));
+                                $expires = date('Y-m-d H:i:s', strtotime('+30 days'));
+
+                                $stmt = $db->prepare("INSERT INTO user_tokens (user_id, role, token, expires_at) VALUES (?, ?, ?, ?)");
+                                $stmt->execute([$user['id'], $role, $token, $expires]);
+
+                                setcookie('remember_token', $token, strtotime('+30 days'), '/', '', false, true);
+                            }
+
+                            // Determine redirect based on role
+                            $redirect = match ($role) {
+                                'siswa' => 'student/dashboard.php',
+                                'guru' => 'teacher/dashboard.html',
+                                'admin' => 'admin/dashboard.html',
+                            };
+
+                            // Get user name for response
+                            $userName = match ($role) {
+                                'siswa' => $user['full_name'] ?? $user['username'],
+                                'guru' => $user['full_name'] ?? $user['nip'],
+                                'admin' => $user['username'],
+                            };
+
+                            if ($isAjax) {
+                                // Return JSON success response for AJAX
+                                sendJsonResponse(true, 200, 'Login berhasil', [
+                                    'redirect' => $redirect,
+                                    'role' => $role,
+                                    'user' => [
+                                        'id' => $user['id'],
+                                        'name' => $userName
+                                    ]
+                                ]);
                             } else {
-                                // Clear login attempts
-                                $db->prepare("DELETE FROM login_attempts WHERE ip = ?")->execute([$ip]);
-
-                                // Set session
-                                setSession($user, $role);
-
-                                // Handle Remember Me
-                                if ($remember) {
-                                    $token = bin2hex(random_bytes(32));
-                                    $expires = date('Y-m-d H:i:s', strtotime('+30 days'));
-
-                                    $stmt = $db->prepare("INSERT INTO user_tokens (user_id, role, token, expires_at) VALUES (?, ?, ?, ?)");
-                                    $stmt->execute([$user['id'], $role, $token, $expires]);
-
-                                    setcookie('remember_token', $token, strtotime('+30 days'), '/', '', false, true);
-                                }
-
-                                // Redirect based on role
-                                $redirect = match ($role) {
-                                    'siswa' => 'student/dashboard.php',
-                                    'guru' => 'teacher/dashboard.html',
-                                    'admin' => 'admin/dashboard.html',
-                                };
-
+                                // Traditional redirect for non-AJAX
                                 $_SESSION['success'] = 'Login berhasil!';
                                 header("Location: $redirect");
                                 exit;
@@ -118,9 +198,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
-            } catch (Exception $e) {
-                error_log("Login error: " . $e->getMessage());
-                $error = 'Terjadi kesalahan sistem. Silakan coba lagi.';
+            }
+        } catch (Exception $e) {
+            error_log("Login error: " . $e->getMessage());
+            $error = 'Terjadi kesalahan sistem. Silakan coba lagi.';
+            if ($isAjax) {
+                sendJsonResponse(false, 500, $error);
             }
         }
     }
@@ -291,7 +374,6 @@ $csrf_token = generateCSRFToken();
         }
 
         .register-link {
-            text-align: center;
             margin-top: 20px;
             font-size: 0.88rem;
             color: #64748b;
@@ -302,19 +384,8 @@ $csrf_token = generateCSRFToken();
             font-weight: 600;
         }
 
-        .info-box {
-            background: #eff6ff;
-            border: 1px solid #bfdbfe;
-            border-radius: 10px;
-            padding: 14px 16px;
-            margin-bottom: 20px;
-            font-size: 0.85rem;
-            color: #1e40af;
-        }
-
-        .info-box strong {
-            display: block;
-            margin-bottom: 4px;
+        .register-link a:hover {
+            text-decoration: underline;
         }
 
         .footer-text {
@@ -322,14 +393,6 @@ $csrf_token = generateCSRFToken();
             color: rgba(255, 255, 255, 0.6);
             font-size: 0.82rem;
             margin-top: 20px;
-        }
-
-        .tab-content {
-            display: none;
-        }
-
-        .tab-content.active {
-            display: block;
         }
 
         .alert {
@@ -351,6 +414,12 @@ $csrf_token = generateCSRFToken();
             border: 1px solid #bbf7d0;
         }
 
+        .alert-info {
+            background: #eff6ff;
+            color: #1e40af;
+            border: 1px solid #bfdbfe;
+        }
+
         .checkbox-label {
             display: flex;
             align-items: center;
@@ -359,6 +428,15 @@ $csrf_token = generateCSRFToken();
             font-size: 0.88rem;
             color: #475569;
             cursor: pointer;
+        }
+
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+
+        .role-alert {
+            margin-bottom: 20px;
         }
     </style>
 </head>
@@ -372,13 +450,19 @@ $csrf_token = generateCSRFToken();
         </div>
 
         <div class="login-card">
-            <?php if ($error): ?>
+            <!-- Traditional POST error/success display (non-JS fallback) -->
+            <?php if ($error && !$isAjax): ?>
                 <div class="alert alert-danger">❌ <?php echo htmlspecialchars($error); ?></div>
             <?php endif; ?>
 
-            <?php if ($success): ?>
+            <?php if ($success && !$isAjax): ?>
                 <div class="alert alert-success">✅ <?php echo htmlspecialchars($success); ?></div>
             <?php endif; ?>
+
+            <!-- Role-specific alert containers for AJAX -->
+            <div id="alert-siswa" class="role-alert" style="display:none;"></div>
+            <div id="alert-guru" class="role-alert" style="display:none;"></div>
+            <div id="alert-admin" class="role-alert" style="display:none;"></div>
 
             <div class="role-tabs">
                 <button type="button" class="role-tab active" data-role="siswa">👨‍🎓 Siswa</button>
@@ -408,6 +492,9 @@ $csrf_token = generateCSRFToken();
                             <input type="password" class="form-control" name="password" id="password-siswa" placeholder="Masukkan password" required>
                         </div>
                     </div>
+                    <div class="register-link">
+                        Belum punya akun? <a href="student/register.html">Daftar Siswa</a>
+                    </div>
                 </div>
 
                 <!-- GURU FIELDS -->
@@ -427,6 +514,9 @@ $csrf_token = generateCSRFToken();
                             <span class="icon">🔒</span>
                             <input type="password" class="form-control" name="password" id="password-guru" placeholder="Masukkan password">
                         </div>
+                    </div>
+                    <div class="register-link">
+                        Belum punya akun? <a href="teacher/register.html">Daftar Guru</a>
                     </div>
                 </div>
 
@@ -448,24 +538,14 @@ $csrf_token = generateCSRFToken();
                             <input type="password" class="form-control" name="password" id="password-admin" placeholder="Masukkan password">
                         </div>
                     </div>
+                    <!-- No registration link for admin -->
                 </div>
 
                 <label class="checkbox-label">
                     <input type="checkbox" name="remember"> Ingat saya
                 </label>
 
-                <button type="submit" class="btn btn-primary btn-block btn-lg mt-2">Masuk ke Dashboard</button>
-
-                <div style="text-align:center; margin-top:20px; font-size:0.9rem; color:#64748b">
-                    Belum punya akun? <a href="student/register.html" style="color:var(--primary); font-weight:600">Daftar Siswa</a>
-                </div>
-
-                <div class="info-box mt-3">
-                    <strong>ℹ️ Demo Login:</strong><br>
-                    <b>Siswa:</b> siswa001 / siswa123<br>
-                    <b>Guru:</b> guru@sma.sch.id / guru123<br>
-                    <b>Admin:</b> admin / admin123
-                </div>
+                <button type="submit" class="btn btn-primary btn-block btn-lg mt-2" id="submitBtn">Masuk ke Dashboard</button>
             </form>
         </div>
 
@@ -473,6 +553,9 @@ $csrf_token = generateCSRFToken();
     </div>
 
     <script>
+        // CSRF token from hidden field
+        const csrfToken = document.querySelector('input[name="csrf_token"]').value;
+
         // Role switching
         function updateFormFields() {
             const role = document.getElementById('role').value;
@@ -491,6 +574,16 @@ $csrf_token = generateCSRFToken();
                 }
             });
 
+            // Hide all role alerts and show the current one
+            document.querySelectorAll('.role-alert').forEach(alert => {
+                alert.style.display = 'none';
+                alert.innerHTML = '';
+            });
+            const currentAlert = document.getElementById(`alert-${role}`);
+            if (currentAlert) {
+                currentAlert.style.display = 'block';
+            }
+
             // Set focus to the username field of the active role
             const activeUsernameField = document.getElementById(`username-${role}`);
             if (activeUsernameField) {
@@ -498,6 +591,101 @@ $csrf_token = generateCSRFToken();
             }
         }
 
+        // Display alert message for current role
+        function showAlert(role, message, type) {
+            const alertDiv = document.getElementById(`alert-${role}`);
+            if (alertDiv) {
+                alertDiv.innerHTML = `<div class="alert alert-${type}">${message}</div>`;
+                alertDiv.style.display = 'block';
+            }
+        }
+
+        // AJAX login function - sends request to current page (index.php)
+        async function doLoginAJAX(role, username, password, remember) {
+            const submitBtn = document.getElementById('submitBtn');
+            const originalText = submitBtn.innerHTML;
+
+            // Show loading state
+            submitBtn.disabled = true;
+            submitBtn.innerHTML = '⌛ Memproses...';
+
+            // Clear previous alerts
+            showAlert(role, '', '');
+
+            // Show loading message
+            showAlert(role, '⌛ Sedang memverifikasi...', 'info');
+
+            try {
+                const response = await fetch(window.location.href, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'Accept': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        role: role,
+                        username: username,
+                        password: password,
+                        remember: remember,
+                        csrf_token: csrfToken
+                    })
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showAlert(role, `✅ ${data.message}! Mengalihkan...`, 'success');
+
+                    // Store data in sessionStorage (Option A)
+                    sessionStorage.setItem('role', data.role);
+                    sessionStorage.setItem('user', data.user.name);
+                    sessionStorage.setItem('user_id', data.user.id);
+
+                    setTimeout(() => {
+                        window.location.href = data.redirect;
+                    }, 1000);
+                } else {
+                    // Handle different error codes
+                    let errorMessage = `❌ ${data.message}`;
+                    if (data.code === 403) {
+                        errorMessage = `❌ ${data.message} Hubungi admin untuk verifikasi.`;
+                    }
+                    showAlert(role, errorMessage, 'danger');
+                    submitBtn.disabled = false;
+                    submitBtn.innerHTML = originalText;
+                }
+            } catch (error) {
+                console.error('Login error:', error);
+                showAlert(role, '❌ Terjadi kesalahan koneksi ke server.', 'danger');
+                submitBtn.disabled = false;
+                submitBtn.innerHTML = originalText;
+            }
+        }
+
+        // Handle form submission
+        document.getElementById('loginForm').addEventListener('submit', function(e) {
+            const role = document.getElementById('role').value;
+            const usernameField = document.getElementById(`username-${role}`);
+            const passwordField = document.getElementById(`password-${role}`);
+            const remember = document.querySelector('input[name="remember"]').checked;
+
+            const username = usernameField ? usernameField.value : '';
+            const password = passwordField ? passwordField.value : '';
+
+            if (!username || !password) {
+                showAlert(role, '❌ Semua field harus diisi.', 'danger');
+                e.preventDefault();
+                return false;
+            }
+
+            // Use AJAX if JavaScript is enabled
+            e.preventDefault();
+            doLoginAJAX(role, username, password, remember);
+            return false;
+        });
+
+        // Role tab switching
         document.querySelectorAll('.role-tab').forEach(tab => {
             tab.addEventListener('click', function() {
                 const role = this.dataset.role;
@@ -511,10 +699,6 @@ $csrf_token = generateCSRFToken();
 
                 // Update form fields visibility and disable states
                 updateFormFields();
-
-                // Clear any previous error messages
-                const alerts = document.querySelectorAll('.alert');
-                alerts.forEach(alert => alert.remove());
             });
         });
 
