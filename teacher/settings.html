@@ -5,6 +5,51 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Pengaturan — ExamSafe</title>
     <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      .settings-tabs {
+        display: flex;
+        gap: 8px;
+        margin-bottom: 24px;
+        border-bottom: 2px solid #e2e8f0;
+      }
+      .settings-tab {
+        padding: 10px 20px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-weight: 600;
+        color: #64748b;
+        font-family: "Poppins", sans-serif;
+        transition: all 0.2s;
+      }
+      .settings-tab.active {
+        color: var(--primary);
+        border-bottom: 2px solid var(--primary);
+        margin-bottom: -2px;
+      }
+      .settings-tab-content {
+        display: none;
+      }
+      .settings-tab-content.active {
+        display: block;
+      }
+      .api-key-status {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        margin-left: 8px;
+      }
+      .api-key-status.configured {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .api-key-status.not-configured {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+    </style>
   </head>
   <body>
     <nav class="navbar">
@@ -94,56 +139,147 @@
           <div>
             <div class="page-title">⚙️ Pengaturan Akun</div>
             <div class="page-subtitle">
-              Kelola profil dan keamanan akun Anda
+              Kelola profil dan konfigurasi AI untuk impor soal otomatis
             </div>
           </div>
         </div>
 
-        <div class="card">
-          <h3>Profil Guru</h3>
-          <p style="margin-bottom: 20px; color: #64748b">
-            Ubah data profil Anda di bawah ini.
-          </p>
+        <!-- Settings Tabs -->
+        <div class="settings-tabs">
+          <button class="settings-tab active" data-tab="profile">
+            👤 Profil
+          </button>
+          <button class="settings-tab" data-tab="ai">🤖 AI (Gemini)</button>
+        </div>
 
-          <div id="alert-settings"></div>
+        <!-- Profile Tab -->
+        <div id="settings-profile" class="settings-tab-content active">
+          <div class="card">
+            <h3>Profil Guru</h3>
+            <p style="margin-bottom: 20px; color: #64748b">
+              Ubah data profil Anda di bawah ini.
+            </p>
 
-          <form id="settings-form" onsubmit="saveProfile(event)">
-            <div class="form-group">
-              <label>Nama Lengkap (Termasuk Gelar)</label>
-              <input
-                type="text"
-                class="form-control"
-                id="profile-name"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label>Email .id.Belajar</label>
-              <input
-                type="email"
-                class="form-control"
-                id="profile-email"
-                required
-              />
-            </div>
-            <div class="form-group">
-              <label>Nomor HP</label>
-              <input type="tel" class="form-control" id="profile-phone" />
-            </div>
-            <hr style="margin: 20px 0; border-top: 1px solid #e2e8f0" />
-            <div class="form-group">
-              <label>Ganti Password (Opsional)</label>
-              <input
-                type="password"
-                class="form-control"
-                id="new-password"
-                placeholder="Biarkan kosong jika tidak ingin ganti"
-              />
-            </div>
-            <button type="submit" class="btn btn-primary">
-              💾 Simpan Perubahan
-            </button>
-          </form>
+            <div id="alert-settings"></div>
+
+            <form id="settings-form" onsubmit="saveProfile(event)">
+              <div class="form-group">
+                <label>Nama Lengkap (Termasuk Gelar)</label>
+                <input
+                  type="text"
+                  class="form-control"
+                  id="profile-name"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Email .id.Belajar</label>
+                <input
+                  type="email"
+                  class="form-control"
+                  id="profile-email"
+                  required
+                />
+              </div>
+              <div class="form-group">
+                <label>Nomor HP</label>
+                <input type="tel" class="form-control" id="profile-phone" />
+              </div>
+              <hr style="margin: 20px 0; border-top: 1px solid #e2e8f0" />
+              <div class="form-group">
+                <label>Ganti Password (Opsional)</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="new-password"
+                  placeholder="Biarkan kosong jika tidak ingin ganti"
+                />
+              </div>
+              <button type="submit" class="btn btn-primary">
+                💾 Simpan Perubahan
+              </button>
+            </form>
+          </div>
+        </div>
+
+        <!-- AI Settings Tab -->
+        <div id="settings-ai" class="settings-tab-content">
+          <div class="card">
+            <h3>🤖 Pengaturan AI (Gemini)</h3>
+            <p style="margin-bottom: 20px; color: #64748b">
+              Konfigurasi API Key dan model untuk fitur
+              <strong>Impor Soal Otomatis</strong> di halaman
+              <a href="create-exam.html">Buat Ujian</a>.
+            </p>
+
+            <div id="alert-ai-settings"></div>
+
+            <form id="ai-settings-form" onsubmit="saveAISettings(event)">
+              <div class="form-group">
+                <label>Gemini API Key</label>
+                <input
+                  type="password"
+                  class="form-control"
+                  id="gemini-api-key"
+                  placeholder="Masukkan API Key dari Google AI Studio"
+                />
+                <small>
+                  Dapatkan API Key gratis di
+                  <a href="https://aistudio.google.com/" target="_blank"
+                    >Google AI Studio</a
+                  >
+                  <span
+                    id="api-key-status"
+                    class="api-key-status not-configured"
+                    >Belum dikonfigurasi</span
+                  >
+                </small>
+              </div>
+
+              <div class="form-group">
+                <label>Model Gemini</label>
+                <select class="form-control" id="gemini-model">
+                  <optgroup label="Gemini 3 (Terbaru)">
+                    <option value="gemini-3-flash-preview">
+                      Gemini 3 Flash Preview
+                    </option>
+                  </optgroup>
+                  <optgroup label="Gemini 2.5">
+                    <option value="'gemini-2.5-flash-lite'" selected>
+                      Gemini 2.5 Flash Lite
+                    </option>
+                  </optgroup>
+                </select>
+              </div>
+
+              <hr style="margin: 20px 0; border-top: 1px solid #e2e8f0" />
+
+              <div class="form-group">
+                <label>Batasan File</label>
+                <ul style="margin-top: 8px; padding-left: 20px; color: #64748b">
+                  <li>Maksimal ukuran file: <strong>10 MB</strong></li>
+                  <li>Format didukung: <strong>PDF, DOCX, TXT</strong></li>
+                  <li>
+                    Maksimal teks yang diproses:
+                    <strong>~30.000 karakter</strong>
+                  </li>
+                </ul>
+              </div>
+
+              <div style="display: flex; gap: 12px">
+                <button type="submit" class="btn btn-primary">
+                  💾 Simpan Pengaturan AI
+                </button>
+                <button
+                  type="button"
+                  class="btn btn-outline"
+                  onclick="testAIConnection()"
+                >
+                  🔌 Test Koneksi
+                </button>
+              </div>
+            </form>
+          </div>
         </div>
       </main>
     </div>
@@ -168,7 +304,33 @@
         });
       }
 
-      document.addEventListener("DOMContentLoaded", fetchProfile);
+      // Tab switching
+      document.querySelectorAll(".settings-tab").forEach((tab) => {
+        tab.addEventListener("click", () => {
+          const tabName = tab.dataset.tab;
+
+          // Update active tab button
+          document
+            .querySelectorAll(".settings-tab")
+            .forEach((t) => t.classList.remove("active"));
+          tab.classList.add("active");
+
+          // Update active content
+          document
+            .querySelectorAll(".settings-tab-content")
+            .forEach((content) => {
+              content.classList.remove("active");
+            });
+          document
+            .getElementById(`settings-${tabName}`)
+            .classList.add("active");
+        });
+      });
+
+      document.addEventListener("DOMContentLoaded", () => {
+        fetchProfile();
+        fetchAISettings();
+      });
 
       async function fetchProfile() {
         try {
@@ -241,6 +403,96 @@
           }
         } catch (error) {
           console.error("Save profile error:", error);
+        }
+      }
+
+      async function fetchAISettings() {
+        try {
+          const response = await fetch("../php/get_ai_settings.php");
+          const data = await response.json();
+
+          if (data.success) {
+            const settings = data.settings;
+
+            if (settings.has_key) {
+              const statusSpan = document.getElementById("api-key-status");
+              statusSpan.textContent = "✓ Terkonfigurasi";
+              statusSpan.className = "api-key-status configured";
+
+              // Show placeholder that key exists (don't show actual key)
+              const keyInput = document.getElementById("gemini-api-key");
+              keyInput.placeholder = "•••••••• (API Key sudah tersimpan)";
+            }
+
+            document.getElementById("gemini-model").value =
+              settings.gemini_model;
+          }
+        } catch (error) {
+          console.error("Error fetching AI settings:", error);
+        }
+      }
+
+      async function saveAISettings(e) {
+        e.preventDefault();
+        const alertEl = document.getElementById("alert-ai-settings");
+        alertEl.innerHTML =
+          '<div class="alert alert-info">Menyimpan pengaturan AI...</div>';
+
+        const apiKey = document.getElementById("gemini-api-key").value;
+        const model = document.getElementById("gemini-model").value;
+
+        try {
+          const response = await fetch("../php/save_ai_settings.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              gemini_api_key: apiKey,
+              gemini_model: model,
+            }),
+          });
+          const result = await response.json();
+
+          if (result.success) {
+            alertEl.innerHTML =
+              '<div class="alert alert-success">✅ Pengaturan AI berhasil disimpan!</div>';
+            fetchAISettings();
+          } else {
+            alertEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
+          }
+        } catch (error) {
+          console.error("Save AI settings error:", error);
+          alertEl.innerHTML =
+            '<div class="alert alert-danger">❌ Gagal menyimpan pengaturan. Cek koneksi.</div>';
+        }
+      }
+
+      async function testAIConnection() {
+        const alertEl = document.getElementById("alert-ai-settings");
+        alertEl.innerHTML =
+          '<div class="alert alert-info">🔌 Menguji koneksi ke Gemini API...</div>';
+
+        try {
+          // Simple test with a small prompt
+          const response = await fetch("../php/ai_import.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "extract",
+              text: "Test: Apa ibu kota Indonesia? A. Jakarta B. Surabaya C. Bandung",
+            }),
+          });
+          const result = await response.json();
+
+          if (result.success) {
+            alertEl.innerHTML =
+              '<div class="alert alert-success">✅ Koneksi ke Gemini API berhasil! AI siap digunakan.</div>';
+          } else {
+            alertEl.innerHTML = `<div class="alert alert-danger">❌ Gagal: ${result.message}</div>`;
+          }
+        } catch (error) {
+          console.error("Test connection error:", error);
+          alertEl.innerHTML =
+            '<div class="alert alert-danger">❌ Gagal terhubung ke server. Periksa koneksi internet.</div>';
         }
       }
     </script>

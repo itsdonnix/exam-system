@@ -667,6 +667,44 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                   </li>
                   <li>Gambar soal bisa lebih dari satu (multiple upload).</li>
                 </ul>
+                <!-- Add after Bank Soal section, before Tips Penggunaan -->
+                <hr class="divider" style="margin: 20px 0" />
+
+                <div
+                  style="
+                    font-weight: 700;
+                    color: #1e293b;
+                    margin-bottom: 12px;
+                    font-size: 0.95rem;
+                    display: flex;
+                    align-items: center;
+                    gap: 8px;
+                  "
+                >
+                  <span>🤖 AI Import</span>
+                </div>
+                <button
+                  class="btn btn-primary btn-sm"
+                  onclick="openAIImportModal()"
+                  style="
+                    width: 100%;
+                    text-align: left;
+                    justify-content: flex-start;
+                    background: linear-gradient(
+                      135deg,
+                      #667eea 0%,
+                      #764ba2 100%
+                    );
+                    border: none;
+                  "
+                >
+                  <span style="margin-right: 8px">✨</span> Impor Soal dengan AI
+                </button>
+                <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 8px">
+                  Ekstrak otomatis soal dari PDF, DOCX, atau teks
+                </p>
+
+                <hr class="divider" style="margin: 20px 0" />
               </div>
             </aside>
           </div>
@@ -1081,6 +1119,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
       </div>
     </div>
 
+    <script defer src="js/ai-import.js"></script>
     <script>
       // Sidebar toggle functionality
       const hamburgerBtn = document.getElementById("hamburgerBtn");
