@@ -240,6 +240,22 @@
         color: #065f46;
         font-weight: 600;
       }
+
+      /* NEW: Whitespace preservation for previews */
+      .preview-q-card .question-text,
+      .preview-q-card .options-list .option-item,
+      .preview-q-card .options-list .option-item span,
+      .preview-q-card .form-group p {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      /* Ensure AI preview modal also preserves whitespace */
+      #ai-preview-modal .preview-question-text,
+      #ai-preview-modal .preview-options div span {
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
     </style>
   </head>
   <body>
@@ -2230,8 +2246,14 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                   isCorrect ? "#10b981" : "#e2e8f0"
                 }; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:10px; font-size:0.9rem; color:${
                   isCorrect ? "#065f46" : "#1e293b"
-                }; font-weight:${isCorrect ? "600" : "normal"};">
-                  <strong>${letters[optIdx]}.</strong> ${escapeHtml(optText)}
+                }; font-weight:${
+                  isCorrect ? "600" : "normal"
+                }; white-space: pre-wrap; word-break: break-word;">
+                  <strong>${
+                    letters[optIdx]
+                  }.</strong> <span style="flex:1;">${escapeHtml(
+                  optText
+                )}</span>
                   ${
                     optImg
                       ? `
@@ -2258,7 +2280,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
               optionsHtml = `
             <div style="padding:15px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; margin-top:15px">
               <p style="font-size:0.9rem; color:#64748b; margin-bottom:8px"><em>Ini adalah soal esai. Siswa akan mengetik jawaban di sini.</em></p>
-              <p style="font-size:0.85rem; color:#475569; font-weight:600">Kunci Jawaban/Rubrik: ${
+              <p style="font-size:0.85rem; color:#475569; font-weight:600; white-space: pre-wrap; word-break: break-word;">Kunci Jawaban/Rubrik: ${
                 q.correct || "(Belum ada kunci jawaban)"
               }</p>
             </div>
@@ -2271,7 +2293,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
               idx + 1
             } ${qType === "checkbox" ? "(PG Kompleks)" : ""}</div>
             ${mediaHtml}
-            <div class="question-text" style="font-size:1.05rem; font-weight:500; margin-bottom:15px; color:#1e293b;">${escapeHtml(
+            <div class="question-text" style="font-size:1.05rem; font-weight:500; margin-bottom:15px; color:#1e293b; white-space: pre-wrap; word-break: break-word;">${escapeHtml(
               qText
             )}</div>
             ${optionsHtml}
