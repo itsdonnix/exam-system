@@ -1,227 +1,484 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daftar Guru — ExamSafe</title>
-  <link rel="stylesheet" href="../css/style.css">
-  <style>
-    body { background: linear-gradient(135deg, #1a3c6e 0%, #2563eb 50%, #0ea5e9 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .register-wrapper { width: 100%; max-width: 520px; }
-    .register-logo { text-align: center; margin-bottom: 24px; }
-    .register-logo h1 { color: #fff; font-size: 1.8rem; font-weight: 700; }
-    .register-logo h1 span { color: #fbbf24; }
-    .register-logo p { color: rgba(255,255,255,0.75); font-size: 0.88rem; }
-    .register-card { background: #fff; border-radius: 20px; padding: 36px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
-    .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    @media(max-width:500px) { .form-row { grid-template-columns: 1fr; } }
-    .step-dots { display: flex; justify-content: center; gap: 8px; margin-bottom: 24px; }
-    .dot { width: 10px; height: 10px; border-radius: 50%; background: #e2e8f0; transition: all 0.3s; }
-    .dot.active { background: var(--primary); transform: scale(1.3); }
-    .dot.done { background: var(--success); }
-  </style>
-</head>
-<body>
-  <div class="register-wrapper">
-    <div class="register-logo">
-      <h1>🎓 Exam<span>Safe</span></h1>
-      <p>Pendaftaran Akun Guru</p>
-    </div>
-
-    <div class="register-card">
-      <div class="step-dots">
-        <div class="dot active" id="dot-1"></div>
-        <div class="dot" id="dot-2"></div>
-        <div class="dot" id="dot-3"></div>
-      </div>
-
-      <div id="alert-box"></div>
-
-      <!-- Step 1: Data Pribadi -->
-      <div id="reg-step-1">
-        <div style="font-size:1.2rem;font-weight:700;color:var(--primary);margin-bottom:4px">Data Pribadi</div>
-        <div style="font-size:0.85rem;color:#64748b;margin-bottom:20px">Langkah 1 dari 3</div>
-
-        <div class="form-row">
-          <div class="form-group">
-            <label>Nama Depan *</label>
-            <input type="text" class="form-control" id="fname" placeholder="Nama depan" required>
-          </div>
-          <div class="form-group" style="grid-column: span 1">
-            <label>Gelar (S.Pd, M.Pd, dll) *</label>
-            <input type="text" class="form-control" id="gelar" placeholder="Contoh: S.Pd" required>
-          </div>
-        </div>
-        <div class="form-group">
-          <label>Nama Belakang *</label>
-          <input type="text" class="form-control" id="lname" placeholder="Nama belakang" required>
-        </div>
-        <div class="form-group">
-          <label>Email .id.Belajar *</label>
-          <input type="email" class="form-control" id="email" placeholder="nama@guru.sma.belajar.id" required>
-        </div>
-        <div class="form-group">
-          <label>Nomor HP</label>
-          <input type="tel" class="form-control" id="phone" placeholder="08xxxxxxxxxx">
-        </div>
-        <button class="btn btn-primary btn-block mt-2" onclick="nextStep(2)">Lanjut →</button>
-      </div>
-
-      <!-- Step 2: Data Mengajar -->
-      <div id="reg-step-2" style="display:none">
-        <div style="font-size:1.2rem;font-weight:700;color:var(--primary);margin-bottom:4px">Data Mengajar</div>
-        <div style="font-size:0.85rem;color:#64748b;margin-bottom:20px">Langkah 2 dari 3</div>
-
-        <div class="form-group">
-          <label>Mata Pelajaran yang Diajar *</label>
-          <select class="form-control" id="subject" required>
-            <option value="">-- Pilih Mata Pelajaran --</option>
-            <!-- Dynamic -->
-          </select>
-        </div>
-        <div class="form-group">
-          <label>Nama Sekolah *</label>
-          <input type="text" class="form-control" id="school" value="SMA Kristen Mercusuar Kupang" readonly style="background:#f1f5f9;cursor:not-allowed;font-weight:600">
-        </div>
-        <div style="display:flex;gap:8px;margin-top:8px">
-          <button class="btn btn-outline" onclick="nextStep(1)" style="flex:1">← Kembali</button>
-          <button class="btn btn-primary" onclick="nextStep(3)" style="flex:2">Lanjut →</button>
-        </div>
-      </div>
-
-      <!-- Step 3: Buat Password -->
-      <div id="reg-step-3" style="display:none">
-        <div style="font-size:1.2rem;font-weight:700;color:var(--primary);margin-bottom:4px">Buat Password</div>
-        <div style="font-size:0.85rem;color:#64748b;margin-bottom:20px">Langkah 3 dari 3</div>
-
-        <div class="form-group">
-          <label>Password *</label>
-          <input type="password" class="form-control" id="password" placeholder="Minimal 8 karakter" oninput="checkPassword()" required>
-          <div id="pw-strength" style="margin-top:6px;font-size:0.8rem"></div>
-        </div>
-        <div class="form-group">
-          <label>Konfirmasi Password *</label>
-          <input type="password" class="form-control" id="password2" placeholder="Ulangi password" required>
-        </div>
-        <div class="form-group">
-          <label style="text-transform:none;font-size:0.88rem;font-weight:400;color:var(--text);cursor:pointer;display:flex;align-items:flex-start;gap:8px">
-            <input type="checkbox" id="agree" style="width:16px;height:16px;accent-color:var(--primary);margin-top:2px">
-            Saya menyetujui <a href="#" style="color:var(--primary-light)">Syarat & Ketentuan</a> penggunaan sistem ExamSafe
-          </label>
-        </div>
-        <div class="alert alert-info">
-          ℹ️ Akun Anda akan diverifikasi oleh admin sekolah sebelum dapat digunakan. Proses verifikasi 1-2 hari kerja.
-        </div>
-
-        <div
-          style="
-            text-align: center;
-            margin-top: 20px;
-            font-size: 0.85rem;
-            color: #64748b;
-          "
-        >
-          Sudah punya akun?
-          <a
-            href="../index.php"
-            style="color: var(--primary-light); font-weight: 600"
-            >Login di sini</a
-          >
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // Fetch subjects
-    async function fetchSubjects() {
-      try {
-        const response = await fetch('../php/exam_api.php?action=get_subjects');
-        const data = await response.json();
-        if (data.success) {
-          const select = document.getElementById('subject');
-          data.subjects.forEach(s => {
-            const opt = document.createElement('option');
-            opt.value = s.name;
-            opt.textContent = s.name;
-            select.appendChild(opt);
-          });
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daftar Guru — ExamSafe</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <style>
+      body {
+        background: linear-gradient(
+          135deg,
+          #1a3c6e 0%,
+          #2563eb 50%,
+          #0ea5e9 100%
+        );
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 20px;
+      }
+      .register-wrapper {
+        width: 100%;
+        max-width: 520px;
+      }
+      .register-logo {
+        text-align: center;
+        margin-bottom: 24px;
+      }
+      .register-logo h1 {
+        color: #fff;
+        font-size: 1.8rem;
+        font-weight: 700;
+      }
+      .register-logo h1 span {
+        color: #fbbf24;
+      }
+      .register-logo p {
+        color: rgba(255, 255, 255, 0.75);
+        font-size: 0.88rem;
+      }
+      .register-card {
+        background: #fff;
+        border-radius: 20px;
+        padding: 36px;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.25);
+      }
+      .form-row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+      }
+      @media (max-width: 500px) {
+        .form-row {
+          grid-template-columns: 1fr;
         }
-      } catch (e) { console.error('Error fetching subjects:', e); }
-    }
-    fetchSubjects();
+      }
+      .step-dots {
+        display: flex;
+        justify-content: center;
+        gap: 8px;
+        margin-bottom: 24px;
+      }
+      .dot {
+        width: 10px;
+        height: 10px;
+        border-radius: 50%;
+        background: #e2e8f0;
+        transition: all 0.3s;
+      }
+      .dot.active {
+        background: var(--primary);
+        transform: scale(1.3);
+      }
+      .dot.done {
+        background: var(--success);
+      }
+      .action-buttons {
+        display: flex;
+        gap: 12px;
+        margin-top: 24px;
+      }
+      .action-buttons .btn {
+        flex: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="register-wrapper">
+      <div class="register-logo">
+        <h1>🎓 Exam<span>Safe</span></h1>
+        <p>Pendaftaran Akun Guru</p>
+      </div>
 
-    function nextStep(n) {
-      // Validate current step
-      if (n === 2) {
-        if (!document.getElementById('fname').value || !document.getElementById('email').value) {
-          document.getElementById('alert-box').innerHTML = '<div class="alert alert-danger">⚠️ Lengkapi semua field yang wajib diisi!</div>';
+      <div class="register-card">
+        <div class="step-dots">
+          <div class="dot active" id="dot-1"></div>
+          <div class="dot" id="dot-2"></div>
+          <div class="dot" id="dot-3"></div>
+        </div>
+
+        <div id="alert-box"></div>
+
+        <!-- Step 1: Data Pribadi -->
+        <div id="reg-step-1">
+          <div
+            style="
+              font-size: 1.2rem;
+              font-weight: 700;
+              color: var(--primary);
+              margin-bottom: 4px;
+            "
+          >
+            Data Pribadi
+          </div>
+          <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 20px">
+            Langkah 1 dari 3
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>Nama Depan *</label>
+              <input
+                type="text"
+                class="form-control"
+                id="fname"
+                placeholder="Nama depan"
+                required
+              />
+            </div>
+            <div class="form-group" style="grid-column: span 1">
+              <label>Gelar (S.Pd, M.Pd, dll) *</label>
+              <input
+                type="text"
+                class="form-control"
+                id="gelar"
+                placeholder="Contoh: S.Pd"
+                required
+              />
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Nama Belakang *</label>
+            <input
+              type="text"
+              class="form-control"
+              id="lname"
+              placeholder="Nama belakang"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Email .id.Belajar *</label>
+            <input
+              type="email"
+              class="form-control"
+              id="email"
+              placeholder="nama@guru.sma.belajar.id"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label>Nomor HP</label>
+            <input
+              type="tel"
+              class="form-control"
+              id="phone"
+              placeholder="08xxxxxxxxxx"
+            />
+          </div>
+          <button class="btn btn-primary btn-block mt-2" onclick="nextStep(2)">
+            Lanjut →
+          </button>
+        </div>
+
+        <!-- Step 2: Data Mengajar -->
+        <div id="reg-step-2" style="display: none">
+          <div
+            style="
+              font-size: 1.2rem;
+              font-weight: 700;
+              color: var(--primary);
+              margin-bottom: 4px;
+            "
+          >
+            Data Mengajar
+          </div>
+          <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 20px">
+            Langkah 2 dari 3
+          </div>
+
+          <div class="form-group">
+            <label>Mata Pelajaran yang Diajar *</label>
+            <select class="form-control" id="subject" required>
+              <option value="">-- Pilih Mata Pelajaran --</option>
+              <!-- Dynamic -->
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Nama Sekolah *</label>
+            <input
+              type="text"
+              class="form-control"
+              id="school"
+              value="SMA Kristen Mercusuar Kupang"
+              readonly
+              style="background: #f1f5f9; cursor: not-allowed; font-weight: 600"
+            />
+          </div>
+          <div style="display: flex; gap: 8px; margin-top: 8px">
+            <button
+              class="btn btn-outline"
+              onclick="nextStep(1)"
+              style="flex: 1"
+            >
+              ← Kembali
+            </button>
+            <button
+              class="btn btn-primary"
+              onclick="nextStep(3)"
+              style="flex: 2"
+            >
+              Lanjut →
+            </button>
+          </div>
+        </div>
+
+        <!-- Step 3: Buat Password -->
+        <div id="reg-step-3" style="display: none">
+          <div
+            style="
+              font-size: 1.2rem;
+              font-weight: 700;
+              color: var(--primary);
+              margin-bottom: 4px;
+            "
+          >
+            Buat Password
+          </div>
+          <div style="font-size: 0.85rem; color: #64748b; margin-bottom: 20px">
+            Langkah 3 dari 3
+          </div>
+
+          <div class="form-group">
+            <label>Password *</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password"
+              placeholder="Minimal 8 karakter"
+              oninput="checkPassword()"
+              required
+            />
+            <div
+              id="pw-strength"
+              style="margin-top: 6px; font-size: 0.8rem"
+            ></div>
+          </div>
+          <div class="form-group">
+            <label>Konfirmasi Password *</label>
+            <input
+              type="password"
+              class="form-control"
+              id="password2"
+              placeholder="Ulangi password"
+              required
+            />
+          </div>
+          <div class="form-group">
+            <label
+              style="
+                text-transform: none;
+                font-size: 0.88rem;
+                font-weight: 400;
+                color: var(--text);
+                cursor: pointer;
+                display: flex;
+                align-items: flex-start;
+                gap: 8px;
+              "
+            >
+              <input
+                type="checkbox"
+                id="agree"
+                style="
+                  width: 16px;
+                  height: 16px;
+                  accent-color: var(--primary);
+                  margin-top: 2px;
+                "
+              />
+              Saya menyetujui
+              <a href="#" style="color: var(--primary-light)"
+                >Syarat & Ketentuan</a
+              >
+              penggunaan sistem ExamSafe
+            </label>
+          </div>
+          <div class="alert alert-info">
+            ℹ️ Akun Anda akan diverifikasi oleh admin sekolah sebelum dapat
+            digunakan. Proses verifikasi 1-2 hari kerja.
+          </div>
+
+          <!-- Action Buttons: Back and Submit -->
+          <div class="action-buttons">
+            <button class="btn btn-outline" onclick="nextStep(2)">
+              ← Kembali
+            </button>
+            <button class="btn btn-primary" onclick="submitRegister()">
+              Kirim Pendaftaran
+            </button>
+          </div>
+
+          <div
+            style="
+              text-align: center;
+              margin-top: 20px;
+              font-size: 0.85rem;
+              color: #64748b;
+            "
+          >
+            Sudah punya akun?
+            <a
+              href="../index.php"
+              style="color: var(--primary-light); font-weight: 600"
+              >Login di sini</a
+            >
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // Fetch subjects
+      async function fetchSubjects() {
+        try {
+          const response = await fetch(
+            "../php/exam_api.php?action=get_subjects"
+          );
+          const data = await response.json();
+          if (data.success) {
+            const select = document.getElementById("subject");
+            data.subjects.forEach((s) => {
+              const opt = document.createElement("option");
+              opt.value = s.name;
+              opt.textContent = s.name;
+              select.appendChild(opt);
+            });
+          }
+        } catch (e) {
+          console.error("Error fetching subjects:", e);
+        }
+      }
+      fetchSubjects();
+
+      function validateStep1() {
+        const fname = document.getElementById("fname").value.trim();
+        const lname = document.getElementById("lname").value.trim();
+        const gelar = document.getElementById("gelar").value.trim();
+        const email = document.getElementById("email").value.trim();
+
+        if (!fname) return "Nama depan wajib diisi";
+        if (!lname) return "Nama belakang wajib diisi";
+        if (!gelar) return "Gelar wajib diisi";
+        if (!email) return "Email wajib diisi";
+        if (!email.endsWith(".belajar.id") && !email.includes("@"))
+          return "Email harus menggunakan domain .belajar.id yang valid";
+        return null;
+      }
+
+      function validateStep2() {
+        const subject = document.getElementById("subject").value;
+        if (!subject) return "Mata pelajaran wajib dipilih";
+        return null;
+      }
+
+      function nextStep(n) {
+        // Validate current step before moving forward
+        if (n === 2) {
+          const step1Error = validateStep1();
+          if (step1Error) {
+            document.getElementById(
+              "alert-box"
+            ).innerHTML = `<div class="alert alert-danger">⚠️ ${step1Error}</div>`;
+            return;
+          }
+        }
+
+        if (n === 3) {
+          const step2Error = validateStep2();
+          if (step2Error) {
+            document.getElementById(
+              "alert-box"
+            ).innerHTML = `<div class="alert alert-danger">⚠️ ${step2Error}</div>`;
+            return;
+          }
+        }
+
+        document.getElementById("alert-box").innerHTML = "";
+
+        for (let i = 1; i <= 3; i++) {
+          document.getElementById(`reg-step-${i}`).style.display = "none";
+          document.getElementById(`dot-${i}`).className = "dot";
+        }
+        document.getElementById(`reg-step-${n}`).style.display = "block";
+        document.getElementById(`dot-${n}`).className = "dot active";
+        for (let i = 1; i < n; i++) {
+          document.getElementById(`dot-${i}`).className = "dot done";
+        }
+      }
+
+      function checkPassword() {
+        const pw = document.getElementById("password").value;
+        const el = document.getElementById("pw-strength");
+        if (pw.length < 6) {
+          el.innerHTML = '<span style="color:var(--danger)">● Lemah</span>';
+        } else if (pw.length < 10 || !/[A-Z]/.test(pw) || !/[0-9]/.test(pw)) {
+          el.innerHTML = '<span style="color:var(--warning)">● Sedang</span>';
+        } else {
+          el.innerHTML = '<span style="color:var(--success)">● Kuat</span>';
+        }
+      }
+
+      function validateAllSteps() {
+        const step1Error = validateStep1();
+        if (step1Error) return step1Error;
+
+        const step2Error = validateStep2();
+        if (step2Error) return step2Error;
+
+        const pw = document.getElementById("password").value;
+        const pw2 = document.getElementById("password2").value;
+        const agree = document.getElementById("agree").checked;
+
+        if (!pw) return "Password wajib diisi";
+        if (pw.length < 8) return "Password minimal 8 karakter";
+        if (pw !== pw2) return "Password tidak cocok";
+        if (!agree) return "Centang persetujuan syarat & ketentuan";
+
+        return null;
+      }
+
+      async function submitRegister() {
+        const alertEl = document.getElementById("alert-box");
+        alertEl.innerHTML = "";
+
+        // Validate all steps before submission
+        const validationError = validateAllSteps();
+        if (validationError) {
+          alertEl.innerHTML = `<div class="alert alert-danger">❌ ${validationError}</div>`;
           return;
         }
-      }
-      document.getElementById('alert-box').innerHTML = '';
 
-      for (let i = 1; i <= 3; i++) {
-        document.getElementById(`reg-step-${i}`).style.display = 'none';
-        document.getElementById(`dot-${i}`).className = 'dot';
-      }
-      document.getElementById(`reg-step-${n}`).style.display = 'block';
-      document.getElementById(`dot-${n}`).className = 'dot active';
-      for (let i = 1; i < n; i++) {
-        document.getElementById(`dot-${i}`).className = 'dot done';
-      }
-    }
+        const formData = {
+          fname: document.getElementById("fname").value.trim(),
+          lname: document.getElementById("lname").value.trim(),
+          gelar: document.getElementById("gelar").value.trim(),
+          email: document.getElementById("email").value.trim(),
+          phone: document.getElementById("phone").value.trim(),
+          subject: document.getElementById("subject").value,
+          school: document.getElementById("school").value,
+          password: document.getElementById("password").value,
+        };
 
-    function checkPassword() {
-      const pw = document.getElementById('password').value;
-      const el = document.getElementById('pw-strength');
-      if (pw.length < 6) {
-        el.innerHTML = '<span style="color:var(--danger)">● Lemah</span>';
-      } else if (pw.length < 10 || !/[A-Z]/.test(pw) || !/[0-9]/.test(pw)) {
-        el.innerHTML = '<span style="color:var(--warning)">● Sedang</span>';
-      } else {
-        el.innerHTML = '<span style="color:var(--success)">● Kuat</span>';
-      }
-    }
+        // Disable submit button to prevent double submission
+        const submitBtn = document.querySelector("#reg-step-3 .btn-primary");
+        const originalText = submitBtn.textContent;
+        submitBtn.disabled = true;
+        submitBtn.textContent = "Mengirim...";
 
-    async function submitRegister() {
-      const alertEl = document.getElementById('alert-box');
-      alertEl.innerHTML = '';
+        try {
+          const response = await fetch("../php/register.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(formData),
+          });
 
-      const pw = document.getElementById('password').value;
-      const pw2 = document.getElementById('password2').value;
-      const agree = document.getElementById('agree').checked;
+          const result = await response.json();
 
-      if (pw !== pw2) {
-        alertEl.innerHTML = '<div class="alert alert-danger">❌ Password tidak cocok!</div>';
-        return;
-      }
-      if (!agree) {
-        alertEl.innerHTML = '<div class="alert alert-danger">❌ Centang persetujuan syarat & ketentuan!</div>';
-        return;
-      }
-
-      const formData = {
-        fname: document.getElementById('fname').value,
-        lname: document.getElementById('lname').value,
-        gelar: document.getElementById('gelar').value,
-        email: document.getElementById('email').value,
-        phone: document.getElementById('phone').value,
-        subject: document.getElementById('subject').value,
-        school: document.getElementById('school').value,
-        password: pw
-      };
-
-      try {
-        const response = await fetch('../php/register.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(formData)
-        });
-
-        const result = await response.json();
-
-        if (result.success) {
-          document.getElementById('reg-step-3').innerHTML = `
+          if (result.success) {
+            document.getElementById("reg-step-3").innerHTML = `
             <div style="text-align:center;padding:20px">
               <div style="font-size:4rem;margin-bottom:16px">🎉</div>
               <h3 style="color:var(--success);margin-bottom:8px">Pendaftaran Berhasil!</h3>
@@ -229,15 +486,22 @@
               <a href="../index.php" class="btn btn-primary btn-block">← Kembali ke Login</a>
             </div>
           `;
-          document.querySelectorAll('.dot').forEach(d => d.className = 'dot done');
-        } else {
-          alertEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
+            document
+              .querySelectorAll(".dot")
+              .forEach((d) => (d.className = "dot done"));
+          } else {
+            alertEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
+            submitBtn.disabled = false;
+            submitBtn.textContent = originalText;
+          }
+        } catch (error) {
+          console.error("Register error:", error);
+          alertEl.innerHTML =
+            '<div class="alert alert-danger">❌ Terjadi kesalahan koneksi ke server.</div>';
+          submitBtn.disabled = false;
+          submitBtn.textContent = originalText;
         }
-      } catch (error) {
-        console.error('Register error:', error);
-        alertEl.innerHTML = '<div class="alert alert-danger">❌ Terjadi kesalahan koneksi ke server.</div>';
       }
-    }
-  </script>
-</body>
+    </script>
+  </body>
 </html>
