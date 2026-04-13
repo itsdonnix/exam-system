@@ -240,26 +240,33 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
                     <p style="color: #b45309; font-size: 0.9rem">
                         Masukkan kode unik dari pengawas untuk memulai ujian Anda.
                     </p>
-                    <div id="join-alert" style="margin-top: 10px"></div>
                 </div>
-                <div style="display: flex; gap: 10px; min-width: 300px">
-                    <input
-                        type="text"
-                        id="exam-code-input"
-                        class="form-control"
-                        placeholder="Kode Ujian (Contoh: A1B2C3)"
-                        style="
-              text-transform: uppercase;
-              font-weight: 700;
-              letter-spacing: 2px;
-              height: 48px;
-            " />
-                    <button
-                        class="btn btn-primary"
-                        onclick="joinExam()"
-                        style="height: 48px; white-space: nowrap">
-                        🚀 Masuk Ujian
-                    </button>
+                <div style="flex: 2; min-width: 300px">
+                    <form id="join-exam-form" style="margin: 0;">
+                        <div style="display: flex; gap: 10px; width: 100%;">
+                            <input
+                                type="text"
+                                id="exam-code-input"
+                                class="form-control"
+                                placeholder="Kode Ujian (Contoh: A1B2C3)"
+                                style="
+                                    text-transform: uppercase;
+                                    font-weight: 700;
+                                    letter-spacing: 2px;
+                                    height: 48px;
+                                    flex: 1;
+                                "
+                                autocomplete="off"
+                                required />
+                            <button
+                                type="submit"
+                                class="btn btn-primary"
+                                style="height: 48px; white-space: nowrap">
+                                🚀 Masuk Ujian
+                            </button>
+                        </div>
+                        <div id="join-alert" style="margin-top: 10px;"></div>
+                    </form>
                 </div>
             </div>
         </div>
@@ -304,10 +311,8 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
     </div>
 
     <script>
-        // No more sessionStorage - using PHP session only
         const studentName = <?php echo json_encode($full_name); ?>;
 
-        // Skeleton Loader Functions
         function showExamListSkeletonLoader() {
             const container = document.getElementById("exam-list");
             container.innerHTML = `
@@ -326,7 +331,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       `;
         }
 
-        // Live clock
         function updateTime() {
             const now = new Date();
             const timeEl = document.getElementById("current-time");
@@ -365,48 +369,68 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
             }, 2000);
         }
 
-        async function joinExam() {
-            const codeInput = document.getElementById("exam-code-input");
-            const alertEl = document.getElementById("join-alert");
-            const code = codeInput.value.trim().toUpperCase();
-
-            if (!code) {
-                alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">⚠️ Masukkan kode ujian!</div>';
-                return;
-            }
-
-            alertEl.innerHTML = '<div class="alert alert-info" style="margin:0; padding:8px 12px; font-size:0.85rem">⌛ Memverifikasi kode...</div>';
-
-            try {
-                const response = await fetch("../php/exam_api.php", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        action: "join_exam",
-                        exam_code: code
-                    }),
-                    credentials: "include" // Important for session cookies
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    alertEl.innerHTML = `<div class="alert alert-success" style="margin:0; padding:8px 12px; font-size:0.85rem">✅ ${result.message}</div>`;
-                    setTimeout(() => {
-                        window.location.href = `exam.html?exam_id=${result.exam_id}`;
-                    }, 1000);
-                } else {
-                    alertEl.innerHTML = `<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">❌ ${result.message}</div>`;
-                }
-            } catch (error) {
-                console.error("Join exam error:", error);
-                alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">❌ Terjadi kesalahan koneksi.</div>';
-            }
+        const codeInput = document.getElementById("exam-code-input");
+        if (codeInput) {
+            codeInput.addEventListener("input", function(e) {
+                this.value = this.value.toUpperCase();
+            });
         }
 
-        // Fetch Exams
+        const joinForm = document.getElementById("join-exam-form");
+        if (joinForm) {
+            joinForm.addEventListener("submit", async function(e) {
+                e.preventDefault();
+
+                const codeInput = document.getElementById("exam-code-input");
+                const alertEl = document.getElementById("join-alert");
+                const rawCode = codeInput.value.trim();
+
+                if (!rawCode) {
+                    alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">⚠️ Masukkan kode ujian!</div>';
+                    codeInput.focus();
+                    return;
+                }
+
+                const code = rawCode.toUpperCase();
+
+                if (code.length !== 8 || !/^[A-Z0-9]{8}$/.test(code)) {
+                    alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">⚠️ Format kode tidak valid! Kode harus 8 karakter alfanumerik.</div>';
+                    return;
+                }
+
+                alertEl.innerHTML = '<div class="alert alert-info" style="margin:0; padding:8px 12px; font-size:0.85rem">⌛ Memverifikasi kode...</div>';
+
+                try {
+                    const response = await fetch("../php/exam_api.php", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            action: "join_exam",
+                            exam_code: code
+                        }),
+                        credentials: "include"
+                    });
+
+                    const result = await response.json();
+
+                    if (result.success) {
+                        alertEl.innerHTML = `<div class="alert alert-success" style="margin:0; padding:8px 12px; font-size:0.85rem">✅ ${result.message}</div>`;
+                        setTimeout(() => {
+                            window.location.href = `exam.html?exam_id=${result.exam_id}`;
+                        }, 1000);
+                    } else {
+                        alertEl.innerHTML = `<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">❌ ${result.message}</div>`;
+                        codeInput.focus();
+                    }
+                } catch (error) {
+                    console.error("Join exam error:", error);
+                    alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">❌ Terjadi kesalahan koneksi.</div>';
+                }
+            });
+        }
+
         document.addEventListener("DOMContentLoaded", () => {
             showExamListSkeletonLoader();
             showHistoryTableSkeletonLoader();
