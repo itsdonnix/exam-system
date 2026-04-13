@@ -20,8 +20,8 @@
       .exam-header {
         background: #fff;
         color: #1e293b;
-        padding: 0 12px;
-        height: 60px;
+        padding: 0 0.75rem;
+        height: 3.75rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -37,13 +37,13 @@
       .header-left {
         display: flex;
         align-items: center;
-        gap: 10px;
+        gap: 0.625em;
         min-width: 0;
       }
 
       .header-logo {
-        width: 36px;
-        height: 36px;
+        width: 2.25rem;
+        height: 2.25rem;
         background: #2563eb;
         border-radius: 10px;
         display: flex;
@@ -63,21 +63,21 @@
         white-space: nowrap;
         overflow: hidden;
         text-overflow: ellipsis;
-        max-width: 180px;
+        max-width: 11.25rem;
       }
 
       .header-meta {
         display: flex;
         align-items: center;
-        gap: 4px;
+        gap: 0.25em;
         font-size: 0.65rem;
         flex-wrap: wrap;
-        margin-top: 2px;
+        margin-top: 0.125em;
       }
 
       .meta-badge {
         background: #f1f5f9;
-        padding: 1px 5px;
+        padding: 0.1em 0.5em;
         border-radius: 4px;
         font-size: 0.6rem;
       }
@@ -93,19 +93,19 @@
       .header-right {
         display: flex;
         align-items: center;
-        gap: 8px;
+        gap: 0.5em;
       }
 
       .timer-pill {
         background: #fee2e2;
         color: #dc2626;
-        padding: 5px 10px;
+        padding: 0.3125em 0.625em;
         border-radius: 50px;
         font-size: 0.85rem;
         font-weight: 700;
         display: flex;
         align-items: center;
-        gap: 6px;
+        gap: 0.375em;
         border: 1px solid #fecaca;
       }
 
@@ -119,8 +119,8 @@
       .nav-grid-trigger {
         cursor: pointer;
         background: #f1f5f9;
-        width: 40px;
-        height: 40px;
+        width: 2.5rem;
+        height: 2.5rem;
         border-radius: 10px;
         display: flex;
         align-items: center;
@@ -128,77 +128,22 @@
         color: #475569;
       }
 
-      /* Mobile-first responsive adjustments */
-      @media (max-width: 480px) {
-        .exam-header {
-          height: 56px;
-          padding: 0 10px;
-        }
-
-        .header-left {
-          gap: 8px;
-        }
-
-        .header-logo {
-          width: 32px;
-          height: 32px;
-          font-size: 1rem;
-        }
-
-        .header-info h1 {
-          font-size: 0.8rem;
-          max-width: 140px;
-        }
-
-        .header-meta {
-          font-size: 0.6rem;
-          gap: 3px;
-        }
-
-        .meta-badge {
-          padding: 1px 4px;
-        }
-
-        .timer-pill {
-          padding: 4px 8px;
-          font-size: 0.8rem;
-        }
-
-        .nav-grid-trigger {
-          width: 36px;
-          height: 36px;
-          font-size: 1.1rem;
-        }
-      }
-
-      @media (max-width: 360px) {
-        .header-info h1 {
-          max-width: 110px;
-        }
-
-        .header-meta {
-          flex-direction: column;
-          align-items: flex-start;
-          gap: 2px;
-        }
-      }
-
       /* TOP NAVIGATION SCROLL */
       .q-nav-container {
         position: fixed;
-        top: 60px;
+        top: 3.75rem;
         left: 0;
         right: 0;
         background: #fff;
-        padding: 12px 0;
+        padding: 0.75em 0;
         z-index: 150;
         border-bottom: 1px solid #e2e8f0;
       }
       .q-nav-scroll {
         display: flex;
-        gap: 10px;
+        gap: 0.625em;
         overflow-x: auto;
-        padding: 0 16px;
+        padding: 0 1em;
         scrollbar-width: none;
         -ms-overflow-style: none;
       }
@@ -207,8 +152,8 @@
       }
 
       .q-nav-btn {
-        flex: 0 0 42px;
-        height: 42px;
+        flex: 0 0 2.625rem;
+        height: 2.625rem;
         border-radius: 10px;
         display: flex;
         align-items: center;
@@ -240,10 +185,10 @@
 
       /* MAIN CONTENT */
       .exam-container {
-        margin-top: 128px;
-        margin-bottom: 80px;
-        padding: 16px;
-        max-width: 800px;
+        margin-top: 8rem;
+        margin-bottom: 5rem;
+        padding: 1em;
+        max-width: 50rem;
         margin-left: auto;
         margin-right: auto;
       }
@@ -251,16 +196,16 @@
       .question-card {
         background: #fff;
         border-radius: 16px;
-        padding: 24px;
+        padding: 1.5em;
         box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
           0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        margin-bottom: 24px;
+        margin-bottom: 1.5em;
       }
       .q-meta {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 16px;
+        margin-bottom: 1em;
       }
       .q-number {
         font-weight: 800;
@@ -271,7 +216,7 @@
         font-size: 0.75rem;
         color: #64748b;
         background: #f1f5f9;
-        padding: 4px 10px;
+        padding: 0.333em 0.833em;
         border-radius: 50px;
         font-weight: 600;
       }
@@ -281,20 +226,20 @@
         font-weight: 500;
         color: #1e293b;
         line-height: 1.6;
-        margin-bottom: 24px;
+        margin-bottom: 1.5em;
       }
 
       .options-list {
         list-style: none;
         display: flex;
         flex-direction: column;
-        gap: 12px;
+        gap: 0.75em;
       }
       .option-item {
         display: flex;
         align-items: center;
-        gap: 14px;
-        padding: 16px;
+        gap: 0.875em;
+        padding: 1em;
         border: 2px solid #e2e8f0;
         border-radius: 14px;
         cursor: pointer;
@@ -310,8 +255,8 @@
         background: #eff6ff;
       }
       .opt-letter {
-        width: 32px;
-        height: 32px;
+        width: 2rem;
+        height: 2rem;
         border-radius: 8px;
         display: flex;
         align-items: center;
@@ -342,25 +287,25 @@
         left: 0;
         right: 0;
         background: #fff;
-        height: 72px;
+        height: 4.5rem;
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding: 0 16px;
+        padding: 0 1em;
         z-index: 200;
         box-shadow: 0 -4px 12px rgba(0, 0, 0, 0.05);
         border-top: 1px solid #e2e8f0;
       }
       .nav-btn {
-        height: 46px;
+        height: 2.875rem;
         border-radius: 12px;
         display: flex;
         align-items: center;
         justify-content: center;
-        gap: 8px;
+        gap: 0.5em;
         font-weight: 600;
         font-size: 0.95rem;
-        padding: 0 20px;
+        padding: 0 1.25em;
         cursor: pointer;
         transition: all 0.2s;
         border: none;
@@ -384,7 +329,7 @@
       .btn-ragu {
         background: #fef3c7;
         color: #d97706;
-        padding: 0 16px;
+        padding: 0 1em;
       }
 
       /* VIOLATION OVERLAY */
@@ -399,7 +344,7 @@
         justify-content: center;
         z-index: 9999;
         text-align: center;
-        padding: 40px;
+        padding: 2.5em;
       }
       #violation-overlay.show {
         display: flex;
@@ -415,7 +360,7 @@
         align-items: center;
         justify-content: center;
         text-align: center;
-        padding: 32px;
+        padding: 2em;
       }
 
       @keyframes pulse {
@@ -437,21 +382,21 @@
         display: none;
         align-items: center;
         justify-content: center;
-        padding: 20px;
+        padding: 1.25em;
       }
       .nav-grid-content {
         background: #fff;
         border-radius: 20px;
         width: 100%;
-        max-width: 400px;
-        padding: 24px;
+        max-width: 25rem;
+        padding: 1.5em;
         box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1);
       }
       .grid-header {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        margin-bottom: 20px;
+        margin-bottom: 1.25em;
       }
       .grid-title {
         font-weight: 700;
@@ -460,15 +405,29 @@
       .grid-items {
         display: grid;
         grid-template-columns: repeat(5, 1fr);
-        gap: 10px;
+        gap: 0.625em;
       }
 
       @media (max-width: 480px) {
+        .header-info h1 {
+          max-width: 8.75rem;
+        }
         .grid-items {
           grid-template-columns: repeat(4, 1fr);
         }
         .nav-btn {
-          padding: 0 16px;
+          padding: 0 1em;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .header-info h1 {
+          max-width: 6.875rem;
+        }
+        .header-meta {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 0.125em;
         }
       }
     </style>
@@ -503,9 +462,9 @@
 
     <!-- FULLSCREEN PROMPT -->
     <div id="fs-prompt">
-      <div style="font-size: 4rem; margin-bottom: 24px">🔒</div>
-      <h2 style="font-weight: 800; margin-bottom: 12px">Mode Ujian Aman</h2>
-      <p style="color: #64748b; margin-bottom: 32px">
+      <div style="font-size: 4rem; margin-bottom: 1.5em">🔒</div>
+      <h2 style="font-weight: 800; margin-bottom: 0.75em">Mode Ujian Aman</h2>
+      <p style="color: #64748b; margin-bottom: 2em">
         Ujian ini memerlukan mode layar penuh untuk menjaga integritas dan
         keamanan.
       </p>
@@ -516,15 +475,15 @@
 
     <!-- VIOLATION OVERLAY -->
     <div id="violation-overlay">
-      <div style="font-size: 4rem; margin-bottom: 16px">⚠️</div>
+      <div style="font-size: 4rem; margin-bottom: 1em">⚠️</div>
       <h2>Pelanggaran Terdeteksi!</h2>
       <p id="violation-msg">Aktivitas mencurigakan terdeteksi</p>
       <div
         id="violation-count"
         style="
-          margin: 20px 0;
+          margin: 1.25em 0;
           background: rgba(255, 255, 255, 0.2);
-          padding: 10px 24px;
+          padding: 0.625em 1.5em;
           border-radius: 50px;
           font-weight: 700;
         "
@@ -614,9 +573,9 @@
         </div>
         <div
           style="
-            margin-top: 24px;
+            margin-top: 1.5em;
             border-top: 1px solid #eee;
-            padding-top: 20px;
+            padding-top: 1.25em;
           "
         >
           <button
@@ -641,13 +600,13 @@
         flex-direction: column;
         align-items: center;
         justify-content: center;
-        padding: 32px;
+        padding: 2em;
         text-align: center;
       "
     >
-      <div style="font-size: 4rem; margin-bottom: 20px">✅</div>
+      <div style="font-size: 4rem; margin-bottom: 1.25em">✅</div>
       <h2
-        style="font-weight: 800; font-size: 2rem; margin-bottom: 8px"
+        style="font-weight: 800; font-size: 2rem; margin-bottom: 0.5em"
         id="result-score-title"
       >
         Ujian Selesai
@@ -659,24 +618,24 @@
           font-weight: 900;
           color: #2563eb;
           line-height: 1;
-          margin-bottom: 8px;
+          margin-bottom: 0.5em;
         "
       >
         0
       </div>
-      <p style="color: #64748b; margin-bottom: 32px">Nilai Anda</p>
+      <p style="color: #64748b; margin-bottom: 2em">Nilai Anda</p>
 
       <div
         style="
           display: grid;
           grid-template-columns: 1fr 1fr;
-          gap: 16px;
+          gap: 1em;
           width: 100%;
-          max-width: 300px;
-          margin-bottom: 40px;
+          max-width: 18.75rem;
+          margin-bottom: 2.5em;
         "
       >
-        <div style="background: #f8fafc; padding: 16px; border-radius: 16px">
+        <div style="background: #f8fafc; padding: 1em; border-radius: 16px">
           <div
             id="result-correct"
             style="font-weight: 800; font-size: 1.2rem; color: #16a34a"
@@ -685,7 +644,7 @@
           </div>
           <div style="font-size: 0.75rem; color: #64748b">Benar</div>
         </div>
-        <div style="background: #f8fafc; padding: 16px; border-radius: 16px">
+        <div style="background: #f8fafc; padding: 1em; border-radius: 16px">
           <div
             id="result-total"
             style="font-weight: 800; font-size: 1.2rem; color: #1e293b"
@@ -699,7 +658,7 @@
       <a
         href="../student/dashboard.php"
         class="btn btn-primary btn-block"
-        style="max-width: 300px"
+        style="max-width: 18.75rem"
       >
         Kembali ke Dashboard
       </a>

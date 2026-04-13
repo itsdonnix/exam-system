@@ -243,7 +243,7 @@ const ExamEngine = {
             if (finalMedia.length === 0) return "";
 
             return `
-              <div class="question-media-container" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 24px; align-items: center;">
+              <div class="question-media-container" style="display: flex; flex-direction: column; gap: 0.75em; margin-bottom: 1.5em; align-items: center;">
                 ${finalMedia
                   .map((url) => {
                     const finalUrl = this.escapeUrl(
@@ -254,7 +254,7 @@ const ExamEngine = {
                       onclick="ExamEngine.openZoom('${this.escapeUrl(
                         finalUrl
                       )}')"
-                      style="max-width: 100%; max-height: 300px; object-fit: contain; cursor: zoom-in; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+                      style="max-width: 100%; max-height: 18.75rem; object-fit: contain; cursor: zoom-in; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
                   `;
                   })
                   .join("")}
@@ -365,10 +365,10 @@ const ExamEngine = {
               ${
                 optImg
                   ? `
-                <div class="option-img-container" style="margin-top:10px" onclick="event.stopPropagation()">
+                <div class="option-img-container" style="margin-top:0.625em" onclick="event.stopPropagation()">
                   <img src="../${this.escapeUrl(
                     optImg
-                  )}" style="max-width:100%; max-height:120px; border-radius:8px; cursor:zoom-in;" 
+                  )}" style="max-width:100%; max-height:7.5rem; border-radius:8px; cursor:zoom-in;" 
                     onclick="ExamEngine.openZoom('../${this.escapeUrl(
                       optImg
                     )}')">
@@ -430,7 +430,7 @@ const ExamEngine = {
   renderEssay(q, idx) {
     return `<textarea class="form-control" id="essay-${idx}" 
       placeholder="Tulis jawaban Anda di sini..." rows="5"
-      style="margin-top:8px">${this.answers[q.id] || ""}</textarea>`;
+      style="margin-top:0.5em">${this.answers[q.id] || ""}</textarea>`;
   },
 
   selectOption(qIdx, optIdx) {
