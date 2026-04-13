@@ -17,13 +17,19 @@ if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
 
 $input = json_decode(file_get_contents('php://input'), true);
 $apiKey = trim($input['gemini_api_key'] ?? '');
-$model = trim($input['gemini_model'] ?? 'gemini-2.0-flash');
+$model = trim($input['gemini_model'] ?? 'gemini-2.5-flash-lite');
 
-// Validate model (Gemini 2.0 and above)
+// FIXED: Expanded allowed models list with all Gemini 2.5 and 2.0 models
 $allowedModels = [
-    'gemini-3-flash-preview',
-    'gemini-2.5-flash-lite'
+    // Gemini 2.5 series
+    'gemini-2.5-pro',
+    'gemini-2.5-flash',
+    'gemini-2.5-flash-lite',
+    // Gemini 2.0 series
+    'gemini-2.0-flash',
+    'gemini-2.0-flash-lite'
 ];
+
 if (!in_array($model, $allowedModels)) {
     $model = 'gemini-2.5-flash-lite';
 }
@@ -40,7 +46,7 @@ try {
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 teacher_id INT NOT NULL,
                 gemini_api_key VARCHAR(500) DEFAULT NULL,
-                gemini_model VARCHAR(50) DEFAULT 'gemini-2.0-flash',
+                gemini_model VARCHAR(50) DEFAULT 'gemini-2.5-flash-lite',
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
                 UNIQUE KEY unique_teacher_settings (teacher_id)

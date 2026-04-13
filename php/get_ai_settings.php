@@ -25,7 +25,7 @@ try {
             'success' => true,
             'settings' => [
                 'gemini_api_key' => '',
-                'gemini_model' => 'gemini-2.0-flash',
+                'gemini_model' => 'gemini-2.5-flash-lite',
                 'has_key' => false
             ],
             'message' => 'Table not found, using defaults'
@@ -61,7 +61,7 @@ try {
             'success' => true,
             'settings' => [
                 'gemini_api_key' => '',
-                'gemini_model' => 'gemini-2.0-flash',
+                'gemini_model' => 'gemini-2.5-flash-lite',
                 'has_key' => false
             ]
         ]);
