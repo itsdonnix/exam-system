@@ -43,7 +43,7 @@ const ExamEngine = {
 
       if (!data.success) {
         alert("Gagal memuat ujian: " + data.message);
-        window.location.href = "dashboard.html";
+        window.location.href = "dashboard.php";
         return;
       }
 
