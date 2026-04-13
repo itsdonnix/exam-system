@@ -408,6 +408,10 @@
         gap: 0.625em;
       }
 
+      .fs-start-btn {
+        max-width: max-content;
+      }
+
       @media (max-width: 480px) {
         .header-info h1 {
           max-width: 8.75rem;
@@ -417,6 +421,11 @@
         }
         .nav-btn {
           padding: 0 1em;
+        }
+        .fs-start-btn {
+          width: 100%;
+          max-width: initial;
+          justify-content: center;
         }
       }
 
@@ -468,8 +477,11 @@
         Ujian ini memerlukan mode layar penuh untuk menjaga integritas dan
         keamanan.
       </p>
-      <button class="btn btn-primary btn-lg btn-block" onclick="startExam()">
-        Mulai Ujian Sekarang
+      <button
+        class="btn btn-primary btn-lg btn-block fs-start-btn"
+        onclick="startExam()"
+      >
+        Mulai Ujian
       </button>
     </div>
 
