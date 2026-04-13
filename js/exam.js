@@ -48,26 +48,23 @@ const ExamEngine = {
       }
 
       this.questions = data.questions;
-      this.duration = parseInt(data.exam.duration_minutes) || 90;
+      this.duration = parseInt(data.exam.duration) || 90;
       this.timeLeft = this.duration * 60;
       this.showResultsSetting =
         data.exam.show_results_setting || "direct_submit";
+      this.examData = data.exam;
 
-      // Update Header Info
-      const subjectTitleEl = document.getElementById("exam-subject-title");
-      if (subjectTitleEl) {
-        subjectTitleEl.textContent = `${data.exam.subject} — ${data.exam.name}`;
-      }
+      // Update Header with Exam Info
+      this.updateHeaderInfo();
 
-      // Fetch student profile for header
-      const profileRes = await fetch("../php/exam_api.php?action=get_profile");
+      // Fetch student profile for header (using session data via API)
+      const profileRes = await fetch("../php/exam_api.php?action=get_profile", {
+        credentials: "include",
+      });
       const profileData = await profileRes.json();
       if (profileData.success) {
-        const student = profileData.user;
-        const nameEl = document.getElementById("exam-student-name");
-        if (nameEl) {
-          nameEl.textContent = `Siswa: ${student.full_name} | Kelas ${student.class}`;
-        }
+        this.studentData = profileData.user;
+        this.updateHeaderInfo(); // Refresh with student data
       }
 
       this.renderQuestions();
@@ -82,6 +79,29 @@ const ExamEngine = {
     } catch (error) {
       console.error("[ExamEngine] Error loading exam:", error);
       alert("Terjadi kesalahan koneksi saat memuat ujian.");
+    }
+  },
+
+  updateHeaderInfo() {
+    // Update exam name and subject display
+    const examNameEl = document.getElementById("exam-name-display");
+    const examSubjectEl = document.getElementById("exam-subject-display");
+    const examClassEl = document.getElementById("exam-class-display");
+    const studentNameEl = document.getElementById("exam-student-display");
+    const questionCountEl = document.getElementById("exam-question-count");
+
+    if (this.examData) {
+      if (examNameEl) examNameEl.textContent = this.examData.name || "Ujian";
+      if (examSubjectEl)
+        examSubjectEl.textContent = this.examData.subject || "-";
+      if (examClassEl && this.examData.class)
+        examClassEl.textContent = this.examData.class;
+      if (questionCountEl && this.questions)
+        questionCountEl.textContent = this.questions.length;
+    }
+
+    if (this.studentData && studentNameEl) {
+      studentNameEl.textContent = `${this.studentData.full_name || "Siswa"}`;
     }
   },
 
@@ -121,7 +141,7 @@ const ExamEngine = {
           ).padStart(2, "0")}`
         : `${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
     const el = document.getElementById("exam-timer");
-    if (el) el.textContent = "⏱️ " + display;
+    if (el) el.textContent = display;
   },
 
   renderQuestions() {

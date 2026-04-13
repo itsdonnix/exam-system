@@ -16,12 +16,12 @@
         font-family: "Poppins", sans-serif;
       }
 
-      /* MODERN HEADER */
+      /* COMPREHENSIVE RESPONSIVE HEADER */
       .exam-header {
         background: #fff;
         color: #1e293b;
-        padding: 0 16px;
-        height: 64px;
+        padding: 0 12px;
+        height: 60px;
         display: flex;
         align-items: center;
         justify-content: space-between;
@@ -33,14 +33,17 @@
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
         border-bottom: 1px solid #e2e8f0;
       }
+
       .header-left {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 10px;
+        min-width: 0;
       }
+
       .header-logo {
-        width: 40px;
-        height: 40px;
+        width: 36px;
+        height: 36px;
         background: #2563eb;
         border-radius: 10px;
         display: flex;
@@ -48,38 +51,64 @@
         justify-content: center;
         color: #fff;
         font-weight: 800;
-        font-size: 1.2rem;
+        font-size: 1.1rem;
       }
+
       .header-info h1 {
-        font-size: 0.95rem;
+        font-size: 0.85rem;
         font-weight: 700;
         color: #1e293b;
         margin: 0;
         line-height: 1.2;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        max-width: 180px;
       }
-      .header-info p {
-        font-size: 0.72rem;
-        color: #64748b;
-        margin: 0;
+
+      .header-meta {
+        display: flex;
+        align-items: center;
+        gap: 4px;
+        font-size: 0.65rem;
+        flex-wrap: wrap;
+        margin-top: 2px;
+      }
+
+      .meta-badge {
+        background: #f1f5f9;
+        padding: 1px 5px;
+        border-radius: 4px;
+        font-size: 0.6rem;
+      }
+
+      .meta-separator {
+        color: #cbd5e1;
+      }
+      .student-name {
+        font-weight: 600;
+        color: #334155;
       }
 
       .header-right {
         display: flex;
         align-items: center;
-        gap: 12px;
+        gap: 8px;
       }
+
       .timer-pill {
         background: #fee2e2;
         color: #dc2626;
-        padding: 6px 14px;
+        padding: 5px 10px;
         border-radius: 50px;
-        font-size: 0.9rem;
+        font-size: 0.85rem;
         font-weight: 700;
         display: flex;
         align-items: center;
         gap: 6px;
         border: 1px solid #fecaca;
       }
+
       .timer-pill.warning {
         background: #fef3c7;
         color: #d97706;
@@ -87,10 +116,77 @@
         animation: pulse 1s infinite;
       }
 
+      .nav-grid-trigger {
+        cursor: pointer;
+        background: #f1f5f9;
+        width: 40px;
+        height: 40px;
+        border-radius: 10px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #475569;
+      }
+
+      /* Mobile-first responsive adjustments */
+      @media (max-width: 480px) {
+        .exam-header {
+          height: 56px;
+          padding: 0 10px;
+        }
+
+        .header-left {
+          gap: 8px;
+        }
+
+        .header-logo {
+          width: 32px;
+          height: 32px;
+          font-size: 1rem;
+        }
+
+        .header-info h1 {
+          font-size: 0.8rem;
+          max-width: 140px;
+        }
+
+        .header-meta {
+          font-size: 0.6rem;
+          gap: 3px;
+        }
+
+        .meta-badge {
+          padding: 1px 4px;
+        }
+
+        .timer-pill {
+          padding: 4px 8px;
+          font-size: 0.8rem;
+        }
+
+        .nav-grid-trigger {
+          width: 36px;
+          height: 36px;
+          font-size: 1.1rem;
+        }
+      }
+
+      @media (max-width: 360px) {
+        .header-info h1 {
+          max-width: 110px;
+        }
+
+        .header-meta {
+          flex-direction: column;
+          align-items: flex-start;
+          gap: 2px;
+        }
+      }
+
       /* TOP NAVIGATION SCROLL */
       .q-nav-container {
         position: fixed;
-        top: 64px;
+        top: 60px;
         left: 0;
         right: 0;
         background: #fff;
@@ -144,7 +240,7 @@
 
       /* MAIN CONTENT */
       .exam-container {
-        margin-top: 132px;
+        margin-top: 128px;
         margin-bottom: 80px;
         padding: 16px;
         max-width: 800px;
@@ -446,27 +542,29 @@
     <!-- EXAM HEADER -->
     <div class="exam-header" id="exam-header" style="display: none">
       <div class="header-left">
-        <div class="header-logo">E</div>
+        <div class="header-logo">📝</div>
         <div class="header-info">
-          <h1 id="exam-subject-display">Memuat...</h1>
-          <p id="exam-student-display">Siswa: ---</p>
+          <h1 id="exam-name-display">Memuat...</h1>
+          <div class="header-meta">
+            <span class="meta-badge" id="exam-subject-display">-</span>
+            <span class="meta-separator">•</span>
+            <span class="meta-badge" id="exam-class-display">-</span>
+            <span class="meta-separator">•</span>
+            <span class="meta-badge" id="exam-question-count">0</span>
+            <span class="meta-text">soal</span>
+            <span class="meta-separator">|</span>
+            <span class="student-name" id="exam-student-display"
+              >Siswa: ---</span
+            >
+          </div>
         </div>
       </div>
       <div class="header-right">
-        <div id="exam-timer" class="timer-pill">⏱️ 00:00</div>
+        <div id="exam-timer" class="timer-pill timer-normal">⏱️ 00:00</div>
         <div
           onclick="toggleGrid()"
-          style="
-            cursor: pointer;
-            background: #f1f5f9;
-            width: 40px;
-            height: 40px;
-            border-radius: 10px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: #475569;
-          "
+          class="nav-grid-trigger"
+          title="Navigasi Soal"
         >
           ☰
         </div>
@@ -611,7 +709,6 @@
     </div>
 
     <script>
-      // ===== DEBUG MODE: DISABLE ALL VIOLATION DETECTORS =====
       window.DEBUG_DISABLE_VIOLATIONS = true;
     </script>
     <script src="../js/security.js"></script>
@@ -726,11 +823,14 @@
           const stdDisp = document.getElementById("exam-student-display");
           const subj = document.getElementById("exam-subject-title");
           const name = document.getElementById("exam-student-name");
+          const count = document.getElementById("exam-question-count");
+          const nameDisp = document.getElementById("exam-name-display");
+          const title = document.getElementById("exam-title-display");
 
-          if (subDisp && subj)
-            subDisp.textContent = subj.textContent.split(" — ")[0];
-          if (stdDisp && name)
-            stdDisp.textContent = name.textContent.split(" | ")[0];
+          if (nameDisp && title) nameDisp.textContent = title.textContent;
+          if (subDisp && subj) subDisp.textContent = subj.textContent;
+          if (stdDisp && name) stdDisp.textContent = name.textContent;
+          if (count) count.textContent = ExamEngine.questions.length;
 
           buildNav();
         });

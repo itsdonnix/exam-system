@@ -692,11 +692,14 @@ function getExam()
     jsonResponse([
         'success'   => true,
         'exam'      => [
-            'id'          => $exam['id'],
-            'name'        => $exam['name'],
-            'subject'     => $exam['subject'],
-            'duration'    => $exam['duration_minutes'],
-            'description' => $exam['description'],
+            'id'              => $exam['id'],
+            'name'            => $exam['name'],
+            'subject'         => $exam['subject'],
+            'class'           => $exam['class'],
+            'duration'        => $exam['duration_minutes'],
+            'question_count'  => $exam['question_count'],
+            'description'     => $exam['description'],
+            'show_results_setting' => $exam['show_results_setting'] ?? 'direct_submit'
         ],
         'questions' => $questions
     ]);
