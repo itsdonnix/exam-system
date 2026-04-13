@@ -49,6 +49,137 @@
         background: #fee2e2;
         color: #991b1b;
       }
+
+      /* Enhanced Diagnostic Styles */
+      .diagnostic-container {
+        margin-top: 20px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid #e2e8f0;
+      }
+      .diagnostic-header {
+        background: #f8fafc;
+        padding: 12px 16px;
+        border-bottom: 1px solid #e2e8f0;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 10px;
+      }
+      .diagnostic-title {
+        font-weight: 700;
+        color: #1e293b;
+      }
+      .diagnostic-steps {
+        padding: 0;
+      }
+      .diagnostic-step {
+        padding: 12px 16px;
+        border-bottom: 1px solid #f1f5f9;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 0.9rem;
+      }
+      .diagnostic-step:last-child {
+        border-bottom: none;
+      }
+      .step-status {
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.9rem;
+        flex-shrink: 0;
+      }
+      .step-status.passed {
+        background: #d1fae5;
+        color: #065f46;
+      }
+      .step-status.failed {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .step-status.warning {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .step-status.pending {
+        background: #e2e8f0;
+        color: #64748b;
+      }
+      .step-name {
+        font-weight: 600;
+        color: #334155;
+        min-width: 140px;
+      }
+      .step-message {
+        flex: 1;
+        color: #475569;
+        font-size: 0.85rem;
+      }
+      .step-latency {
+        color: #94a3b8;
+        font-size: 0.75rem;
+        font-family: monospace;
+      }
+      .diagnostic-summary {
+        background: #f1f5f9;
+        padding: 12px 16px;
+        border-top: 1px solid #e2e8f0;
+      }
+      .suggestions-list {
+        margin-top: 8px;
+        padding-left: 20px;
+      }
+      .suggestions-list li {
+        color: #dc2626;
+        font-size: 0.85rem;
+        margin-bottom: 4px;
+      }
+      .sample-response {
+        background: #1e293b;
+        color: #e2e8f0;
+        padding: 12px;
+        border-radius: 8px;
+        font-size: 0.8rem;
+        font-family: monospace;
+        overflow-x: auto;
+        white-space: pre-wrap;
+        word-break: break-word;
+        max-height: 200px;
+        overflow-y: auto;
+      }
+      .btn-copy {
+        background: none;
+        border: 1px solid #cbd5e1;
+        padding: 4px 12px;
+        border-radius: 6px;
+        font-size: 0.75rem;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+      .btn-copy:hover {
+        background: #e2e8f0;
+      }
+      .diagnostic-loading {
+        display: inline-block;
+        width: 16px;
+        height: 16px;
+        border: 2px solid #e2e8f0;
+        border-top-color: var(--primary);
+        border-radius: 50%;
+        animation: spin 0.6s linear infinite;
+        margin-right: 8px;
+      }
+      @keyframes spin {
+        to {
+          transform: rotate(360deg);
+        }
+      }
     </style>
   </head>
   <body>
@@ -144,7 +275,6 @@
           </div>
         </div>
 
-        <!-- Settings Tabs -->
         <div class="settings-tabs">
           <button class="settings-tab active" data-tab="profile">
             👤 Profil
@@ -152,16 +282,13 @@
           <button class="settings-tab" data-tab="ai">🤖 AI (Gemini)</button>
         </div>
 
-        <!-- Profile Tab -->
         <div id="settings-profile" class="settings-tab-content active">
           <div class="card">
             <h3>Profil Guru</h3>
             <p style="margin-bottom: 20px; color: #64748b">
               Ubah data profil Anda di bawah ini.
             </p>
-
             <div id="alert-settings"></div>
-
             <form id="settings-form" onsubmit="saveProfile(event)">
               <div class="form-group">
                 <label>Nama Lengkap (Termasuk Gelar)</label>
@@ -202,7 +329,6 @@
           </div>
         </div>
 
-        <!-- AI Settings Tab -->
         <div id="settings-ai" class="settings-tab-content">
           <div class="card">
             <h3>🤖 Pengaturan AI (Gemini)</h3>
@@ -211,9 +337,7 @@
               <strong>Impor Soal Otomatis</strong> di halaman
               <a href="create-exam.html">Buat Ujian</a>.
             </p>
-
             <div id="alert-ai-settings"></div>
-
             <form id="ai-settings-form" onsubmit="saveAISettings(event)">
               <div class="form-group">
                 <label>Gemini API Key</label>
@@ -235,7 +359,6 @@
                   >
                 </small>
               </div>
-
               <div class="form-group">
                 <label>Model Gemini</label>
                 <select class="form-control" id="gemini-model">
@@ -258,9 +381,7 @@
                   </optgroup>
                 </select>
               </div>
-
               <hr style="margin: 20px 0; border-top: 1px solid #e2e8f0" />
-
               <div class="form-group">
                 <label>Batasan File</label>
                 <ul style="margin-top: 8px; padding-left: 20px; color: #64748b">
@@ -272,7 +393,6 @@
                   </li>
                 </ul>
               </div>
-
               <div style="display: flex; gap: 12px">
                 <button type="submit" class="btn btn-primary">
                   💾 Simpan Pengaturan AI
@@ -280,19 +400,20 @@
                 <button
                   type="button"
                   class="btn btn-outline"
+                  id="test-connection-btn"
                   onclick="testAIConnection()"
                 >
                   🔌 Test Koneksi
                 </button>
               </div>
             </form>
+            <div id="diagnostic-results" style="display: none"></div>
           </div>
         </div>
       </main>
     </div>
 
     <script>
-      // Sidebar toggle functionality
       const hamburgerBtn = document.getElementById("hamburgerBtn");
       const sidebar = document.getElementById("sidebar");
       const sidebarOverlay = document.getElementById("sidebarOverlay");
@@ -311,23 +432,16 @@
         });
       }
 
-      // Tab switching
       document.querySelectorAll(".settings-tab").forEach((tab) => {
         tab.addEventListener("click", () => {
           const tabName = tab.dataset.tab;
-
-          // Update active tab button
           document
             .querySelectorAll(".settings-tab")
             .forEach((t) => t.classList.remove("active"));
           tab.classList.add("active");
-
-          // Update active content
           document
             .querySelectorAll(".settings-tab-content")
-            .forEach((content) => {
-              content.classList.remove("active");
-            });
+            .forEach((content) => content.classList.remove("active"));
           document
             .getElementById(`settings-${tabName}`)
             .classList.add("active");
@@ -345,24 +459,18 @@
             "../php/exam_api.php?action=get_profile"
           );
           const data = await response.json();
-
           if (data.success) {
             const user = data.user;
             const fullNameWithGelar =
               user.full_name + (user.gelar ? ", " + user.gelar : "");
-
             document.getElementById("profile-name").value = user.full_name;
             document.getElementById("profile-email").value = user.email;
             document.getElementById("profile-phone").value = user.phone || "";
-
-            // Update navbar avatar
             document.querySelector(".nav-user span").textContent =
               fullNameWithGelar;
             document.querySelector(".nav-avatar").textContent = user.full_name
               .charAt(0)
               .toUpperCase();
-
-            // Update sidebar
             const sidebarAvatar = document.getElementById("sidebarAvatar");
             if (sidebarAvatar)
               sidebarAvatar.textContent = user.full_name
@@ -382,7 +490,6 @@
         e.preventDefault();
         const alertEl = document.getElementById("alert-settings");
         alertEl.innerHTML = '<div class="alert alert-info">Menyimpan...</div>';
-
         const formData = {
           action: "update_profile",
           full_name: document.getElementById("profile-name").value,
@@ -390,7 +497,6 @@
           phone: document.getElementById("profile-phone").value,
           new_password: document.getElementById("new-password").value,
         };
-
         try {
           const response = await fetch("../php/exam_api.php", {
             method: "POST",
@@ -398,7 +504,6 @@
             body: JSON.stringify(formData),
           });
           const result = await response.json();
-
           if (result.success) {
             alertEl.innerHTML =
               '<div class="alert alert-success">✅ Profil berhasil diperbarui!</div>';
@@ -417,20 +522,15 @@
         try {
           const response = await fetch("../php/get_ai_settings.php");
           const data = await response.json();
-
           if (data.success) {
             const settings = data.settings;
-
             if (settings.has_key) {
               const statusSpan = document.getElementById("api-key-status");
               statusSpan.textContent = "✓ Terkonfigurasi";
               statusSpan.className = "api-key-status configured";
-
-              // Show placeholder that key exists (don't show actual key)
-              const keyInput = document.getElementById("gemini-api-key");
-              keyInput.placeholder = "•••••••• (API Key sudah tersimpan)";
+              document.getElementById("gemini-api-key").placeholder =
+                "•••••••• (API Key sudah tersimpan)";
             }
-
             document.getElementById("gemini-model").value =
               settings.gemini_model;
           }
@@ -444,10 +544,8 @@
         const alertEl = document.getElementById("alert-ai-settings");
         alertEl.innerHTML =
           '<div class="alert alert-info">Menyimpan pengaturan AI...</div>';
-
         const apiKey = document.getElementById("gemini-api-key").value;
         const model = document.getElementById("gemini-model").value;
-
         try {
           const response = await fetch("../php/save_ai_settings.php", {
             method: "POST",
@@ -458,7 +556,6 @@
             }),
           });
           const result = await response.json();
-
           if (result.success) {
             alertEl.innerHTML =
               '<div class="alert alert-success">✅ Pengaturan AI berhasil disimpan!</div>';
@@ -467,7 +564,6 @@
             alertEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
           }
         } catch (error) {
-          console.error("Save AI settings error:", error);
           alertEl.innerHTML =
             '<div class="alert alert-danger">❌ Gagal menyimpan pengaturan. Cek koneksi.</div>';
         }
@@ -475,32 +571,159 @@
 
       async function testAIConnection() {
         const alertEl = document.getElementById("alert-ai-settings");
+        const diagnosticContainer =
+          document.getElementById("diagnostic-results");
         alertEl.innerHTML =
-          '<div class="alert alert-info">🔌 Menguji koneksi ke Gemini API...</div>';
-
+          '<div class="alert alert-info">🔌 <span class="diagnostic-loading"></span> Menguji koneksi ke Gemini API...</div>';
+        diagnosticContainer.style.display = "none";
+        const testBtn = document.getElementById("test-connection-btn");
+        testBtn.disabled = true;
+        testBtn.textContent = "⏳ Menguji...";
         try {
-          // Simple test with a small prompt
           const response = await fetch("../php/ai_import.php", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              action: "extract",
-              text: "Test: Apa ibu kota Indonesia? A. Jakarta B. Surabaya C. Bandung",
-            }),
+            body: JSON.stringify({ action: "test" }),
           });
           const result = await response.json();
-
           if (result.success) {
             alertEl.innerHTML =
-              '<div class="alert alert-success">✅ Koneksi ke Gemini API berhasil! AI siap digunakan.</div>';
+              '<div class="alert alert-success">✅ ' +
+              result.message +
+              "</div>";
           } else {
-            alertEl.innerHTML = `<div class="alert alert-danger">❌ Gagal: ${result.message}</div>`;
+            alertEl.innerHTML =
+              '<div class="alert alert-warning">⚠️ ' +
+              (result.message || "Test completed with issues") +
+              "</div>";
           }
+          renderDiagnostics(result);
+          diagnosticContainer.style.display = "block";
         } catch (error) {
-          console.error("Test connection error:", error);
           alertEl.innerHTML =
             '<div class="alert alert-danger">❌ Gagal terhubung ke server. Periksa koneksi internet.</div>';
+          diagnosticContainer.style.display = "none";
+        } finally {
+          testBtn.disabled = false;
+          testBtn.textContent = "🔌 Test Koneksi";
         }
+      }
+
+      function renderDiagnostics(data) {
+        const container = document.getElementById("diagnostic-results");
+        if (!data || !data.steps) {
+          container.innerHTML =
+            '<div class="alert alert-danger">Tidak ada data diagnostik</div>';
+          return;
+        }
+        const getStatusIcon = (status) =>
+          status === "passed"
+            ? "✅"
+            : status === "failed"
+            ? "❌"
+            : status === "warning"
+            ? "⚠️"
+            : "⏳";
+        const getStatusClass = (status) =>
+          status === "passed"
+            ? "passed"
+            : status === "failed"
+            ? "failed"
+            : status === "warning"
+            ? "warning"
+            : "pending";
+        const stepsHtml = data.steps
+          .map(
+            (step) => `
+          <div class="diagnostic-step">
+            <div class="step-status ${getStatusClass(
+              step.status
+            )}">${getStatusIcon(step.status)}</div>
+            <div class="step-name">${step.name}</div>
+            <div class="step-message">${escapeHtml(step.message)}</div>
+            ${
+              step.latency_ms
+                ? `<div class="step-latency">${step.latency_ms}ms</div>`
+                : ""
+            }
+          </div>
+        `
+          )
+          .join("");
+        const suggestionsHtml =
+          data.suggestions && data.suggestions.length > 0
+            ? `<div style="margin-top: 12px;"><strong>💡 Saran Perbaikan:</strong><ul class="suggestions-list">${data.suggestions
+                .map((s) => `<li>🔧 ${escapeHtml(s)}</li>`)
+                .join("")}</ul></div>`
+            : "";
+        const summaryHtml = `<div class="diagnostic-summary"><div><strong>📊 Ringkasan:</strong> ${escapeHtml(
+          data.message || ""
+        )}</div>${
+          data.api_latency_ms
+            ? `<div><strong>⏱️ Latency API:</strong> ${data.api_latency_ms}ms</div>`
+            : ""
+        }${
+          data.model_used
+            ? `<div><strong>🤖 Model digunakan:</strong> ${escapeHtml(
+                data.model_used
+              )}</div>`
+            : ""
+        }${
+          data.token_estimate
+            ? `<div><strong>📝 Perkiraan token:</strong> ~${data.token_estimate}</div>`
+            : ""
+        }${suggestionsHtml}</div>`;
+        const sampleHtml = data.sample_response
+          ? `<div style="padding: 12px 16px; border-top: 1px solid #e2e8f0;"><div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;"><strong>📄 Contoh Respons AI:</strong><button class="btn-copy" onclick="copyToClipboard(this)">📋 Salin</button></div><div class="sample-response">${escapeHtml(
+              data.sample_response
+            )}</div></div>`
+          : "";
+        container.innerHTML = `<div class="diagnostic-container"><div class="diagnostic-header"><span class="diagnostic-title">🔍 Hasil Diagnostik Koneksi</span><button class="btn-copy" onclick="copyDiagnosticReport()">📋 Salin Laporan</button></div><div class="diagnostic-steps">${stepsHtml}</div>${summaryHtml}${sampleHtml}</div>`;
+        window.lastDiagnosticData = data;
+      }
+
+      function copyToClipboard(btn) {
+        const sampleDiv = btn.parentElement.nextElementSibling;
+        navigator.clipboard.writeText(sampleDiv.innerText).then(() => {
+          const originalText = btn.textContent;
+          btn.textContent = "✅ Tersalin!";
+          setTimeout(() => {
+            btn.textContent = originalText;
+          }, 2000);
+        });
+      }
+
+      function copyDiagnosticReport() {
+        if (!window.lastDiagnosticData) return;
+        const data = window.lastDiagnosticData;
+        let report = `=== DIAGNOSTIC REPORT ===\nTimestamp: ${
+          data.timestamp || new Date().toISOString()
+        }\nSuccess: ${data.success ? "Yes" : "No"}\nMessage: ${
+          data.message
+        }\n\n--- STEPS ---\n`;
+        data.steps.forEach((step) => {
+          report += `${step.name}: ${step.status} - ${step.message}${
+            step.latency_ms ? ` (${step.latency_ms}ms)` : ""
+          }\n`;
+        });
+        if (data.suggestions && data.suggestions.length) {
+          report += `\n--- SUGGESTIONS ---\n`;
+          data.suggestions.forEach((s) => (report += `- ${s}\n`));
+        }
+        if (data.sample_response)
+          report += `\n--- SAMPLE RESPONSE ---\n${data.sample_response}\n`;
+        navigator.clipboard
+          .writeText(report)
+          .then(() =>
+            alert("✅ Laporan diagnostik telah disalin ke clipboard")
+          );
+      }
+
+      function escapeHtml(text) {
+        if (!text) return "";
+        const div = document.createElement("div");
+        div.appendChild(document.createTextNode(text));
+        return div.innerHTML;
       }
     </script>
   </body>
