@@ -602,7 +602,7 @@
       </div>
     </div>
 
-    <!-- RESULT SCREEN -->
+    <!-- RESULT SCREEN - SECURITY: Simplified to show only completion message, no scores -->
     <div
       id="exam-result"
       style="
@@ -619,60 +619,26 @@
       "
     >
       <div style="font-size: 4rem; margin-bottom: 1.25em">✅</div>
-      <h2
-        style="font-weight: 800; font-size: 2rem; margin-bottom: 0.5em"
-        id="result-score-title"
-      >
+      <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 0.5em">
         Ujian Selesai
       </h2>
       <div
-        id="result-score"
         style="
-          font-size: 5rem;
-          font-weight: 900;
-          color: #2563eb;
-          line-height: 1;
-          margin-bottom: 0.5em;
+          font-size: 1.5rem;
+          font-weight: 600;
+          color: #16a34a;
+          margin-bottom: 1em;
         "
       >
-        0
+        Terima kasih telah mengerjakan ujian
       </div>
-      <p style="color: #64748b; margin-bottom: 2em">Nilai Anda</p>
-
-      <div
-        style="
-          display: grid;
-          grid-template-columns: 1fr 1fr;
-          gap: 1em;
-          width: 100%;
-          max-width: 18.75rem;
-          margin-bottom: 2.5em;
-        "
-      >
-        <div style="background: #f8fafc; padding: 1em; border-radius: 16px">
-          <div
-            id="result-correct"
-            style="font-weight: 800; font-size: 1.2rem; color: #16a34a"
-          >
-            0
-          </div>
-          <div style="font-size: 0.75rem; color: #64748b">Benar</div>
-        </div>
-        <div style="background: #f8fafc; padding: 1em; border-radius: 16px">
-          <div
-            id="result-total"
-            style="font-weight: 800; font-size: 1.2rem; color: #1e293b"
-          >
-            0
-          </div>
-          <div style="font-size: 0.75rem; color: #64748b">Total Soal</div>
-        </div>
-      </div>
-
+      <p style="color: #64748b; margin-bottom: 2em; max-width: 300px">
+        Jawaban Anda telah disimpan. Hasil ujian akan diumumkan oleh guru.
+      </p>
       <a
         href="../student/dashboard.php"
-        class="btn btn-primary btn-block"
-        style="max-width: 18.75rem"
+        class="btn btn-primary"
+        style="max-width: 18.75rem; display: inline-block; padding: 12px 24px"
       >
         Kembali ke Dashboard
       </a>

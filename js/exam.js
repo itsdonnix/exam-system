@@ -533,59 +533,27 @@ const ExamEngine = {
         const examContent = document.getElementById("exam-content");
         if (examContent) examContent.style.display = "none";
 
-        if (this.showResultsSetting === "never") {
-          const examResult = document.getElementById("exam-result");
-          if (examResult) examResult.style.display = "flex";
+        // SECURITY: Always show completion message without scores
+        // Never display score data to students regardless of show_results_setting
+        const examResult = document.getElementById("exam-result");
+        if (examResult) examResult.style.display = "flex";
 
-          const rScore = document.getElementById("result-score");
-          if (rScore) {
-            rScore.textContent = "Selesai";
-            rScore.style.fontSize = "2.5rem";
-          }
-
-          const rScoreLabel = document.getElementById("result-score-label");
-          if (rScoreLabel) rScoreLabel.textContent = "Ujian telah dikumpulkan";
-
-          const rStats = document.querySelector(".result-stats");
-          if (rStats) rStats.style.display = "none";
-
-          const rReason = document.getElementById("result-reason");
-          if (rReason) rReason.textContent = "Hasil ujian belum tersedia.";
-        } else {
-          const examResult = document.getElementById("exam-result");
-          if (examResult) examResult.style.display = "flex";
-
-          const rScore = document.getElementById("result-score");
-          if (rScore) {
-            rScore.textContent = data.score;
-            rScore.style.fontSize = "5rem";
-          }
-
-          const rScoreLabel = document.getElementById("result-score-label");
-          if (rScoreLabel) rScoreLabel.textContent = "Nilai Anda";
-
-          const rStats = document.querySelector(".result-stats");
-          if (rStats) rStats.style.display = "grid";
-
-          const rCorrect = document.getElementById("result-correct");
-          if (rCorrect) rCorrect.textContent = data.correct;
-
-          const rTotal = document.getElementById("result-total");
-          if (rTotal) rTotal.textContent = data.total;
-
-          const rTime = document.getElementById("result-time");
-          if (rTime)
-            rTime.textContent = Math.round(data.time_taken / 60) + " menit";
-
-          const rReason = document.getElementById("result-reason");
-          if (rReason) {
-            if (reason) {
-              rReason.textContent = "Status: " + reason;
-            } else if (forced) {
-              rReason.textContent = "Status: Dihentikan Paksa";
-            }
-          }
+        const rScore = document.getElementById("result-score");
+        if (rScore) {
+          rScore.textContent = "Selesai";
+          rScore.style.fontSize = "2.5rem";
         }
+
+        const rScoreLabel = document.getElementById("result-score-label");
+        if (rScoreLabel) rScoreLabel.textContent = "Ujian telah dikumpulkan";
+
+        const rStats = document.querySelector(".result-stats");
+        if (rStats) rStats.style.display = "none";
+
+        const rReason = document.getElementById("result-reason");
+        if (rReason)
+          rReason.textContent =
+            "Hasil ujian belum tersedia. Hubungi guru untuk melihat nilai.";
       } else {
         alert("Gagal menyimpan jawaban: " + data.message);
       }

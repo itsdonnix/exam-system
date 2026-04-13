@@ -319,8 +319,9 @@ function getStudentHistory()
     }
 
     $db = getDB();
+    // SECURITY: Removed es.total_score as score from student history
     $stmt = $db->prepare("
-        SELECT e.name, e.subject, es.total_score as score, es.status, es.submitted_at, es.time_taken_seconds, e.show_results_setting
+        SELECT e.name, e.subject, es.status, es.submitted_at, es.time_taken_seconds, e.show_results_setting
         FROM exam_submissions es
         JOIN exams e ON e.id = es.exam_id
         WHERE es.student_id = ?
@@ -822,12 +823,10 @@ function submitAnswers()
         $forced ? 1 : 0
     ]);
 
+    // SECURITY: Removed score, correct, total from student response
     jsonResponse([
         'success'    => true,
         'message'    => 'Jawaban berhasil dikumpulkan',
-        'score'      => round($scorePercentage, 1),
-        'correct'    => $correctCount,
-        'total'      => count($questions),
         'status'     => $status,
         'has_essay'  => $hasEssay,
         'time_taken' => $timeTaken
