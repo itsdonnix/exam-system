@@ -1,21 +1,72 @@
 <?php
+session_set_cookie_params([
+    'lifetime' => 0,
+    'path' => '/',
+    'domain' => '',
+    'secure' => false,
+    'httponly' => true,
+    'samesite' => 'Lax'
+]);
 
-/**
- * ExamSafe — Exam API
- * GET  /php/exam_api.php?action=get_exam&exam_id=1
- * POST /php/exam_api.php?action=submit_answers
- * POST /php/exam_api.php?action=report_violation
- * GET  /php/exam_api.php?action=get_results&exam_id=1
- */
-
-session_start();
+// Now start the session
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 require_once 'db.php';
+
+// Validate session has required data
+if (!isset($_SESSION['role']) && isset($_SESSION['user_id'])) {
+    // Attempt to recover session from database
+    $db = getDB();
+
+    // Check which role this user_id belongs to
+    $stmt = $db->prepare("
+        SELECT 'siswa' as role, full_name, username FROM students WHERE id = ? AND is_active = 1
+        UNION 
+        SELECT 'guru' as role, full_name, username FROM teachers WHERE id = ? AND is_active = 1
+        UNION 
+        SELECT 'admin' as role, username as full_name, username FROM admins WHERE id = ? AND is_active = 1
+    ");
+    $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id'], $_SESSION['user_id']]);
+    $user = $stmt->fetch();
+
+    if ($user) {
+        $_SESSION['role'] = $user['role'];
+        $_SESSION['full_name'] = $user['full_name'];
+        $_SESSION['username'] = $user['username'];
+        error_log("[ExamAPI] Session recovered for user_id: " . $_SESSION['user_id'] . " as role: " . $user['role']);
+    } else {
+        error_log("[ExamAPI] Failed to recover session for user_id: " . $_SESSION['user_id']);
+        session_destroy();
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Sesi tidak valid. Silakan login kembali.']);
+        exit;
+    }
+}
+
+// Check if session is valid
+if (!isset($_SESSION['role']) || !isset($_SESSION['user_id'])) {
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Silakan login terlebih dahulu.']);
+    exit;
+}
+
+// Check session timeout (2 hours)
+if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 7200)) {
+    session_destroy();
+    header('Content-Type: application/json');
+    echo json_encode(['success' => false, 'message' => 'Sesi telah berakhir. Silakan login kembali.']);
+    exit;
+}
 
 // Set error handling to prevent HTML error pages
 set_error_handler(function ($errno, $errstr, $errfile, $errline) {
     error_log("[API Error] $errstr in $errfile:$errline");
-    jsonResponse(['success' => false, 'message' => 'API Error: ' . $errstr], 500);
+    if (!headers_sent()) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'API Error: ' . $errstr]);
+    }
     return true; // Mark error as handled
 });
 
@@ -90,7 +141,6 @@ try {
         case 'save_manual_grade':
             saveManualGrade();
             break;
-        // Bank Soal (Question Bank) API
         case 'get_bank_questions':
             getBankQuestions();
             break;
@@ -120,7 +170,6 @@ try {
     jsonResponse(['success' => false, 'message' => 'Server Error: ' . $e->getMessage()], 500);
 }
 
-// ===== GET SUBMISSION DETAIL (for teacher) =====
 function getSubmissionDetail()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -154,7 +203,6 @@ function getSubmissionDetail()
     jsonResponse(['success' => true, 'submission' => $submission, 'questions' => $questions]);
 }
 
-// ===== SAVE MANUAL GRADE (for teacher) =====
 function saveManualGrade()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -163,11 +211,10 @@ function saveManualGrade()
 
     $data = getInput();
     $submissionId = (int)($data['submission_id'] ?? 0);
-    $manualScore = (float)($data['manual_score'] ?? 0); // This is raw points from teacher
+    $manualScore = (float)($data['manual_score'] ?? 0);
 
     $db = getDB();
 
-    // Get current auto score and exam_id
     $stmt = $db->prepare("SELECT score, exam_id FROM exam_submissions WHERE id = ?");
     $stmt->execute([$submissionId]);
     $sub = $stmt->fetch();
@@ -176,15 +223,12 @@ function saveManualGrade()
 
     $examId = $sub['exam_id'];
 
-    // Get total possible points for this exam
     $stmtP = $db->prepare("SELECT SUM(points) as total_points FROM questions WHERE exam_id = ?");
     $stmtP->execute([$examId]);
     $totalPoints = (int)$stmtP->fetchColumn();
 
-    if ($totalPoints <= 0) $totalPoints = 1; // Prevent division by zero
+    if ($totalPoints <= 0) $totalPoints = 1;
 
-    // Recalculate total score
-    // sub['score'] is already (earnedAutoPoints / totalPoints) * 100
     $autoPoints = ($sub['score'] / 100) * $totalPoints;
     $totalScore = (($autoPoints + $manualScore) / $totalPoints) * 100;
 
@@ -196,23 +240,17 @@ function saveManualGrade()
     jsonResponse(['success' => true, 'message' => 'Nilai berhasil disimpan', 'total_score' => round($totalScore, 2)]);
 }
 
-// ===== GET CLASSES =====
 function getClasses()
 {
-
     $db = getDB();
     $classes = $db->query("SELECT * FROM classes ORDER BY name ASC")->fetchAll();
     jsonResponse(['success' => true, 'classes' => $classes]);
 }
 
-// ===== GET SUBJECTS =====
 function getSubjects()
 {
-
-
     try {
         $db = getDB();
-        // Check if subjects table exists
         $checkTable = $db->query("SHOW TABLES LIKE 'subjects'");
         if ($checkTable->rowCount() === 0) {
             jsonResponse(['success' => false, 'message' => 'Subjects table not found'], 404);
@@ -230,11 +268,8 @@ function getSubjects()
     }
 }
 
-// ===== GET PROFILE (for teacher) =====
 function getProfile()
 {
-
-
     $db = getDB();
     $table = $_SESSION['role'] === 'guru' ? 'teachers' : ($_SESSION['role'] === 'admin' ? 'admins' : 'students');
 
@@ -242,11 +277,10 @@ function getProfile()
     $stmt->execute([$_SESSION['user_id']]);
     $user = $stmt->fetch();
 
-    unset($user['password']); // Jangan kirim password
+    unset($user['password']);
     jsonResponse(['success' => true, 'user' => $user]);
 }
 
-// ===== UPDATE PROFILE (for teacher) =====
 function updateProfile()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -278,7 +312,6 @@ function updateProfile()
     jsonResponse(['success' => true, 'message' => 'Profil berhasil diperbarui']);
 }
 
-// ===== GET STUDENT HISTORY =====
 function getStudentHistory()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'siswa') {
@@ -297,7 +330,6 @@ function getStudentHistory()
     jsonResponse(['success' => true, 'history' => $stmt->fetchAll()]);
 }
 
-// ===== GET RECENT VIOLATIONS (for teacher) =====
 function getRecentViolations()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -317,7 +349,6 @@ function getRecentViolations()
     jsonResponse(['success' => true, 'violations' => $stmt->fetchAll()]);
 }
 
-// ===== GET EXAM MONITOR (Real-time progress) =====
 function getExamMonitor()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -327,7 +358,6 @@ function getExamMonitor()
     $examId = (int)($_GET['exam_id'] ?? 0);
     $db = getDB();
 
-    // Stats
     $totalCount = $db->prepare("SELECT COUNT(*) FROM students s JOIN exams e ON e.class = s.class WHERE e.id = ?");
     $totalCount->execute([$examId]);
     $total = $totalCount->fetchColumn();
@@ -346,7 +376,6 @@ function getExamMonitor()
         'violation' => $violation ?: 0,
     ];
 
-    // List participants
     $stmt = $db->prepare("
         SELECT s.id as student_id, s.full_name, es.total_score as score, es.status, es.submitted_at, es.is_forced,
                (SELECT COUNT(*) FROM violations WHERE exam_id = ? AND student_id = s.id) as v_count
@@ -359,7 +388,6 @@ function getExamMonitor()
     jsonResponse(['success' => true, 'stats' => $stats, 'participants' => $stmt->fetchAll()]);
 }
 
-// ===== GET STUDENTS (for teacher) =====
 function getStudents()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -367,7 +395,6 @@ function getStudents()
     }
 
     $db = getDB();
-    // Ambil siswa yang ada di kelas yang diampu guru
     $stmt = $db->prepare("
         SELECT DISTINCT s.* FROM students s
         JOIN exams e ON e.class = s.class
@@ -380,7 +407,6 @@ function getStudents()
     jsonResponse(['success' => true, 'students' => $students]);
 }
 
-// ===== ACTIVATE EXAM (for teacher) =====
 function activateExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -401,7 +427,6 @@ function activateExam()
     }
 }
 
-// ===== DEACTIVATE EXAM (for teacher) =====
 function deactivateExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -422,7 +447,6 @@ function deactivateExam()
     }
 }
 
-// ===== DELETE EXAM (for teacher) =====
 function deleteExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -433,7 +457,6 @@ function deleteExam()
     $examId = (int)($data['exam_id'] ?? 0);
     $db = getDB();
 
-    // Cek status terlebih dahulu
     $check = $db->prepare("SELECT status FROM exams WHERE id = ? AND teacher_id = ?");
     $check->execute([$examId, $_SESSION['user_id']]);
     $exam = $check->fetch();
@@ -449,20 +472,12 @@ function deleteExam()
 
     try {
         $db->beginTransaction();
-
-        // 1. Hapus data pelanggaran terkait
         $stmtV = $db->prepare("DELETE FROM violations WHERE exam_id = ?");
         $stmtV->execute([$examId]);
-
-        // 2. Hapus data submission terkait
         $stmtS = $db->prepare("DELETE FROM exam_submissions WHERE exam_id = ?");
         $stmtS->execute([$examId]);
-
-        // 3. Hapus soal (sudah ada ON DELETE CASCADE di DB sebenarnya, tapi untuk keamanan kita biarkan query utama jalan)
-        // 4. Hapus ujian
         $stmt = $db->prepare("DELETE FROM exams WHERE id = ? AND teacher_id = ?");
         $stmt->execute([$examId, $_SESSION['user_id']]);
-
         $db->commit();
 
         if ($stmt->rowCount() > 0) {
@@ -472,12 +487,10 @@ function deleteExam()
         }
     } catch (Exception $e) {
         $db->rollBack();
-        // Log internal error: error_log("Delete Exam failed: " . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Gagal menghapus ujian. Terjadi kesalahan server.'], 500);
     }
 }
 
-// ===== DUPLICATE EXAM (for teacher) =====
 function duplicateExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -490,15 +503,12 @@ function duplicateExam()
 
     try {
         $db->beginTransaction();
-
-        // 1. Ambil data ujian lama
         $stmt = $db->prepare("SELECT * FROM exams WHERE id = ? AND teacher_id = ?");
         $stmt->execute([$examId, $_SESSION['user_id']]);
         $oldExam = $stmt->fetch();
 
         if (!$oldExam) throw new Exception("Ujian tidak ditemukan.");
 
-        // 2. Buat ujian baru (Copy)
         $newCode = strtoupper(bin2hex(random_bytes(4)));
         $stmtInsert = $db->prepare("
             INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, created_at)
@@ -518,7 +528,6 @@ function duplicateExam()
         ]);
         $newExamId = $db->lastInsertId();
 
-        // 3. Salin semua soal
         $stmtQuestions = $db->prepare("SELECT * FROM questions WHERE exam_id = ?");
         $stmtQuestions->execute([$examId]);
         $questions = $stmtQuestions->fetchAll();
@@ -545,12 +554,10 @@ function duplicateExam()
         jsonResponse(['success' => true, 'message' => 'Ujian berhasil diduplikasi! Cek daftar ujian Anda.']);
     } catch (Exception $e) {
         $db->rollBack();
-        // Log internal error: error_log("Duplicate Exam failed: " . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Gagal menduplikasi ujian. Terjadi kesalahan server.']);
     }
 }
 
-// ===== UNLOCK STUDENT (Tolerance) =====
 function unlockStudent()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -562,7 +569,6 @@ function unlockStudent()
     $studentId = (int)($data['student_id'] ?? 0);
     $db = getDB();
 
-    // Pastikan guru ini adalah pemilik ujian
     $stmt = $db->prepare("SELECT id FROM exams WHERE id = ? AND teacher_id = ?");
     $stmt->execute([$examId, $_SESSION['user_id']]);
     if (!$stmt->fetch()) {
@@ -571,25 +577,18 @@ function unlockStudent()
 
     try {
         $db->beginTransaction();
-
-        // 1. Hapus submission yang bersifat forced/sementara
         $stmt1 = $db->prepare("DELETE FROM exam_submissions WHERE exam_id = ? AND student_id = ?");
         $stmt1->execute([$examId, $studentId]);
-
-        // 2. Hapus catatan pelanggaran agar counter keamanan kembali ke 0
         $stmt2 = $db->prepare("DELETE FROM violations WHERE exam_id = ? AND student_id = ?");
         $stmt2->execute([$examId, $studentId]);
-
         $db->commit();
         jsonResponse(['success' => true, 'message' => 'Toleransi diberikan. Siswa dapat login kembali ke ujian.']);
     } catch (Exception $e) {
         $db->rollBack();
-        // Log internal error: error_log("Unlock Student failed: " . $e->getMessage());
         jsonResponse(['success' => false, 'message' => 'Gagal memberikan toleransi. Terjadi kesalahan server.']);
     }
 }
 
-// ===== JOIN EXAM (by code) =====
 function joinExamAction()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'siswa') {
@@ -619,14 +618,12 @@ function joinExamAction()
         jsonResponse(['success' => false, 'message' => 'Ujian ini tidak sedang aktif'], 403);
     }
 
-    // Check if already submitted
     $stmt = $db->prepare("SELECT id FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
     $stmt->execute([$exam['id'], $_SESSION['user_id']]);
     if ($stmt->fetch()) {
         jsonResponse(['success' => false, 'message' => 'Anda sudah mengerjakan ujian ini sebelumnya'], 409);
     }
 
-    // Authorize this exam for this session
     if (!isset($_SESSION['authorized_exams'])) {
         $_SESSION['authorized_exams'] = [];
     }
@@ -641,28 +638,22 @@ function joinExamAction()
     ]);
 }
 
-// ===== GET EXAM (for student and teacher) =====
 function getExam()
 {
-
-
     $examId = (int)($_GET['exam_id'] ?? 0);
     $db = getDB();
     $role = $_SESSION['role'];
 
-    // Security Check for Students
     if ($role === 'siswa') {
         if (!isset($_SESSION['authorized_exams']) || !in_array($examId, $_SESSION['authorized_exams'])) {
             jsonResponse(['success' => false, 'message' => 'Silakan masukkan kode ujian terlebih dahulu'], 403);
         }
     }
 
-    // Prepare Query
     if ($role === 'guru') {
         $stmt = $db->prepare("SELECT id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, show_results_setting FROM exams WHERE id = ? AND teacher_id = ? LIMIT 1");
         $stmt->execute([$examId, $_SESSION['user_id']]);
     } else {
-        // Admin or Student
         $stmt = $db->prepare("SELECT id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, show_results_setting FROM exams WHERE id = ? AND status = 'active' LIMIT 1");
         $stmt->execute([$examId]);
     }
@@ -673,7 +664,6 @@ function getExam()
         jsonResponse(['success' => false, 'message' => 'Ujian tidak ditemukan atau Anda tidak memiliki akses'], 404);
     }
 
-    // Security Check for Students (Duplicate Submission)
     if ($role === 'siswa') {
         $stmt = $db->prepare("SELECT id FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
         $stmt->execute([$examId, $_SESSION['user_id']]);
@@ -682,12 +672,10 @@ function getExam()
         }
     }
 
-    // Get questions
     $stmt = $db->prepare("SELECT id, question_text, question_text as text, question_type, question_type as type, options, correct_answer, points, media_url FROM questions WHERE exam_id = ? ORDER BY id ASC");
     $stmt->execute([$examId]);
     $questions = $stmt->fetchAll();
 
-    // Prepare questions for frontend
     foreach ($questions as &$q) {
         if ($q['options']) {
             $decoded = json_decode($q['options'], true);
@@ -696,7 +684,6 @@ function getExam()
             $q['options'] = [];
         }
 
-        // Security: Don't send correct answers to students!
         if ($role === 'siswa') {
             unset($q['correct_answer']);
         }
@@ -715,7 +702,6 @@ function getExam()
     ]);
 }
 
-// ===== SUBMIT ANSWERS =====
 function submitAnswers()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'siswa') {
@@ -724,20 +710,18 @@ function submitAnswers()
 
     $data = getInput();
     $examId  = (int)($data['exam_id'] ?? 0);
-    $answers = $data['answers'] ?? []; // Associative array { "qId": "answer" }
+    $answers = $data['answers'] ?? [];
     $forced  = (bool)($data['forced'] ?? false);
     $timeTaken = (int)($data['time_taken'] ?? 0);
 
     $db = getDB();
 
-    // Prevent double submission
     $stmt = $db->prepare("SELECT id FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
     $stmt->execute([$examId, $_SESSION['user_id']]);
     if ($stmt->fetch()) {
         jsonResponse(['success' => false, 'message' => 'Jawaban sudah dikumpulkan sebelumnya'], 409);
     }
 
-    // Get all questions for this exam
     $stmt = $db->prepare("SELECT id, correct_answer, points, question_type FROM questions WHERE exam_id = ?");
     $stmt->execute([$examId]);
     $questions = $stmt->fetchAll();
@@ -752,7 +736,6 @@ function submitAnswers()
     $answerLog = [];
     $hasEssay = false;
 
-    // Normalize student answers: ensure all keys are strings for reliable lookup
     $normalizedAnswers = [];
     if (is_array($answers)) {
         foreach ($answers as $key => $val) {
@@ -766,7 +749,6 @@ function submitAnswers()
         $points = (int)($q['points'] > 0 ? $q['points'] : 1);
         $totalPointsPossible += $points;
 
-        // Find student answer by question ID
         $studentAnswer = null;
         if (array_key_exists($qId, $normalizedAnswers)) {
             $studentAnswer = $normalizedAnswers[$qId];
@@ -786,20 +768,16 @@ function submitAnswers()
             }
         } elseif ($qType === 'checkbox') {
             if ($studentAnswer !== null && is_array($studentAnswer)) {
-                // Correct answers for checkbox should be stored as JSON array string in DB
                 $cAnsRaw = html_entity_decode((string)$q['correct_answer']);
                 $cAns = json_decode($cAnsRaw, true);
 
                 if (!is_array($cAns)) {
-                    // Fallback if not JSON (maybe comma separated)
                     $cAns = explode(',', $cAnsRaw);
                 }
 
-                // Sort both to compare
                 sort($studentAnswer);
                 sort($cAns);
 
-                // Remove empty values and trim
                 $studentAnswer = array_filter(array_map('trim', $studentAnswer), fn($v) => $v !== '');
                 $cAns = array_filter(array_map('trim', $cAns), fn($v) => $v !== '');
 
@@ -822,12 +800,9 @@ function submitAnswers()
         ];
     }
 
-    // Calculate score as percentage
     $scorePercentage = ($totalPointsPossible > 0) ? ($earnedPointsAuto / $totalPointsPossible) * 100 : 0;
     $status = $hasEssay ? 'pending' : 'graded';
 
-    // Insert into DB
-    // Columns: 1:exam_id, 2:student_id, 3:answers_json, 4:score, 5:manual_score, 6:total_score, 7:status, 8:time_taken_seconds, 9:is_forced, 10:submitted_at
     $stmt = $db->prepare("
         INSERT INTO exam_submissions (exam_id, student_id, answers_json, score, manual_score, total_score, status, time_taken_seconds, is_forced, submitted_at)
         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
@@ -837,8 +812,8 @@ function submitAnswers()
         $_SESSION['user_id'],
         json_encode($answerLog),
         (float)round($scorePercentage, 2),
-        0.00, // manual_score
-        (float)round($scorePercentage, 2), // total_score
+        0.00,
+        (float)round($scorePercentage, 2),
         $status,
         $timeTaken,
         $forced ? 1 : 0
@@ -856,7 +831,6 @@ function submitAnswers()
     ]);
 }
 
-// ===== REPORT VIOLATION =====
 function reportViolation()
 {
     $data = getInput();
@@ -875,7 +849,6 @@ function reportViolation()
     jsonResponse(['success' => true, 'message' => 'Pelanggaran dicatat']);
 }
 
-// ===== GET RESULTS (for teacher) =====
 function getResults()
 {
     if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['guru', 'admin'])) {
@@ -920,7 +893,6 @@ function getResults()
     jsonResponse(['success' => true, 'results' => $results, 'stats' => $stats]);
 }
 
-// ===== CREATE EXAM (for teacher) =====
 function createExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -935,7 +907,6 @@ function createExam()
     $duration       = (int)($data['duration'] ?? 90);
     $questionCount  = (int)($data['question_count'] ?? 40);
 
-    // Validate numeric inputs
     if ($duration <= 0 || $duration > 240) {
         jsonResponse(['success' => false, 'message' => 'Durasi ujian harus antara 1 dan 240 menit.'], 400);
     }
@@ -965,7 +936,6 @@ function createExam()
 
     $examId = $db->lastInsertId();
 
-    // Insert questions
     if (!empty($data['questions'])) {
         $qStmt = $db->prepare("
             INSERT INTO questions (exam_id, question_text, question_type, options, correct_answer, points, difficulty, media_url)
@@ -975,8 +945,8 @@ function createExam()
             $points = isset($q['points']) ? (int)$q['points'] : 1;
             if ($points <= 0) $points = 1;
 
-            $correctAnswer = $q['correct_answer'] ?? ''; // Already JSON string or plain string from frontend
-            $mediaUrl = $q['media_url'] ?? '[]'; // Already JSON string from frontend
+            $correctAnswer = $q['correct_answer'] ?? '';
+            $mediaUrl = $q['media_url'] ?? '[]';
 
             $qStmt->execute([
                 $examId,
@@ -994,11 +964,8 @@ function createExam()
     jsonResponse(['success' => true, 'exam_id' => $examId, 'exam_code' => $examCode]);
 }
 
-// ===== GET EXAMS LIST =====
 function getExams()
 {
-
-
     $db = getDB();
     $role = $_SESSION['role'];
 
@@ -1008,13 +975,10 @@ function getExams()
     } elseif ($role === 'admin') {
         $stmt = $db->query("SELECT e.*, t.full_name as teacher_name FROM exams e JOIN teachers t ON t.id = e.teacher_id ORDER BY e.created_at DESC");
     } else {
-        // Role Siswa: Hanya lihat ujian aktif yang sesuai level & jurusan
-        // 1. Ambil data kelas siswa (contoh: 'XII IPA 1')
         $stmtS = $db->prepare("SELECT class FROM students WHERE id = ?");
         $stmtS->execute([$_SESSION['user_id']]);
         $studentClass = $stmtS->fetchColumn();
 
-        // 2. Tentukan jenjang (X, XI, XII) dan jurusan (IPA, IPS)
         $level = '';
         if (strpos($studentClass, 'XII') !== false) $level = 'Kelas XII';
         elseif (strpos($studentClass, 'XI') !== false) $level = 'Kelas XI';
@@ -1024,8 +988,6 @@ function getExams()
         if (strpos($studentClass, 'IPA') !== false) $major = 'IPA';
         elseif (strpos($studentClass, 'IPS') !== false) $major = 'IPS';
 
-        // 3. Ambil ujian yang statusnya active
-        // Filter: exam.class match student level AND (subject category is 'Umum' OR match student major)
         $stmt = $db->prepare("
             SELECT e.*, s.category as subject_category 
             FROM exams e
@@ -1045,7 +1007,6 @@ function getExams()
         foreach ($exams as &$exam) {
             $exam['is_authorized'] = in_array($exam['id'], $authorized);
 
-            // Check if already submitted
             $stmtS = $db->prepare("SELECT id, is_forced FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
             $stmtS->execute([$exam['id'], $_SESSION['user_id']]);
             $sub = $stmtS->fetch();
@@ -1060,7 +1021,6 @@ function getExams()
     jsonResponse(['success' => true, 'exams' => $stmt->fetchAll()]);
 }
 
-// ===== GET TEACHER STATS (Total Siswa & Rata-rata Nilai) =====
 function getTeacherStats()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -1070,7 +1030,6 @@ function getTeacherStats()
     $db = getDB();
 
     try {
-        // Total Siswa - hitung distinct siswa di kelas yang ada ujian guru
         $stmt1 = $db->prepare("
             SELECT COUNT(DISTINCT s.id) as total_students
             FROM students s
@@ -1082,7 +1041,6 @@ function getTeacherStats()
         $result1 = $stmt1->fetch();
         $totalStudents = (int)($result1['total_students'] ?? 0);
 
-        // Rata-rata Nilai - average dari semua submissions di ujian guru
         $stmt2 = $db->prepare("
             SELECT AVG(COALESCE(es.total_score, 0)) as avg_score
             FROM exam_submissions es
@@ -1105,9 +1063,6 @@ function getTeacherStats()
     }
 }
 
-// ===== BANK SOAL (QUESTION BANK) FUNCTIONS =====
-
-// Get all questions from teacher's question bank
 function getBankQuestions()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -1116,12 +1071,8 @@ function getBankQuestions()
 
     try {
         $db = getDB();
-
-        // Check if table exists
         $checkTable = $db->query("SHOW TABLES LIKE 'question_bank'");
         if ($checkTable->rowCount() === 0) {
-            // Table doesn't exist - return empty list rather than error
-            // This allow page to load, but tell user to create questions
             jsonResponse(['success' => true, 'questions' => [], 'message' => 'Bank Soal belum diinisialisasi']);
             return;
         }
@@ -1162,7 +1113,6 @@ function getBankQuestions()
     }
 }
 
-// Get detail of single question from bank
 function getBankQuestion()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -1193,7 +1143,6 @@ function getBankQuestion()
     }
 }
 
-// Save new question to bank
 function saveQuestionToBank()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -1234,7 +1183,6 @@ function saveQuestionToBank()
     }
 }
 
-// Update question in bank
 function updateBankQuestion()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -1246,7 +1194,6 @@ function updateBankQuestion()
         $questionId = (int)($data['id'] ?? 0);
         $db = getDB();
 
-        // Verify ownership
         $stmt = $db->prepare("SELECT teacher_id FROM question_bank WHERE id = ?");
         if (!$stmt) throw new Exception("Prepare ownership check failed");
 
@@ -1297,7 +1244,6 @@ function updateBankQuestion()
     }
 }
 
-// Delete question from bank
 function deleteBankQuestion()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -1308,7 +1254,6 @@ function deleteBankQuestion()
         $questionId = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
         $db = getDB();
 
-        // Verify ownership
         $stmt = $db->prepare("SELECT teacher_id FROM question_bank WHERE id = ?");
         if (!$stmt) throw new Exception("Prepare ownership check failed");
 
@@ -1335,7 +1280,6 @@ function deleteBankQuestion()
     }
 }
 
-// Copy question from bank to exam
 function copyQuestionToExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
@@ -1348,7 +1292,6 @@ function copyQuestionToExam()
         $examId = (int)($data['exam_id'] ?? 0);
         $db = getDB();
 
-        // Verify bank question ownership
         $stmt = $db->prepare("SELECT * FROM question_bank WHERE id = ? AND teacher_id = ?");
         if (!$stmt) throw new Exception("Prepare bank question check failed");
 
@@ -1362,7 +1305,6 @@ function copyQuestionToExam()
             jsonResponse(['success' => false, 'message' => 'Soal dari bank tidak ditemukan'], 404);
         }
 
-        // Verify exam ownership
         $examStmt = $db->prepare("SELECT teacher_id FROM exams WHERE id = ?");
         if (!$examStmt) throw new Exception("Prepare exam check failed");
 
@@ -1376,7 +1318,6 @@ function copyQuestionToExam()
             jsonResponse(['success' => false, 'message' => 'Ujian tidak ditemukan atau Anda tidak memiliki akses'], 403);
         }
 
-        // Copy question to exam
         $copyStmt = $db->prepare("
             INSERT INTO questions (exam_id, question_text, question_type, options, correct_answer, points, difficulty, media_url)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)

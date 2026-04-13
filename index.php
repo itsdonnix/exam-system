@@ -1,11 +1,14 @@
 <?php
-// Add error reporting for debugging (remove in production)
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
-// Ensure no output before session starts
 ob_start();
-
+// This ensures the cookie works across all subdirectories
+session_set_cookie_params([
+    'lifetime' => 0,      // Session cookie (expires when browser closes)
+    'path' => '/',        // Make cookie available across entire site
+    'domain' => '',       // Current domain only
+    'secure' => false,    // Set to true if using HTTPS
+    'httponly' => true,   // Prevent JavaScript access
+    'samesite' => 'Lax'   // CSRF protection
+]);
 session_start();
 
 require_once 'includes/auth.php';

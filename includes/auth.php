@@ -32,6 +32,7 @@ function setSession($user, $role)
     $_SESSION['username'] = $user['username'] ?? $user['email'];
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['login_time'] = time();
+    $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'];
 }
 
 function clearSession()
@@ -60,4 +61,15 @@ function isSessionExpired($timeout = 3600)
         return true;
     }
     return (time() - $_SESSION['login_time']) > $timeout;
+}
+
+// Session validation function
+function validateSession()
+{
+    if (!isset($_SESSION['role']) && isset($_SESSION['user_id'])) {
+        error_log("[Session] Recovery needed for user_id: " . $_SESSION['user_id']);
+        return false;
+    }
+
+    return isset($_SESSION['user_id']) && isset($_SESSION['role']);
 }
