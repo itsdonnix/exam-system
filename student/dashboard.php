@@ -36,6 +36,146 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
     <title>Dashboard Siswa — ExamSafe</title>
     <link rel="stylesheet" href="../css/style.css" />
     <style>
+        /* ========== KODE UJIAN CARD STYLES (IMPROVED) ========== */
+        .join-exam-card {
+            border-left: 5px solid var(--accent);
+            background: #fff9db;
+        }
+
+        .join-exam-container {
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+        }
+
+        .join-exam-header {
+            display: flex;
+            gap: 16px;
+            align-items: flex-start;
+        }
+
+        .join-exam-icon {
+            font-size: 2.5rem;
+            flex-shrink: 0;
+            margin-top: 2px;
+        }
+
+        .join-exam-text h3 {
+            color: #92400e;
+            margin: 0 0 6px 0;
+            font-size: 1.1rem;
+        }
+
+        .join-exam-text p {
+            color: #b45309;
+            font-size: 0.9rem;
+            margin: 0;
+            line-height: 1.4;
+        }
+
+        .join-exam-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin: 0;
+        }
+
+        .join-exam-input {
+            width: 100%;
+            padding: 12px 14px;
+            font-size: 1rem;
+            text-transform: uppercase;
+            font-weight: 700;
+            letter-spacing: 2px;
+            border: 2px solid #fcd34d;
+            border-radius: 8px;
+            background: white;
+            transition: all 0.2s;
+        }
+
+        .join-exam-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+
+        .join-exam-input::placeholder {
+            color: #a0a0a0;
+            font-weight: 600;
+            letter-spacing: 1px;
+        }
+
+        .join-exam-button {
+            padding: 12px 24px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            white-space: nowrap;
+            border: none;
+            transition: all 0.2s;
+        }
+
+        .join-exam-button:hover {
+            transform: translateY(-1px);
+            box-shadow: 0 4px 12px rgba(37, 99, 235, 0.3);
+        }
+
+        .join-exam-button:active {
+            transform: translateY(0);
+        }
+
+        .join-exam-alert {
+            min-height: 32px;
+            margin-top: 4px;
+        }
+
+        .join-exam-alert:empty {
+            display: none;
+        }
+
+        /* ========== RESPONSIVE BEHAVIOR ========== */
+        @media (min-width: 768px) {
+            .join-exam-container {
+                flex-direction: row;
+                gap: 32px;
+                align-items: center;
+                justify-content: space-between;
+            }
+
+            .join-exam-header {
+                flex: 1;
+                min-width: 280px;
+            }
+
+            .join-exam-form {
+                flex: 1.2;
+                min-width: 320px;
+                flex-direction: row;
+                gap: 10px;
+                align-items: center;
+            }
+
+            .join-exam-input {
+                flex: 1;
+            }
+
+            .join-exam-button {
+                flex-shrink: 0;
+                height: 44px;
+                padding: 0 28px;
+                display: flex;
+                align-items: center;
+            }
+
+            .join-exam-alert {
+                /* position: absolute; */
+                top: 100%;
+                left: 0;
+                right: 0;
+                margin-top: 0;
+            }
+        }
+
+        /* ========== EXISTING EXAM LIST STYLES ========== */
         .exam-list {
             display: grid;
             gap: 18px;
@@ -228,46 +368,32 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
             <div class="welcome-icon">📚</div>
         </div>
 
-        <!-- Join Exam Section -->
-        <div
-            class="card"
-            style="border-left: 5px solid var(--accent); background: #fff9db">
-            <div
-                style="display: flex; align-items: center; gap: 20px; flex-wrap: wrap">
-                <div style="font-size: 3rem">🔑</div>
-                <div style="flex: 1">
-                    <h3 style="color: #92400e">Masuk Ujian Baru</h3>
-                    <p style="color: #b45309; font-size: 0.9rem">
-                        Masukkan kode unik dari pengawas untuk memulai ujian Anda.
-                    </p>
+        <!-- Join Exam Section (IMPROVED) -->
+        <div class="card join-exam-card">
+            <div id="join-alert" class="join-exam-alert"></div>
+            <div class="join-exam-container">
+                <div class="join-exam-header w-100">
+                    <div class="join-exam-icon">🔑</div>
+                    <div class="join-exam-text">
+                        <h3>Masuk Ujian Baru</h3>
+                        <p>Masukkan kode unik dari pengawas untuk memulai ujian Anda.</p>
+                    </div>
                 </div>
-                <div style="flex: 2; min-width: 300px">
-                    <form id="join-exam-form" style="margin: 0;">
-                        <div style="display: flex; gap: 10px; width: 100%;">
-                            <input
-                                type="text"
-                                id="exam-code-input"
-                                class="form-control"
-                                placeholder="Kode Ujian (Contoh: A1B2C3)"
-                                style="
-                                    text-transform: uppercase;
-                                    font-weight: 700;
-                                    letter-spacing: 2px;
-                                    height: 48px;
-                                    flex: 1;
-                                "
-                                autocomplete="off"
-                                required />
-                            <button
-                                type="submit"
-                                class="btn btn-primary"
-                                style="height: 48px; white-space: nowrap">
-                                🚀 Masuk Ujian
-                            </button>
-                        </div>
-                        <div id="join-alert" style="margin-top: 10px;"></div>
-                    </form>
-                </div>
+                <form id="join-exam-form" class="join-exam-form">
+                    <input
+                        type="text"
+                        id="exam-code-input"
+                        class="form-control join-exam-input"
+                        placeholder="Kode Ujian (Contoh: A1B2C3)"
+                        autocomplete="off"
+                        required />
+                    <button
+                        type="submit"
+                        class="btn btn-primary join-exam-button">
+                        🚀 Masuk Ujian
+                    </button>
+
+                </form>
             </div>
         </div>
 
