@@ -361,41 +361,75 @@ class ExamManager {
 
         if (tbody) {
           tbody.innerHTML = data.participants
-            .map(
-              (p) => `
-            <tr>
-              <td>${p.full_name}</td>
-              <td>${p.score || "—"} (Skor)</td>
-              <td>${
-                p.submitted_at
-                  ? new Date(p.submitted_at).toLocaleTimeString("id-ID")
-                  : "—"
-              }</td>
-              <td style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                <span class="badge badge-${
-                  p.is_forced == 1 ? "danger" : "success"
-                }">
-                  ${p.is_forced == 1 ? "Diputus" : "Selesai"}
-                </span>
-                ${
-                  p.v_count > 0
-                    ? `<span style="color:red; font-size:0.7rem">⚠️ ${p.v_count}x</span>`
-                    : ""
-                }
-                ${
-                  p.is_forced == 1
-                    ? `<button class="btn btn-sm btn-success" style="padding:2px 8px; font-size:0.7rem" onclick="window.examManager.grantTolerance(${examId}, ${
-                        p.student_id
-                      }, '${p.full_name.replace(
-                        /'/g,
-                        "\\'"
-                      )}')">🔓 Toleransi</button>`
-                    : ""
-                }
-              </td>
-            </tr>
-          `
-            )
+            .map((p) => {
+              // Determine status badge
+              let statusBadge = "";
+              let statusText = "";
+              if (p.is_forced == 1) {
+                statusBadge = "danger";
+                statusText = "Dipaksa";
+              } else if (p.status === "graded") {
+                statusBadge = "success";
+                statusText = "Selesai";
+              } else if (p.status === "pending") {
+                statusBadge = "warning";
+                statusText = "Pending (Esai)";
+              } else {
+                statusBadge = "secondary";
+                statusText = "Dalam Proses";
+              }
+
+              // Format score display
+              const scoreDisplay =
+                p.total_score !== null && p.total_score !== undefined
+                  ? `${p.total_score} (${p.auto_score || p.score})`
+                  : p.score || "—";
+
+              return `
+                <tr>
+                  <td><strong>${p.full_name}</strong></td>
+                  <td>${scoreDisplay}</td>
+                  <td>${
+                    p.submitted_at
+                      ? new Date(p.submitted_at).toLocaleTimeString("id-ID")
+                      : "—"
+                  }</td>
+                  <td style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
+                    <span class="badge badge-${statusBadge}">
+                      ${statusText}
+                    </span>
+                    ${
+                      p.v_count > 0
+                        ? `<span style="color:red; font-size:0.7rem">⚠️ ${p.v_count}x</span>`
+                        : ""
+                    }
+                    <div style="display:flex; gap:6px;">
+                      ${
+                        p.is_forced == 1
+                          ? `<button class="btn btn-sm btn-success" onclick="window.examManager.grantTolerance(${examId}, ${
+                              p.student_id
+                            }, '${p.full_name.replace(/'/g, "\\'")}')">
+                          🔓 Toleransi
+                        </button>`
+                          : ""
+                      }
+                      ${
+                        (p.status === "graded" || p.status === "pending") &&
+                        p.is_forced != 1
+                          ? `<button class="btn btn-sm btn-warning" onclick="window.examManager.resetStudentResult(${examId}, ${
+                              p.student_id
+                            }, '${p.full_name.replace(/'/g, "\\'")}', ${
+                              p.total_score || p.score || 0
+                            })">
+                          🔄 Reset Hasil
+                        </button>`
+                          : ""
+                      }
+                    </div>
+                  </td>
+                </tr>
+              `;
+            })
             .join("");
         }
       } else {
@@ -409,6 +443,41 @@ class ExamManager {
       if (tbody)
         tbody.innerHTML =
           '<tr><td colspan="4" style="text-align:center;color:#64748b">Terjadi kesalahan.</td></tr>';
+    }
+  }
+
+  async resetStudentResult(examId, studentId, studentName, currentScore) {
+    const confirmMsg = `⚠️ RESET HASIL UJIAN\n\nSiswa: ${studentName}\nNilai saat ini: ${currentScore}\n\nTindakan ini akan MENGHAPUS semua jawaban siswa.\nCatatan pelanggaran akan tetap tersimpan.\n\nApakah Anda yakin?`;
+
+    if (!confirm(confirmMsg)) return;
+
+    try {
+      const response = await fetch(this.apiBaseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "reset_student_result",
+          exam_id: examId,
+          student_id: studentId,
+        }),
+      });
+      const result = await response.json();
+
+      if (result.success) {
+        alert("✅ " + result.message);
+        // Refresh monitor with current exam
+        const exam = this.allExams.find((e) => e.id === examId);
+        if (exam) {
+          this.showMonitor(examId, exam.name);
+        }
+        // Trigger onExamAction callback to refresh parent dashboard if needed
+        this.onExamAction();
+      } else {
+        alert("❌ " + result.message);
+      }
+    } catch (error) {
+      console.error("Error resetting student result:", error);
+      alert("Terjadi kesalahan saat mereset hasil.");
     }
   }
 

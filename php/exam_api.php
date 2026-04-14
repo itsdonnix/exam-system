@@ -127,6 +127,9 @@ try {
         case 'unlock_student':
             unlockStudent();
             break;
+        case 'reset_student_result':
+            resetStudentResult();
+            break;
         case 'join_exam':
             joinExamAction();
             break;
@@ -187,6 +190,23 @@ try {
 } catch (Exception $e) {
     error_log("[API Exception] " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
     jsonResponse(['success' => false, 'message' => 'Server Error: ' . $e->getMessage()], 500);
+}
+
+function logExamAction($level, $message, $context = [])
+{
+    $logDir = __DIR__ . '/logs';
+    if (!is_dir($logDir)) {
+        mkdir($logDir, 0755, true);
+    }
+
+    $logFile = $logDir . '/exam_actions.log';
+    $timestamp = date('Y-m-d H:i:s');
+    $userId = $_SESSION['user_id'] ?? 'unknown';
+    $role = $_SESSION['role'] ?? 'unknown';
+    $contextStr = !empty($context) ? ' ' . json_encode($context) : '';
+    $logEntry = "[{$timestamp}] [{$level}] [User:{$userId}] [Role:{$role}] {$message}{$contextStr}" . PHP_EOL;
+
+    file_put_contents($logFile, $logEntry, FILE_APPEND);
 }
 
 function getSubmissionDetail()
@@ -680,6 +700,81 @@ function unlockStudent()
     } catch (Exception $e) {
         $db->rollBack();
         jsonResponse(['success' => false, 'message' => 'Gagal memberikan toleransi. Terjadi kesalahan server.']);
+    }
+}
+
+function resetStudentResult()
+{
+    // Check authentication - allow both admin and teacher
+    if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['guru', 'admin'])) {
+        logExamAction('WARNING', 'Unauthorized reset attempt', ['ip' => $_SERVER['REMOTE_ADDR']]);
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $data = getInput();
+    $examId = (int)($data['exam_id'] ?? 0);
+    $studentId = (int)($data['student_id'] ?? 0);
+    $db = getDB();
+
+    // Verify exam exists and get details
+    if ($_SESSION['role'] === 'admin') {
+        $stmt = $db->prepare("SELECT e.*, t.full_name as teacher_name FROM exams e JOIN teachers t ON t.id = e.teacher_id WHERE e.id = ?");
+        $stmt->execute([$examId]);
+    } else {
+        $stmt = $db->prepare("SELECT * FROM exams WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+    }
+
+    $exam = $stmt->fetch();
+
+    if (!$exam) {
+        logExamAction('WARNING', 'Reset failed - exam not found', ['exam_id' => $examId]);
+        jsonResponse(['success' => false, 'message' => 'Ujian tidak ditemukan.']);
+    }
+
+    // Get student info for logging
+    $stmtStudent = $db->prepare("SELECT full_name FROM students WHERE id = ?");
+    $stmtStudent->execute([$studentId]);
+    $student = $stmtStudent->fetch();
+
+    if (!$student) {
+        logExamAction('WARNING', 'Reset failed - student not found', ['student_id' => $studentId]);
+        jsonResponse(['success' => false, 'message' => 'Siswa tidak ditemukan.']);
+    }
+
+    // Get submission details before deletion for logging
+    $stmtSub = $db->prepare("SELECT total_score, status, submitted_at FROM exam_submissions WHERE exam_id = ? AND student_id = ?");
+    $stmtSub->execute([$examId, $studentId]);
+    $submission = $stmtSub->fetch();
+
+    if (!$submission) {
+        jsonResponse(['success' => false, 'message' => 'Data submission tidak ditemukan.']);
+    }
+
+    try {
+        // Delete exam_submissions record (keep violations)
+        $stmtDelete = $db->prepare("DELETE FROM exam_submissions WHERE exam_id = ? AND student_id = ?");
+        $stmtDelete->execute([$examId, $studentId]);
+
+        // Log successful reset
+        logExamAction('INFO', 'Student result reset', [
+            'exam_id' => $examId,
+            'exam_name' => $exam['name'],
+            'student_id' => $studentId,
+            'student_name' => $student['full_name'],
+            'previous_score' => $submission['total_score'],
+            'previous_status' => $submission['status'],
+            'submitted_at' => $submission['submitted_at']
+        ]);
+
+        jsonResponse(['success' => true, 'message' => 'Hasil ujian siswa berhasil direset. Siswa dapat mengerjakan ulang.']);
+    } catch (Exception $e) {
+        logExamAction('ERROR', 'Reset failed - database error', [
+            'exam_id' => $examId,
+            'student_id' => $studentId,
+            'error' => $e->getMessage()
+        ]);
+        jsonResponse(['success' => false, 'message' => 'Gagal mereset hasil. Terjadi kesalahan server.'], 500);
     }
 }
 
