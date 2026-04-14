@@ -15,50 +15,72 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once 'db.php';
 
-// Validate session has required data
-if (!isset($_SESSION['role']) && isset($_SESSION['user_id'])) {
-    // Attempt to recover session from database
-    $db = getDB();
+// ============================================================
+// PUBLIC ENDPOINTS CONFIGURATION
+// ============================================================
+// Add any action names here that should be accessible WITHOUT authentication.
+$public_actions = ['get_subjects', 'get_classes'];
 
-    // Check which role this user_id belongs to
-    $stmt = $db->prepare("
-        SELECT 'siswa' as role, full_name, username FROM students WHERE id = ? AND is_active = 1
-        UNION 
-        SELECT 'guru' as role, full_name, username FROM teachers WHERE id = ? AND is_active = 1
-        UNION 
-        SELECT 'admin' as role, username as full_name, username FROM admins WHERE id = ? AND is_active = 1
-    ");
-    $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id'], $_SESSION['user_id']]);
-    $user = $stmt->fetch();
+// Detect action and input BEFORE session validation
+$input = getInput();
+$action = $_GET['action'] ?? $input['action'] ?? '';
 
-    if ($user) {
-        $_SESSION['role'] = $user['role'];
-        $_SESSION['full_name'] = $user['full_name'];
-        $_SESSION['username'] = $user['username'];
-        error_log("[ExamAPI] Session recovered for user_id: " . $_SESSION['user_id'] . " as role: " . $user['role']);
-    } else {
-        error_log("[ExamAPI] Failed to recover session for user_id: " . $_SESSION['user_id']);
+// Check if current action is public
+$is_public = in_array($action, $public_actions);
+
+// ============================================================
+// SESSION VALIDATION (only for non-public endpoints)
+// ============================================================
+if (!$is_public) {
+    // Validate session has required data
+    if (!isset($_SESSION['role']) && isset($_SESSION['user_id'])) {
+        // Attempt to recover session from database
+        $db = getDB();
+
+        // Check which role this user_id belongs to
+        $stmt = $db->prepare("
+            SELECT 'siswa' as role, full_name, username FROM students WHERE id = ? AND is_active = 1
+            UNION 
+            SELECT 'guru' as role, full_name, username FROM teachers WHERE id = ? AND is_active = 1
+            UNION 
+            SELECT 'admin' as role, username as full_name, username FROM admins WHERE id = ? AND is_active = 1
+        ");
+        $stmt->execute([$_SESSION['user_id'], $_SESSION['user_id'], $_SESSION['user_id']]);
+        $user = $stmt->fetch();
+
+        if ($user) {
+            $_SESSION['role'] = $user['role'];
+            $_SESSION['full_name'] = $user['full_name'];
+            $_SESSION['username'] = $user['username'];
+            error_log("[ExamAPI] Session recovered for user_id: " . $_SESSION['user_id'] . " as role: " . $user['role']);
+        } else {
+            error_log("[ExamAPI] Failed to recover session for user_id: " . $_SESSION['user_id']);
+            session_destroy();
+            header('Content-Type: application/json');
+            echo json_encode(['success' => false, 'message' => 'Sesi tidak valid. Silakan login kembali.']);
+            exit;
+        }
+    }
+
+    // Check if session is valid
+    if (!isset($_SESSION['role']) || !isset($_SESSION['user_id'])) {
+        header('Content-Type: application/json');
+        echo json_encode(['success' => false, 'message' => 'Silakan login terlebih dahulu.']);
+        exit;
+    }
+
+    // Check session timeout (2 hours)
+    if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 7200)) {
         session_destroy();
         header('Content-Type: application/json');
-        echo json_encode(['success' => false, 'message' => 'Sesi tidak valid. Silakan login kembali.']);
+        echo json_encode(['success' => false, 'message' => 'Sesi telah berakhir. Silakan login kembali.']);
         exit;
     }
 }
 
-// Check if session is valid
-if (!isset($_SESSION['role']) || !isset($_SESSION['user_id'])) {
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Silakan login terlebih dahulu.']);
-    exit;
-}
-
-// Check session timeout (2 hours)
-if (isset($_SESSION['login_time']) && (time() - $_SESSION['login_time'] > 7200)) {
-    session_destroy();
-    header('Content-Type: application/json');
-    echo json_encode(['success' => false, 'message' => 'Sesi telah berakhir. Silakan login kembali.']);
-    exit;
-}
+// ============================================================
+// ERROR HANDLING & MAIN ROUTER
+// ============================================================
 
 // Set error handling to prevent HTML error pages
 set_error_handler(function ($errno, $errstr, $errfile, $errline) {
@@ -71,9 +93,6 @@ set_error_handler(function ($errno, $errstr, $errfile, $errline) {
 });
 
 try {
-    $input = getInput();
-    $action = $_GET['action'] ?? $input['action'] ?? '';
-
     switch ($action) {
         case 'get_exam':
             getExam();
@@ -319,7 +338,6 @@ function getStudentHistory()
     }
 
     $db = getDB();
-    // SECURITY: Removed es.total_score as score from student history
     $stmt = $db->prepare("
         SELECT e.name, e.subject, es.status, es.submitted_at, es.time_taken_seconds, e.show_results_setting
         FROM exam_submissions es
@@ -823,7 +841,6 @@ function submitAnswers()
         $forced ? 1 : 0
     ]);
 
-    // SECURITY: Removed score, correct, total from student response
     jsonResponse([
         'success'    => true,
         'message'    => 'Jawaban berhasil dikumpulkan',
