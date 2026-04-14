@@ -564,4 +564,33 @@ const ExamEngine = {
       );
     }
   },
+
+  async logAgreement(examId) {
+    console.log("[ExamEngine] Logging agreement for exam:", examId);
+
+    try {
+      const response = await fetch("../php/exam_api.php", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "log_agreement",
+          exam_id: examId,
+          timestamp: new Date().toISOString(),
+        }),
+      });
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log("[ExamEngine] Agreement logged successfully");
+        return true;
+      } else {
+        console.error("[ExamEngine] Failed to log agreement:", data.message);
+        return false;
+      }
+    } catch (error) {
+      console.error("[ExamEngine] Error logging agreement:", error);
+      return false;
+    }
+  },
 };

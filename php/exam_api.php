@@ -187,6 +187,9 @@ try {
         case 'get_teacher_stats':
             getTeacherStats();
             break;
+        case 'log_agreement':
+            logAgreement();
+            break;
         default:
             jsonResponse(['success' => false, 'message' => 'Action tidak valid'], 400);
     }
@@ -1565,4 +1568,40 @@ function copyQuestionToExam()
     } catch (Exception $e) {
         jsonResponse(['success' => false, 'message' => 'Error copying question: ' . $e->getMessage()], 500);
     }
+}
+
+function logAgreement()
+{
+    // Check authentication
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'siswa') {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $data = getInput();
+    $examId = (int)($data['exam_id'] ?? 0);
+
+    if (!$examId) {
+        jsonResponse(['success' => false, 'message' => 'Exam ID required'], 400);
+    }
+
+    $db = getDB();
+
+    // Verify exam exists and is active
+    $stmt = $db->prepare("SELECT id, name FROM exams WHERE id = ? AND status = 'active' LIMIT 1");
+    $stmt->execute([$examId]);
+    $exam = $stmt->fetch();
+
+    if (!$exam) {
+        jsonResponse(['success' => false, 'message' => 'Exam not found or not active'], 404);
+    }
+
+    // Log to file
+    logExamAction('INFO', 'Student agreed to exam rules', [
+        'exam_id' => $examId,
+        'exam_name' => $exam['name'],
+        'student_id' => $_SESSION['user_id'],
+        'agreed_at' => date('Y-m-d H:i:s')
+    ]);
+
+    jsonResponse(['success' => true, 'message' => 'Agreement recorded']);
 }
