@@ -97,6 +97,9 @@ try {
         case 'get_exam':
             getExam();
             break;
+        case 'get_exam_info':
+            getExamInfo();
+            break;
         case 'submit_answers':
             submitAnswers();
             break;
@@ -190,6 +193,34 @@ try {
 } catch (Exception $e) {
     error_log("[API Exception] " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
     jsonResponse(['success' => false, 'message' => 'Server Error: ' . $e->getMessage()], 500);
+}
+
+function getExamInfo()
+{
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $examId = (int)($_GET['exam_id'] ?? 0);
+    if (!$examId) {
+        jsonResponse(['success' => false, 'message' => 'Exam ID required'], 400);
+    }
+
+    $db = getDB();
+    $stmt = $db->prepare("
+        SELECT id, name, subject, class, exam_code, duration_minutes, status 
+        FROM exams 
+        WHERE id = ? AND teacher_id = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$examId, $_SESSION['user_id']]);
+    $exam = $stmt->fetch();
+
+    if (!$exam) {
+        jsonResponse(['success' => false, 'message' => 'Exam not found or access denied'], 404);
+    }
+
+    jsonResponse(['success' => true, 'exam' => $exam]);
 }
 
 function logExamAction($level, $message, $context = [])

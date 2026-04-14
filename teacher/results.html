@@ -86,6 +86,56 @@
       .filter-bar input:focus {
         border-color: var(--primary-light);
       }
+      .exam-info-bar {
+        background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
+        padding: 16px 20px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        display: flex;
+        gap: 32px;
+        flex-wrap: wrap;
+        border: 1px solid var(--border);
+        box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
+      }
+      .exam-info-item {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.9rem;
+      }
+      .exam-info-item .label {
+        color: var(--text-muted);
+        font-weight: 500;
+      }
+      .exam-info-item .value {
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .exam-info-item .icon {
+        font-size: 1.2rem;
+      }
+      .skeleton-loader {
+        display: inline-block;
+        width: 100%;
+        height: 20px;
+        background: linear-gradient(
+          90deg,
+          #f0f0f0 25%,
+          #e0e0e0 50%,
+          #f0f0f0 75%
+        );
+        background-size: 200% 100%;
+        animation: loading 1.5s infinite;
+        border-radius: 4px;
+      }
+      @keyframes loading {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
     </style>
   </head>
   <body>
@@ -174,9 +224,11 @@
       <main class="main-content">
         <div class="page-header">
           <div>
-            <div class="page-title" id="exam-title">📊 Laporan Hasil Ujian</div>
+            <div class="page-title" id="exam-title">
+              <span class="skeleton-loader" style="width: 200px"></span>
+            </div>
             <div class="page-subtitle" id="exam-subtitle">
-              Memuat informasi ujian...
+              <span class="skeleton-loader" style="width: 300px"></span>
             </div>
           </div>
           <div style="display: flex; gap: 8px">
@@ -189,6 +241,35 @@
             <button class="btn btn-primary btn-sm" onclick="window.print()">
               🖨️ Cetak
             </button>
+          </div>
+        </div>
+
+        <!-- Enhanced Exam Info Bar -->
+        <div class="exam-info-bar" id="examInfoBar" style="display: none">
+          <div class="exam-info-item">
+            <span class="icon">📚</span>
+            <span class="label">Mata Pelajaran:</span>
+            <span class="value" id="exam-subject">-</span>
+          </div>
+          <div class="exam-info-item">
+            <span class="icon">👥</span>
+            <span class="label">Kelas:</span>
+            <span class="value" id="exam-class">-</span>
+          </div>
+          <div class="exam-info-item">
+            <span class="icon">⏱️</span>
+            <span class="label">Durasi:</span>
+            <span class="value" id="exam-duration">-</span>
+          </div>
+          <div class="exam-info-item">
+            <span class="icon">🔑</span>
+            <span class="label">Kode Ujian:</span>
+            <span class="value" id="exam-code">-</span>
+          </div>
+          <div class="exam-info-item">
+            <span class="icon">📅</span>
+            <span class="label">Status:</span>
+            <span class="value" id="exam-status">-</span>
           </div>
         </div>
 
@@ -396,6 +477,7 @@
       const params = new URLSearchParams(window.location.search);
       const examId = params.get("exam_id");
       let allResults = [];
+      let examInfo = null;
 
       if (!examId) {
         alert("Pilih ujian terlebih dahulu dari dashboard!");
@@ -403,7 +485,7 @@
       }
 
       document.addEventListener("DOMContentLoaded", () => {
-        fetchResults();
+        fetchAllData();
         fetchProfile();
       });
 
@@ -456,30 +538,112 @@
         } catch (e) {}
       }
 
-      async function fetchResults() {
+      // Fetch exam info and results in parallel
+      async function fetchAllData() {
         try {
-          const response = await fetch(
-            `../php/exam_api.php?action=get_results&exam_id=${examId}`
-          );
-          const data = await response.json();
+          // Parallel API calls for better performance
+          const [examRes, resultsRes] = await Promise.all([
+            fetch(`../php/exam_api.php?action=get_exam_info&exam_id=${examId}`),
+            fetch(`../php/exam_api.php?action=get_results&exam_id=${examId}`),
+          ]);
 
-          if (data.success) {
-            allResults = data.results;
+          const examData = await examRes.json();
+          const resultsData = await resultsRes.json();
 
-            // Update Exam Info (Placeholder if exam name not in results)
-            if (allResults.length > 0) {
-              // Kita bisa ambil detail ujian dari API lain jika perlu, untuk sekarang pakai data pertama
-            }
+          // Handle exam info
+          if (examData.success && examData.exam) {
+            updateExamInfo(examData.exam);
+          } else {
+            showExamError(examData.message || "Gagal memuat informasi ujian");
+          }
 
-            updateStats(data.stats);
+          // Handle results
+          if (resultsData.success) {
+            allResults = resultsData.results;
+            updateStats(resultsData.stats);
             populateClassFilter(allResults);
             renderTable(allResults);
+            renderAnalytics(allResults);
           } else {
-            alert("Gagal memuat hasil: " + data.message);
+            showResultsError(resultsData.message || "Gagal memuat hasil ujian");
           }
         } catch (error) {
-          console.error("Error fetching results:", error);
+          console.error("Error fetching data:", error);
+          showExamError("Terjadi kesalahan saat memuat data");
+          showResultsError("Terjadi kesalahan saat memuat hasil");
         }
+      }
+
+      function updateExamInfo(exam) {
+        examInfo = exam;
+
+        // Update page title and subtitle
+        document.getElementById("exam-title").innerHTML = `📊 ${exam.name}`;
+        document.getElementById(
+          "exam-subtitle"
+        ).innerHTML = `${exam.subject} | Kelas ${exam.class} | ${exam.duration_minutes} menit`;
+
+        // Update enhanced info bar
+        document.getElementById("exam-subject").textContent = exam.subject;
+        document.getElementById("exam-class").textContent = exam.class;
+        document.getElementById(
+          "exam-duration"
+        ).textContent = `${exam.duration_minutes} menit`;
+        document.getElementById("exam-code").textContent =
+          exam.exam_code || "-";
+
+        // Set status with appropriate badge styling
+        const statusEl = document.getElementById("exam-status");
+        const status = exam.status || "unknown";
+        let statusText = "";
+        let statusColor = "";
+
+        switch (status) {
+          case "active":
+            statusText = "🟢 Aktif";
+            statusColor = "var(--success)";
+            break;
+          case "ended":
+            statusText = "🔴 Berakhir";
+            statusColor = "var(--danger)";
+            break;
+          case "draft":
+            statusText = "⚪ Draft";
+            statusColor = "var(--text-muted)";
+            break;
+          default:
+            statusText = status;
+            statusColor = "var(--text-muted)";
+        }
+
+        statusEl.textContent = statusText;
+        statusEl.style.color = statusColor;
+
+        // Show the info bar
+        document.getElementById("examInfoBar").style.display = "flex";
+
+        // Update browser tab title
+        document.title = `${exam.name} - Hasil Ujian | ExamSafe`;
+      }
+
+      function showExamError(message) {
+        document.getElementById("exam-title").innerHTML =
+          "⚠️ Gagal Memuat Data";
+        document.getElementById(
+          "exam-subtitle"
+        ).innerHTML = `<span style="color: var(--danger)">${message}</span>`;
+        document.getElementById("examInfoBar").style.display = "none";
+      }
+
+      function showResultsError(message) {
+        const tbody = document.getElementById("results-body");
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="8" style="text-align: center; padding: 40px; color: var(--danger)">
+              ❌ ${message}
+            </td>
+          </tr>
+        `;
       }
 
       function updateStats(stats) {
@@ -525,40 +689,39 @@
             const totalScore = parseFloat(s.total_score || 0);
 
             return `
-          <tr>
-            <td>${i + 1}</td>
-            <td><b>${s.full_name}</b><br><small style="color:#64748b">${
+              <tr>
+                <td>${i + 1}</td>
+                <td><b>${s.full_name}</b><br><small style="color:#64748b">${
               s.nisn
             }</small></td>
-            <td style="text-align:center"><span class="badge badge-outline" style="border-color:#cbd5e1;color:#475569">${
-              s.class
-            }</span></td>
-            <td style="text-align:center"><b>${autoScore.toFixed(1)}</b></td>
-            <td style="text-align:center">${manualScore.toFixed(1)}</td>
-            <td style="text-align:center">
-              <span class="score-cell ${
-                totalScore >= 75 ? "high" : "low"
-              }">${totalScore.toFixed(1)}</span>
-            </td>
-            <td style="text-align:center">
-              <span class="badge badge-${
-                s.status === "graded" ? "success" : "warning"
-              }">
-                ${s.status === "graded" ? "Selesai" : "Perlu Nilai"}
-              </span>
-            </td>
-            <td>
-              <button class="btn btn-sm btn-primary" onclick="openGrading(${
-                s.submission_id
-              })">✏️ Nilai Esai</button>
-            </td>
-          </tr>
-        `;
+                <td style="text-align:center"><span class="badge badge-outline" style="border-color:#cbd5e1;color:#475569">${
+                  s.class
+                }</span></td>
+                <td style="text-align:center"><b>${autoScore.toFixed(
+                  1
+                )}</b></td>
+                <td style="text-align:center">${manualScore.toFixed(1)}</td>
+                <td style="text-align:center">
+                  <span class="score-cell ${
+                    totalScore >= 75 ? "high" : "low"
+                  }">${totalScore.toFixed(1)}</span>
+                </td>
+                <td style="text-align:center">
+                  <span class="badge badge-${
+                    s.status === "graded" ? "success" : "warning"
+                  }">
+                    ${s.status === "graded" ? "Selesai" : "Perlu Nilai"}
+                  </span>
+                </td>
+                <td>
+                  <button class="btn btn-sm btn-primary" onclick="openGrading(${
+                    s.submission_id
+                  })">✏️ Nilai Esai</button>
+                </td>
+              </tr>
+            `;
           })
           .join("");
-
-        // Render analytics after table is rendered
-        renderAnalytics(results);
       }
 
       let scoreChart = null;
@@ -608,44 +771,36 @@
         });
 
         // 2. Identify Difficult Questions
-        // This requires fetching question text, but for now we'll analyze the correct/wrong ratio
         analyzeDifficultQuestions(results);
       }
 
       async function analyzeDifficultQuestions(results) {
-        const qStats = {}; // { qId: { correct: 0, total: 0, text: '' } }
+        const diffContainer = document.getElementById("difficult-questions");
 
         try {
           // Fetch all questions to get their text
           const qRes = await fetch(
-            `../php/exam_api.php?action=get_exam&exam_id=${examId}`
+            `../php/exam_api.php?action=get_exam_info&exam_id=${examId}`
           );
           const qData = await qRes.json();
 
-          if (!qData.success) return;
+          if (!qData.success) {
+            diffContainer.innerHTML =
+              '<p style="color:#64748b">Tidak dapat menganalisis soal</p>';
+            return;
+          }
 
-          const questionsMap = {};
-          qData.questions.forEach((q) => {
-            questionsMap[q.id] = q.question_text || q.text;
-            qStats[q.id] = { correct: 0, total: 0 };
-          });
-
-          // Analyze submissions
-          // We need to fetch detailed answers for all results to do a proper analysis
-          // For efficiency in this demo, we'll simulate based on aggregate if detailed data isn't here
-          // But since we want "Sistem berjalan sebagaimana mestinya", let's assume we need to fetch detail if not present
-
-          results.forEach((r) => {
-            // If the results from API already included a summary of wrong answers, we'd use it.
-            // Since it doesn't, we'd normally need a new API endpoint 'get_exam_stats'.
-            // Let's create a placeholder analysis for now.
-          });
-
-          const diffContainer = document.getElementById("difficult-questions");
-          diffContainer.innerHTML =
-            '<p style="color:#64748b">Analisis butir soal memerlukan data jawaban detail per siswa.</p>';
+          // For now, show placeholder since detailed answer analysis requires additional endpoint
+          diffContainer.innerHTML = `
+            <div style="padding: 12px; background: #fef3c7; border-radius: 8px; margin-bottom: 12px;">
+              <small>💡 Analisis butir soal memerlukan data jawaban detail per siswa.</small>
+            </div>
+            <p style="color:#64748b; font-size:0.8rem">Fitur ini akan tersedia pada update berikutnya.</p>
+          `;
         } catch (e) {
           console.error(e);
+          diffContainer.innerHTML =
+            '<p style="color:#64748b">Gagal menganalisis soal</p>';
         }
       }
 
@@ -669,6 +824,7 @@
 
         renderTable(filtered);
       }
+
       function exportToExcel() {
         if (allResults.length === 0)
           return alert("Tidak ada data untuk diekspor!");
@@ -694,38 +850,40 @@
 
         // Create HTML Table structure which Excel natively imports as a formatted grid
         let html = `
-    <table border="1">
-      <thead>
-        <tr style="background-color: #1a3c6e; color: #ffffff; font-weight: bold;">
-          <th>No</th>
-          <th>Nama Siswa</th>
-          <th>NISN</th>
-          <th>Kelas</th>
-          <th>Nilai Auto</th>
-          <th>Nilai Esai</th>
-          <th>Total Score</th>
-          <th>Status</th>
-          <th>Tanggal Submit</th>
-        </tr>
-      </thead>
-      <tbody>
-  `;
+          <table border="1">
+            <thead>
+              <tr style="background-color: #1a3c6e; color: #ffffff; font-weight: bold;">
+                <th>No</th>
+                <th>Nama Siswa</th>
+                <th>NISN</th>
+                <th>Kelas</th>
+                <th>Nilai Auto</th>
+                <th>Nilai Esai</th>
+                <th>Total Score</th>
+                <th>Status</th>
+                <th>Tanggal Submit</th>
+              </tr>
+            </thead>
+            <tbody>
+        `;
 
         sortedResults.forEach((r, i) => {
           const rowColor = i % 2 === 0 ? "#f9f9f9" : "#ffffff";
           html += `
-      <tr style="background-color: ${rowColor};">
-        <td style="text-align: center;">${i + 1}</td>
-        <td>${r.full_name}</td>
-        <td>${r.nisn}</td>
-        <td>${r.class}</td>
-        <td style="text-align: center;">${r.auto_score}</td>
-        <td style="text-align: center;">${r.manual_score}</td>
-        <td style="text-align: center; font-weight: bold;">${r.total_score}</td>
-        <td>${r.status}</td>
-        <td>${r.submitted_at}</td>
-      </tr>
-    `;
+            <tr style="background-color: ${rowColor};">
+              <td style="text-align: center;">${i + 1}</td>
+              <td>${r.full_name}</td>
+              <td>${r.nisn}</td>
+              <td>${r.class}</td>
+              <td style="text-align: center;">${r.auto_score}</td>
+              <td style="text-align: center;">${r.manual_score}</td>
+              <td style="text-align: center; font-weight: bold;">${
+                r.total_score
+              }</td>
+              <td>${r.status}</td>
+              <td>${r.submitted_at}</td>
+            </tr>
+          `;
         });
 
         html += `</tbody></table>`;
@@ -739,18 +897,20 @@
         link.setAttribute("href", url);
         link.setAttribute(
           "download",
-          `Hasil_Ujian_${examId}_${new Date().toISOString().slice(0, 10)}.xls`
+          `Hasil_Ujian_${examInfo?.name || examId}_${new Date()
+            .toISOString()
+            .slice(0, 10)}.xls`
         );
         link.style.visibility = "hidden";
         document.body.appendChild(link);
         link.click();
         document.body.removeChild(link);
       }
+
       function exportToPDF() {
         // PDF export is handled via window.print() with specific CSS
-        // But we can hide non-essential elements for a cleaner look
         const originalTitle = document.title;
-        document.title = `Laporan_Hasil_Ujian_${examId}`;
+        document.title = `Laporan_Hasil_Ujian_${examInfo?.name || examId}`;
         window.print();
         document.title = originalTitle;
       }
@@ -776,13 +936,13 @@
             const answers = sub.answers;
 
             let html = `
-            <div style="margin-bottom:20px; padding:15px; background:#f8fafc; border-radius:10px">
-              <strong>Siswa:</strong> ${sub.full_name} (${sub.class})<br>
-              <strong>Nilai Otomatis (PG):</strong> ${parseFloat(
-                sub.score
-              ).toFixed(1)}
-            </div>
-          `;
+              <div style="margin-bottom:20px; padding:15px; background:#f8fafc; border-radius:10px">
+                <strong>Siswa:</strong> ${sub.full_name} (${sub.class})<br>
+                <strong>Nilai Otomatis (PG):</strong> ${parseFloat(
+                  sub.score
+                ).toFixed(1)}
+              </div>
+            `;
 
             questions
               .filter((q) => q.question_type === "essay")
@@ -791,22 +951,22 @@
                   answers.find((a) => a.question_id == q.id)?.student_answer ||
                   "<em>Tidak menjawab</em>";
                 html += `
-              <div class="card" style="margin-bottom:15px; border-left:4px solid var(--primary)">
-                <div style="font-size:0.9rem; font-weight:600; margin-bottom:8px">Soal Esai #${
-                  idx + 1
-                }</div>
-                <p style="margin-bottom:10px">${q.question_text}</p>
-                <div style="background:#f1f5f9; padding:12px; border-radius:8px; font-size:0.9rem; margin-bottom:12px">
-                  <strong>Jawaban Siswa:</strong><br>${studentAns}
-                </div>
-                <div class="form-group" style="margin-bottom:0">
-                  <label>Beri Nilai (0 - ${q.points})</label>
-                  <input type="number" class="form-control essay-point" data-max="${
-                    q.points
-                  }" placeholder="Masukkan poin..." style="max-width:150px">
-                </div>
-              </div>
-            `;
+                  <div class="card" style="margin-bottom:15px; border-left:4px solid var(--primary)">
+                    <div style="font-size:0.9rem; font-weight:600; margin-bottom:8px">Soal Esai #${
+                      idx + 1
+                    }</div>
+                    <p style="margin-bottom:10px">${q.question_text}</p>
+                    <div style="background:#f1f5f9; padding:12px; border-radius:8px; font-size:0.9rem; margin-bottom:12px">
+                      <strong>Jawaban Siswa:</strong><br>${studentAns}
+                    </div>
+                    <div class="form-group" style="margin-bottom:0">
+                      <label>Beri Nilai (0 - ${q.points})</label>
+                      <input type="number" class="form-control essay-point" data-max="${
+                        q.points
+                      }" placeholder="Masukkan poin..." style="max-width:150px">
+                    </div>
+                  </div>
+                `;
               });
 
             if (
@@ -817,9 +977,14 @@
             }
 
             content.innerHTML = html;
+          } else {
+            content.innerHTML =
+              '<p class="text-center" style="color: var(--danger)">Gagal memuat data jawaban</p>';
           }
         } catch (e) {
           console.error(e);
+          content.innerHTML =
+            '<p class="text-center" style="color: var(--danger)">Terjadi kesalahan saat memuat data</p>';
         }
       }
 
@@ -854,9 +1019,15 @@
           if (data.success) {
             alert("Berhasil menyimpan nilai!");
             closeModal();
-            fetchResults();
+            fetchAllData(); // Refresh all data
+          } else {
+            alert(
+              "Gagal menyimpan nilai: " + (data.message || "Unknown error")
+            );
           }
-        } catch (e) {}
+        } catch (e) {
+          alert("Terjadi kesalahan saat menyimpan nilai");
+        }
       }
 
       function closeModal() {
