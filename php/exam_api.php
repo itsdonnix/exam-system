@@ -371,11 +371,24 @@ function getRecentViolations()
 function getExamMonitor()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
-        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        // Allow admin access
+        if ($_SESSION['role'] !== 'admin') {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
     }
 
     $examId = (int)($_GET['exam_id'] ?? 0);
     $db = getDB();
+
+    // For admin, no teacher_id check
+    if ($_SESSION['role'] !== 'admin') {
+        // Verify teacher owns this exam
+        $stmt = $db->prepare("SELECT id FROM exams WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+        if (!$stmt->fetch()) {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+    }
 
     $totalCount = $db->prepare("SELECT COUNT(*) FROM students s JOIN exams e ON e.class = s.class WHERE e.id = ?");
     $totalCount->execute([$examId]);
@@ -429,15 +442,25 @@ function getStudents()
 function activateExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
-        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        // Allow admin access
+        if ($_SESSION['role'] !== 'admin') {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
     }
 
     $data = getInput();
     $examId = (int)($data['exam_id'] ?? 0);
     $db = getDB();
 
-    $stmt = $db->prepare("UPDATE exams SET status = 'active' WHERE id = ? AND teacher_id = ?");
-    $stmt->execute([$examId, $_SESSION['user_id']]);
+    if ($_SESSION['role'] === 'admin') {
+        // Admin can activate any exam
+        $stmt = $db->prepare("UPDATE exams SET status = 'active' WHERE id = ?");
+        $stmt->execute([$examId]);
+    } else {
+        // Teacher can only activate their own exams
+        $stmt = $db->prepare("UPDATE exams SET status = 'active' WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+    }
 
     if ($stmt->rowCount() > 0) {
         jsonResponse(['success' => true, 'message' => 'Ujian berhasil diaktifkan! Siswa sekarang dapat masuk.']);
@@ -449,15 +472,25 @@ function activateExam()
 function deactivateExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
-        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        // Allow admin access
+        if ($_SESSION['role'] !== 'admin') {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
     }
 
     $data = getInput();
     $examId = (int)($data['exam_id'] ?? 0);
     $db = getDB();
 
-    $stmt = $db->prepare("UPDATE exams SET status = 'ended' WHERE id = ? AND teacher_id = ?");
-    $stmt->execute([$examId, $_SESSION['user_id']]);
+    if ($_SESSION['role'] === 'admin') {
+        // Admin can deactivate any exam
+        $stmt = $db->prepare("UPDATE exams SET status = 'ended' WHERE id = ?");
+        $stmt->execute([$examId]);
+    } else {
+        // Teacher can only deactivate their own exams
+        $stmt = $db->prepare("UPDATE exams SET status = 'ended' WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+    }
 
     if ($stmt->rowCount() > 0) {
         jsonResponse(['success' => true, 'message' => 'Ujian telah dihentikan. Siswa tidak dapat masuk lagi.']);
@@ -469,15 +502,25 @@ function deactivateExam()
 function deleteExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
-        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        // Allow admin access
+        if ($_SESSION['role'] !== 'admin') {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
     }
 
     $data = getInput();
     $examId = (int)($data['exam_id'] ?? 0);
     $db = getDB();
 
-    $check = $db->prepare("SELECT status FROM exams WHERE id = ? AND teacher_id = ?");
-    $check->execute([$examId, $_SESSION['user_id']]);
+    // Check exam exists and get its status
+    if ($_SESSION['role'] === 'admin') {
+        $check = $db->prepare("SELECT status FROM exams WHERE id = ?");
+        $check->execute([$examId]);
+    } else {
+        $check = $db->prepare("SELECT status FROM exams WHERE id = ? AND teacher_id = ?");
+        $check->execute([$examId, $_SESSION['user_id']]);
+    }
+
     $exam = $check->fetch();
 
     if (!$exam) {
@@ -495,8 +538,15 @@ function deleteExam()
         $stmtV->execute([$examId]);
         $stmtS = $db->prepare("DELETE FROM exam_submissions WHERE exam_id = ?");
         $stmtS->execute([$examId]);
-        $stmt = $db->prepare("DELETE FROM exams WHERE id = ? AND teacher_id = ?");
-        $stmt->execute([$examId, $_SESSION['user_id']]);
+
+        if ($_SESSION['role'] === 'admin') {
+            $stmt = $db->prepare("DELETE FROM exams WHERE id = ?");
+            $stmt->execute([$examId]);
+        } else {
+            $stmt = $db->prepare("DELETE FROM exams WHERE id = ? AND teacher_id = ?");
+            $stmt->execute([$examId, $_SESSION['user_id']]);
+        }
+
         $db->commit();
 
         if ($stmt->rowCount() > 0) {
@@ -513,7 +563,10 @@ function deleteExam()
 function duplicateExam()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
-        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        // Allow admin access
+        if ($_SESSION['role'] !== 'admin') {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
     }
 
     $data = getInput();
@@ -522,19 +575,31 @@ function duplicateExam()
 
     try {
         $db->beginTransaction();
-        $stmt = $db->prepare("SELECT * FROM exams WHERE id = ? AND teacher_id = ?");
-        $stmt->execute([$examId, $_SESSION['user_id']]);
+
+        // Get the exam to duplicate
+        if ($_SESSION['role'] === 'admin') {
+            $stmt = $db->prepare("SELECT * FROM exams WHERE id = ?");
+            $stmt->execute([$examId]);
+        } else {
+            $stmt = $db->prepare("SELECT * FROM exams WHERE id = ? AND teacher_id = ?");
+            $stmt->execute([$examId, $_SESSION['user_id']]);
+        }
+
         $oldExam = $stmt->fetch();
 
         if (!$oldExam) throw new Exception("Ujian tidak ditemukan.");
 
         $newCode = strtoupper(bin2hex(random_bytes(4)));
+
+        // For admin, preserve original teacher_id; for teacher, use their own ID
+        $teacherId = ($_SESSION['role'] === 'admin') ? $oldExam['teacher_id'] : $_SESSION['user_id'];
+
         $stmtInsert = $db->prepare("
             INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, created_at)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())
         ");
         $stmtInsert->execute([
-            $oldExam['teacher_id'],
+            $teacherId,
             $oldExam['name'] . ' (Copy)',
             $oldExam['subject'],
             $oldExam['class'],
@@ -580,7 +645,10 @@ function duplicateExam()
 function unlockStudent()
 {
     if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
-        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        // Allow admin access
+        if ($_SESSION['role'] !== 'admin') {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+        }
     }
 
     $data = getInput();
@@ -588,8 +656,15 @@ function unlockStudent()
     $studentId = (int)($data['student_id'] ?? 0);
     $db = getDB();
 
-    $stmt = $db->prepare("SELECT id FROM exams WHERE id = ? AND teacher_id = ?");
-    $stmt->execute([$examId, $_SESSION['user_id']]);
+    // Verify exam exists
+    if ($_SESSION['role'] === 'admin') {
+        $stmt = $db->prepare("SELECT id FROM exams WHERE id = ?");
+        $stmt->execute([$examId]);
+    } else {
+        $stmt = $db->prepare("SELECT id FROM exams WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+    }
+
     if (!$stmt->fetch()) {
         jsonResponse(['success' => false, 'message' => 'Akses ditolak.']);
     }

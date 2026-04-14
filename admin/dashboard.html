@@ -67,6 +67,128 @@
         font-size: 0.82rem;
         opacity: 0.85;
       }
+
+      /* Exam Card Styles */
+      .exam-card {
+        background: #fff;
+        border-radius: 14px;
+        padding: 20px 24px;
+        box-shadow: 0 4px 16px rgba(26, 60, 110, 0.08);
+        border-left: 4px solid var(--primary-light);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 14px;
+        transition: transform 0.2s;
+        flex-wrap: wrap;
+        gap: 16px;
+      }
+      .exam-card:hover {
+        transform: translateY(-2px);
+      }
+      .exam-card-info {
+        flex: 1;
+        min-width: 200px;
+      }
+      .exam-card-info h4 {
+        font-size: 1rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .exam-card-meta {
+        display: flex;
+        gap: 14px;
+        margin-top: 6px;
+        flex-wrap: wrap;
+      }
+      .exam-card-meta span {
+        font-size: 0.8rem;
+        color: #64748b;
+      }
+      .exam-card-actions {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+      }
+
+      /* Skeleton Loader Styles */
+      .skeleton-loader {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 12px;
+      }
+      .skeleton-line {
+        height: 12px;
+        background: linear-gradient(
+          90deg,
+          #f0f0f0 25%,
+          #e0e0e0 50%,
+          #f0f0f0 75%
+        );
+        background-size: 200% 100%;
+        border-radius: 4px;
+        animation: shimmer 1.5s infinite;
+      }
+      @keyframes shimmer {
+        0% {
+          background-position: 200% 0;
+        }
+        100% {
+          background-position: -200% 0;
+        }
+      }
+
+      /* Modal Styles */
+      .modal-overlay {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.5);
+        z-index: 1000;
+        align-items: center;
+        justify-content: center;
+      }
+      .modal-overlay.active {
+        display: flex;
+      }
+      .modal {
+        background: #fff;
+        border-radius: 16px;
+        max-width: 900px;
+        width: 90%;
+        max-height: 85vh;
+        overflow-y: auto;
+        padding: 24px;
+        position: relative;
+      }
+      .modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+        border-bottom: 1px solid #e2e8f0;
+      }
+      .modal-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--primary);
+      }
+      .modal-close {
+        background: none;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        color: #64748b;
+        transition: color 0.2s;
+      }
+      .modal-close:hover {
+        color: var(--danger);
+      }
     </style>
   </head>
   <body>
@@ -236,100 +358,238 @@
           </div>
         </div>
 
-        <div
-          style="
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 24px;
-            margin-top: 24px;
-          "
-        >
-          <div class="card">
-            <div
-              class="page-title"
-              style="font-size: 1rem; margin-bottom: 16px"
-            >
-              🔒 Log Keamanan Terbaru
+        <!-- Exam List Section -->
+        <div class="card mt-3">
+          <div
+            class="page-header"
+            style="margin-bottom: 20px; flex-wrap: wrap; gap: 12px"
+          >
+            <div style="flex: 1">
+              <div class="page-title" style="font-size: 1.1rem">
+                📋 Semua Ujian (Seluruh Guru)
+              </div>
             </div>
             <div
-              id="security-logs-container"
-              style="display: flex; flex-direction: column; gap: 10px"
-            ></div>
+              style="
+                display: flex;
+                gap: 10px;
+                flex: 2;
+                justify-content: flex-end;
+                flex-wrap: wrap;
+              "
+            >
+              <input
+                type="text"
+                id="examSearch"
+                class="form-control"
+                placeholder="Cari nama ujian, kelas, atau guru..."
+                style="max-width: 300px; padding: 8px 14px"
+              />
+            </div>
+          </div>
+          <div id="exam-list">
+            <!-- Exam cards will be rendered here -->
           </div>
         </div>
 
+        <!-- Recent Violations Section -->
         <div class="card mt-3">
-          <div class="page-header" style="margin-bottom: 16px">
-            <div class="page-title" style="font-size: 1rem">
-              📝 Semua Ujian Aktif
-            </div>
-            <span class="badge badge-success">5 Aktif</span>
+          <div
+            class="page-title"
+            style="font-size: 1.1rem; margin-bottom: 16px"
+          >
+            ⚠️ Pelanggaran Terbaru (Semua Ujian)
           </div>
           <div class="table-wrapper">
             <table>
               <thead>
                 <tr>
-                  <th>Nama Ujian</th>
+                  <th>Siswa</th>
+                  <th>Ujian</th>
                   <th>Guru</th>
-                  <th>Kelas</th>
-                  <th>Jadwal</th>
-                  <th>Peserta</th>
+                  <th>Pelanggaran</th>
+                  <th>Waktu</th>
                   <th>Status</th>
-                  <th>Aksi</th>
                 </tr>
               </thead>
-              <tbody></tbody>
+              <tbody id="violations-tbody">
+                <!-- Violations will be loaded here -->
+              </tbody>
             </table>
           </div>
         </div>
       </main>
     </div>
 
-    <script>
-      document.addEventListener("DOMContentLoaded", () => {
-        fetchDashboardData();
-        fetchAdminProfile();
-      });
+    <!-- Monitor Modal -->
+    <div class="modal-overlay" id="monitor-modal">
+      <div class="modal" style="max-width: 700px">
+        <div class="modal-header">
+          <div class="modal-title">👁️ Monitor Ujian</div>
+          <button
+            class="modal-close"
+            onclick="if(window.examManager) window.examManager.closeMonitor()"
+          >
+            ✕
+          </button>
+        </div>
+        <div
+          class="stats-grid"
+          style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px"
+        >
+          <div class="stat-card" style="padding: 14px">
+            <div>
+              <div
+                class="stat-value"
+                style="font-size: 1.4rem"
+                id="monitor-total"
+              >
+                0
+              </div>
+              <div class="stat-label">Total</div>
+            </div>
+          </div>
+          <div
+            class="stat-card"
+            style="padding: 14px; border-left-color: var(--success)"
+          >
+            <div>
+              <div
+                class="stat-value"
+                style="font-size: 1.4rem; color: var(--success)"
+                id="monitor-active"
+              >
+                0
+              </div>
+              <div class="stat-label">Aktif</div>
+            </div>
+          </div>
+          <div
+            class="stat-card"
+            style="padding: 14px; border-left-color: var(--warning)"
+          >
+            <div>
+              <div
+                class="stat-value"
+                style="font-size: 1.4rem; color: var(--warning)"
+                id="monitor-finished"
+              >
+                0
+              </div>
+              <div class="stat-label">Selesai</div>
+            </div>
+          </div>
+          <div
+            class="stat-card"
+            style="padding: 14px; border-left-color: var(--danger)"
+          >
+            <div>
+              <div
+                class="stat-value"
+                style="font-size: 1.4rem; color: var(--danger)"
+                id="monitor-violations"
+              >
+                0
+              </div>
+              <div class="stat-label">Pelanggaran</div>
+            </div>
+          </div>
+        </div>
+        <div class="table-wrapper">
+          <table>
+            <thead>
+              <tr>
+                <th>Siswa</th>
+                <th>Skor</th>
+                <th>Waktu Submit</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="monitor-tbody">
+              <tr>
+                <td colspan="4" style="text-align: center">Memuat...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 
+    <script src="../js/exam-manager.js"></script>
+    <script>
+      // Sidebar toggle functionality
       const hamburgerBtn = document.getElementById("hamburgerBtn");
       const sidebar = document.getElementById("sidebar");
       const sidebarOverlay = document.getElementById("sidebarOverlay");
 
-      hamburgerBtn.addEventListener("click", () => {
-        sidebar.classList.toggle("sidebar-open");
-        sidebarOverlay.classList.toggle("sidebar-overlay-visible");
-      });
-
-      sidebarOverlay.addEventListener("click", () => {
-        sidebar.classList.remove("sidebar-open");
-        sidebarOverlay.classList.remove("sidebar-overlay-visible");
-      });
-
-      async function fetchAdminProfile() {
-        try {
-          const response = await fetch(
-            "../php/admin_api.php?action=get_admin_profile"
-          );
-          const data = await response.json();
-          if (data.success) {
-            document.querySelector(".nav-user span").textContent =
-              data.user.full_name;
-            document.querySelector(".nav-avatar").textContent =
-              data.user.full_name.charAt(0).toUpperCase();
-            const sidebarAvatar = document.getElementById("sidebarAvatar");
-            const sidebarAvatarName =
-              document.getElementById("sidebarAvatarName");
-            if (sidebarAvatar)
-              sidebarAvatar.textContent = data.user.full_name
-                .charAt(0)
-                .toUpperCase();
-            if (sidebarAvatarName)
-              sidebarAvatarName.textContent = data.user.full_name;
-          }
-        } catch (e) {}
+      if (hamburgerBtn) {
+        hamburgerBtn.addEventListener("click", () => {
+          sidebar.classList.toggle("sidebar-open");
+          sidebarOverlay.classList.toggle("sidebar-overlay-visible");
+        });
       }
 
+      if (sidebarOverlay) {
+        sidebarOverlay.addEventListener("click", () => {
+          sidebar.classList.remove("sidebar-open");
+          sidebarOverlay.classList.remove("sidebar-overlay-visible");
+        });
+      }
+
+      // Initialize ExamManager for admin
+      let examManager = null;
+
+      document.addEventListener("DOMContentLoaded", () => {
+        // Initialize shared exam manager
+        examManager = new ExamManager({
+          containerId: "exam-list",
+          searchInputId: "examSearch",
+          role: "admin",
+          onExamAction: () => {
+            // Refresh admin stats when exam actions occur
+            fetchAdminStats();
+          },
+        });
+
+        // Make examManager globally available for modal buttons
+        window.examManager = examManager;
+
+        // Load all dashboard data
+        fetchDashboardData();
+        fetchAdminProfile();
+      });
+
       async function fetchDashboardData() {
+        try {
+          // Fetch exams using shared manager
+          await examManager.fetchExams();
+
+          // Fetch admin-specific stats
+          await fetchAdminStats();
+
+          // Fetch pending approvals
+          const teachersRes = await fetch(
+            "../php/admin_api.php?action=get_pending_teachers"
+          );
+          const teachersData = await teachersRes.json();
+          if (teachersData.success)
+            renderPendingTeachers(teachersData.teachers);
+
+          const studentsRes = await fetch(
+            "../php/admin_api.php?action=get_pending_students"
+          );
+          const studentsData = await studentsRes.json();
+          if (studentsData.success)
+            renderPendingStudents(studentsData.students);
+
+          // Fetch security logs (all violations)
+          await fetchSecurityLogs();
+        } catch (error) {
+          console.error("Admin dashboard fetch error:", error);
+        }
+      }
+
+      async function fetchAdminStats() {
         try {
           const statsRes = await fetch("../php/admin_api.php?action=get_stats");
           const statsData = await statsRes.json();
@@ -344,35 +604,27 @@
             setVal("stat-exams", s.exams);
             setVal("stat-pending", s.pending);
           }
-          const teachersRes = await fetch(
-            "../php/admin_api.php?action=get_pending_teachers"
-          );
-          const teachersData = await teachersRes.json();
-          if (teachersData.success)
-            renderPendingTeachers(teachersData.teachers);
-          const studentsRes = await fetch(
-            "../php/admin_api.php?action=get_pending_students"
-          );
-          const studentsData = await studentsRes.json();
-          if (studentsData.success)
-            renderPendingStudents(studentsData.students);
-          const examsRes = await fetch(
-            "../php/admin_api.php?action=get_all_exams"
-          );
-          const examsData = await examsRes.json();
-          if (examsData.success) renderExams(examsData.exams);
+        } catch (error) {
+          console.error("Error fetching admin stats:", error);
+        }
+      }
+
+      async function fetchSecurityLogs() {
+        try {
           const logsRes = await fetch(
             "../php/admin_api.php?action=get_security_logs"
           );
           const logsData = await logsRes.json();
           if (logsData.success) renderSecurityLogs(logsData.logs);
         } catch (error) {
-          console.error("Admin dashboard fetch error:", error);
+          console.error("Error fetching security logs:", error);
         }
       }
 
       function renderPendingTeachers(teachers) {
         const container = document.getElementById("pending-teachers-list");
+        if (!container) return;
+
         container.innerHTML =
           teachers.length === 0
             ? '<p style="color:#64748b;text-align:center;padding:20px">Tidak ada guru pending.</p>'
@@ -380,27 +632,32 @@
         teachers.forEach((t) => {
           const div = document.createElement("div");
           div.className = "approval-card";
-          div.innerHTML = `<div class="teacher-avatar">${t.full_name.charAt(
-            0
-          )}</div><div class="teacher-info"><h4>${t.full_name}</h4><p>📚 ${
-            t.subject
-          } | NIP: ${t.nip || "-"}</p><p>📧 ${t.email} | 📅 ${new Date(
-            t.created_at
-          ).toLocaleDateString(
+          div.innerHTML = `
+            <div class="teacher-avatar">${t.full_name.charAt(0)}</div>
+            <div class="teacher-info">
+              <h4>${t.full_name}</h4>
+              <p>📚 ${t.subject} | NIP: ${t.nip || "-"}</p>
+              <p>📧 ${t.email} | 📅 ${new Date(t.created_at).toLocaleDateString(
             "id-ID"
-          )}</p></div><div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0"><button class="btn btn-success btn-sm" onclick="approveTeacher(${
-            t.id
-          }, '${
-            t.full_name
-          }')">✅</button><button class="btn btn-danger btn-sm" onclick="rejectTeacher(${
-            t.id
-          }, '${t.full_name}')">❌</button></div>`;
+          )}</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+              <button class="btn btn-success btn-sm" onclick="approveTeacher(${
+                t.id
+              }, '${t.full_name}')">✅</button>
+              <button class="btn btn-danger btn-sm" onclick="rejectTeacher(${
+                t.id
+              }, '${t.full_name}')">❌</button>
+            </div>
+          `;
           container.appendChild(div);
         });
       }
 
       function renderPendingStudents(students) {
         const container = document.getElementById("pending-students-list");
+        if (!container) return;
+
         container.innerHTML =
           students.length === 0
             ? '<p style="color:#64748b;text-align:center;padding:20px">Tidak ada siswa pending.</p>'
@@ -408,108 +665,58 @@
         students.forEach((s) => {
           const div = document.createElement("div");
           div.className = "approval-card";
-          div.innerHTML = `<div class="teacher-avatar" style="background:var(--secondary)">${s.full_name.charAt(
-            0
-          )}</div><div class="teacher-info"><h4>${s.full_name}</h4><p>👥 ${
-            s.class
-          } | NISN: ${s.nisn}</p><p>👤 @${s.username} | 📅 ${new Date(
+          div.innerHTML = `
+            <div class="teacher-avatar" style="background:var(--secondary)">${s.full_name.charAt(
+              0
+            )}</div>
+            <div class="teacher-info">
+              <h4>${s.full_name}</h4>
+              <p>👥 ${s.class} | NISN: ${s.nisn}</p>
+              <p>👤 @${s.username} | 📅 ${new Date(
             s.created_at
-          ).toLocaleDateString(
-            "id-ID"
-          )}</p></div><div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0"><button class="btn btn-success btn-sm" onclick="approveStudent(${
-            s.id
-          }, '${
-            s.full_name
-          }')">✅</button><button class="btn btn-danger btn-sm" onclick="rejectStudent(${
-            s.id
-          }, '${s.full_name}')">❌</button></div>`;
+          ).toLocaleDateString("id-ID")}</p>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px;flex-shrink:0">
+              <button class="btn btn-success btn-sm" onclick="approveStudent(${
+                s.id
+              }, '${s.full_name}')">✅</button>
+              <button class="btn btn-danger btn-sm" onclick="rejectStudent(${
+                s.id
+              }, '${s.full_name}')">❌</button>
+            </div>
+          `;
           container.appendChild(div);
         });
       }
 
-      async function approveStudent(id, name) {
-        if (!confirm(`Setujui pendaftaran siswa ${name}?`)) return;
-        const res = await fetch("../php/admin_api.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "approve_student", id: id }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert(data.message);
-          fetchDashboardData();
-        }
-      }
-
-      async function rejectStudent(id, name) {
-        if (!confirm(`Tolak pendaftaran siswa ${name}?`)) return;
-        const res = await fetch("../php/admin_api.php", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ action: "reject_student", id: id }),
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert(data.message);
-          fetchDashboardData();
-        }
-      }
-
-      function renderExams(exams) {
-        const tbody = document.querySelector("table tbody");
-        if (exams.length === 0) {
-          tbody.innerHTML =
-            '<tr><td colspan="7" style="text-align:center;padding:20px">Belum ada ujian.</td></tr>';
-          return;
-        }
-        tbody.innerHTML = exams
-          .map((e) => {
-            const statusClass =
-              e.status === "active"
-                ? "success"
-                : e.status === "ended"
-                ? "danger"
-                : "warning";
-            return `<tr><td><b>${e.name}</b></td><td>${
-              e.teacher_name
-            }</td><td>${e.class}</td><td>${new Date(
-              e.start_time
-            ).toLocaleString("id-ID", {
-              day: "2-digit",
-              month: "short",
-              hour: "2-digit",
-              minute: "2-digit",
-            })}</td><td>${e.participants}/${
-              e.question_count
-            }</td><td><span class="badge badge-${statusClass}">${
-              e.status.charAt(0).toUpperCase() + e.status.slice(1)
-            }</span></td><td><button class="btn btn-sm btn-outline">Detail</button></td></tr>`;
-          })
-          .join("");
-      }
-
       function renderSecurityLogs(logs) {
-        const container = document.getElementById("security-logs-container");
+        const container = document.getElementById("violations-tbody");
         if (!container) return;
+
         container.innerHTML =
           logs.length === 0
-            ? '<p style="color:#64748b;text-align:center;padding:20px">Tidak ada aktivitas pelanggaran.</p>'
+            ? '<tr><td colspan="6" style="text-align:center;padding:20px">Tidak ada aktivitas pelanggaran.</td></tr>'
             : logs
                 .map((log) => {
                   const isCritical = log.violation_count >= 3;
-                  return `<div style="padding:12px;background:#fef3c7;border-radius:8px;border-left:3px solid var(--${
-                    isCritical ? "danger" : "warning"
-                  });margin-bottom:10px"><div style="font-size:0.82rem;font-weight:700;color:#92400e">${
-                    isCritical ? "🚫 Pelanggaran Berat" : "⚠️ Pelanggaran"
-                  }</div><div style="font-size:0.8rem;color:#78350f;margin-top:2px">${
-                    log.student_name
-                  } — ${
-                    log.reason
-                  }</div><div style="font-size:0.75rem;color:#a16207;margin-top:2px">${new Date(
-                    log.created_at
-                  ).toLocaleTimeString("id-ID")} | ${
-                    log.exam_name
-                  }</div></div>`;
+                  return `
+                    <tr>
+                      <td><b>${log.student_name}</b></td>
+                      <td>${log.exam_name}</td>
+                      <td>${log.teacher_name || "-"}</td>
+                      <td>${log.reason}</td>
+                      <td>${new Date(log.created_at).toLocaleString(
+                        "id-ID"
+                      )}</td>
+                      <td>
+                        <span class="badge badge-${
+                          isCritical ? "danger" : "warning"
+                        }">
+                          ${isCritical ? "Pelanggaran Berat" : "Peringatan"}
+                        </span>
+                      </td>
+                    </tr>
+                  `;
                 })
                 .join("");
       }
@@ -540,6 +747,58 @@
           alert(result.message);
           fetchDashboardData();
         }
+      }
+
+      async function approveStudent(id, name) {
+        if (!confirm(`Setujui pendaftaran siswa ${name}?`)) return;
+        const res = await fetch("../php/admin_api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "approve_student", id: id }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          fetchDashboardData();
+        }
+      }
+
+      async function rejectStudent(id, name) {
+        if (!confirm(`Tolak pendaftaran siswa ${name}?`)) return;
+        const res = await fetch("../php/admin_api.php", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ action: "reject_student", id: id }),
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert(data.message);
+          fetchDashboardData();
+        }
+      }
+
+      async function fetchAdminProfile() {
+        try {
+          const response = await fetch(
+            "../php/admin_api.php?action=get_admin_profile"
+          );
+          const data = await response.json();
+          if (data.success) {
+            document.querySelector(".nav-user span").textContent =
+              data.user.full_name;
+            document.querySelector(".nav-avatar").textContent =
+              data.user.full_name.charAt(0).toUpperCase();
+            const sidebarAvatar = document.getElementById("sidebarAvatar");
+            const sidebarAvatarName =
+              document.getElementById("sidebarAvatarName");
+            if (sidebarAvatar)
+              sidebarAvatar.textContent = data.user.full_name
+                .charAt(0)
+                .toUpperCase();
+            if (sidebarAvatarName)
+              sidebarAvatarName.textContent = data.user.full_name;
+          }
+        } catch (e) {}
       }
     </script>
   </body>
