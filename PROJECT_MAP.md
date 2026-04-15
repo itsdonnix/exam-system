@@ -38,7 +38,9 @@ ExamSafe/
 ├── css/
 │   └── style.css         # Global styles
 ├── js/
-│   └── exam-manager.js   # SHARED - Exam management logic
+│   ├── exam-manager.js   # SHARED - Exam management logic
+│   ├── exam.js           # Exam engine (timer, answers, submission)
+│   └── security.js       # Anti-cheat monitoring (attaches on exam start)
 ├── php/
 │   ├── db.php           # Database connection
 │   ├── exam_api.php     # SHARED - Exam operations API
@@ -48,7 +50,7 @@ ExamSafe/
 │   ├── ai_import.php    # AI question extraction
 │   └── logs/            # Log files directory
 │       ├── ai_import.log    # AI extraction logs
-│       └── exam_actions.log # Exam action logs (reset, toleransi)
+│       └── exam_actions.log # Exam action logs (reset, toleransi, violations)
 └── vendor/              # Composer dependencies
 ```
 
@@ -60,11 +62,6 @@ ExamSafe/
 
 **Purpose**: Centralized exam management for both admin and teacher dashboards
 
-**Dependencies**:
-
-- Used by: `admin/dashboard.html`, `teacher/dashboard.html`
-- API Calls: `php/exam_api.php`
-
 **Key Methods**:
 | Method | Purpose | API Endpoint |
 |--------|---------|--------------|
@@ -73,374 +70,265 @@ ExamSafe/
 | `deactivateExam(id)` | Stop exam | `deactivate_exam` |
 | `deleteExam(id)` | Delete exam | `delete_exam` |
 | `duplicateExam(id)` | Copy exam | `duplicate_exam` |
-| `showMonitor(id, name)` | Open monitor modal | `get_exam_monitor` |
-| `grantTolerance(id, studentId, name)` | Unlock student | `unlock_student` |
-| `resetStudentResult(id, studentId, name, score)` | Reset student result | `reset_student_result` |
-| `filterExams()` | Search/filter exams | Local only |
+| `showMonitor(id, name)` | Open monitor modal with search & auto-refresh | `get_exam_monitor` |
+| `resetStudentResult(id, studentId, name, score)` | Reset student result + violations | `reset_student_result` |
+| `showViolationDetails()` | View violation history for a student | `get_student_violations` |
+| `deleteViolation()` | Remove a specific violation record | `delete_violation` |
 
-**Role-Based Behavior**:
+**Monitor Modal Features** (Updated):
 
-- `role: 'admin'` - Can manage ALL exams, sees teacher_name, NO "Hasil" button
-- `role: 'teacher'` - Can manage OWN exams, sees "Hasil" button
+- Search/filter students by name
+- Auto-refresh every 30 seconds (indicator in footer)
+- Violation badges (🟢 0, 🟡 1-2, 🔴 3+) clickable for details
+- Reset button (🔄) always visible, clears both answers AND violations
+- Status icons (✅ ⏳ 🟡 ❌) instead of text
 
 ---
 
-### 2. **php/exam_api.php** (SHARED API)
+### 2. **js/security.js** (Student Exam Security)
+
+**Purpose**: Anti-cheat monitoring that only activates when exam officially starts
+
+**Key Behavior**:
+
+- `init()` - Sets up debug mode, attaches NO listeners
+- `start()` - Called from `exam.html` when student clicks "Mulai Ujian" on fullscreen prompt
+- Attaches all security listeners ONLY after `start()` is called
+- Logs violations to database without blocking/forcing submit
+- Shows toast notifications for blocked actions
+
+**Security Features**:
+
+- Blocks keyboard shortcuts (Ctrl+C, Ctrl+V, F12, Alt+Tab, etc.)
+- Blocks copy/paste, right-click
+- Monitors tab switching, window blur, fullscreen exit
+- Detects Developer Tools
+- Prevents navigation (back button, refresh, close)
+
+**Important**: No violations are recorded before exam officially starts (agreement modal, countdown, FS prompt are violation-free).
+
+---
+
+### 3. **js/exam.js** (Exam Engine)
+
+**Purpose**: Manages exam taking experience for students
+
+**Key Methods**:
+| Method | Purpose |
+|--------|---------|
+| `init(examId)` | Load exam questions, start timer, notify security |
+| `submitExam()` | Submit answers to server |
+| `logAgreement(examId)` | Record student agreement to rules |
+| `renderQuestions()` | Display questions with media support |
+
+**Integration with Security**:
+
+- Calls `ExamSecurity.setExamId()` after loading exam data
+- Calls `ExamSecurity.stop()` after submission
+
+---
+
+### 4. **php/exam_api.php** (SHARED API)
 
 **Purpose**: Handles all exam-related operations for all roles
 
-**Authentication**:
+**Key Endpoints** (Updated):
 
-- Session required for all non-public endpoints
-- Supports roles: `siswa`, `guru`, `admin`
+| Action                   | Role Access | Description                                                       |
+| ------------------------ | ----------- | ----------------------------------------------------------------- |
+| `get_exam_monitor`       | Guru, Admin | Returns participants with violation counts                        |
+| `reset_student_result`   | Guru, Admin | **NEW**: Deletes submission AND all violations (transaction-safe) |
+| `get_student_violations` | Guru, Admin | Fetch violation history for a specific student+exam               |
+| `delete_violation`       | Guru, Admin | Delete a single violation record                                  |
+| `report_violation`       | Siswa       | Log violation to database (no blocking)                           |
+| `log_agreement`          | Siswa       | Record student agreement to exam rules                            |
 
-**Key Endpoints**:
+**reset_student_result Changes**:
 
-| Action                  | Role Access | Description                                |
-| ----------------------- | ----------- | ------------------------------------------ |
-| `get_exams`             | All         | Fetch exams (filtered by role)             |
-| `get_exam`              | All         | Fetch single exam with questions           |
-| `activate_exam`         | Guru, Admin | Activate exam (admin can activate any)     |
-| `deactivate_exam`       | Guru, Admin | Stop exam (admin can stop any)             |
-| `delete_exam`           | Guru, Admin | Delete exam (admin can delete any)         |
-| `duplicate_exam`        | Guru, Admin | Copy exam (admin preserves teacher_id)     |
-| `get_exam_monitor`      | Guru, Admin | Get real-time exam status                  |
-| `unlock_student`        | Guru, Admin | Delete submission + violations (Toleransi) |
-| `reset_student_result`  | Guru, Admin | Delete submission ONLY (Reset Hasil)       |
-| `get_recent_violations` | Guru        | Get violations for teacher's exams         |
-| `submit_answers`        | Siswa       | Submit exam answers                        |
-| `report_violation`      | Siswa       | Report security violation                  |
-| `get_results`           | Guru, Admin | Get exam results with stats                |
+- Now deletes both `exam_submissions` AND `violations` records
+- Wrapped in database transaction for atomicity
+- Logs number of violations cleared to `exam_actions.log`
 
 **Special Admin Permissions**:
 
 - Admin bypasses `teacher_id` checks
-- Admin can act on any exam regardless of teacher
-- Admin sees all exams in `get_exams`
+- Admin can delete any violation, reset any student result
 
 **Logging**:
 
 - Function: `logExamAction($level, $message, $context)`
 - Log file: `logs/exam_actions.log`
-- Logs: user_id, role, action, exam_id, student_id, scores
+- Logs include: user_id, role, action, exam_id, student_id, scores, violation counts
 
 ---
 
-### 3. **php/admin_api.php** (ADMIN ONLY)
+### 5. **student/exam.html**
 
-**Purpose**: Admin-specific operations (user management, approvals)
+**Purpose**: Student exam taking interface
 
-**Authentication**: Requires `role === 'admin'`
+**Flow**:
 
-**Key Endpoints**:
-| Action | Description |
-|--------|-------------|
-| `get_stats` | Dashboard statistics (teachers, students, exams, pending) |
-| `get_pending_teachers` | List pending teacher registrations |
-| `get_pending_students` | List pending student registrations |
-| `approve_teacher` | Approve teacher registration |
-| `reject_teacher` | Reject teacher registration |
-| `approve_student` | Approve student registration |
-| `reject_student` | Reject student registration |
-| `get_all_exams` | Get all exams (alternative to exam_api) |
-| `get_security_logs` | Get all violations across all exams |
-| `get_teachers` | Get all teachers (CRUD) |
-| `get_all_students` | Get all students (CRUD) |
-| `add_teacher/update/delete` | Teacher CRUD operations |
-| `add_student/update/delete` | Student CRUD operations |
-| `get_classes/add/delete` | Class management |
-| `get_subjects/add/delete` | Subject management |
+1. Load page → Shows agreement modal with 14 rules checkboxes
+2. Student checks all boxes → 10-second countdown
+3. Countdown finishes → "Mulai Ujian" enabled
+4. Click → Logs agreement, shows fullscreen prompt
+5. Click "Mulai Ujian" on FS prompt → Calls `startExam()`
+6. `startExam()` calls `ExamSecurity.start()` → **Security monitoring begins**
+7. Calls `ExamEngine.init()` → Loads questions, starts timer
+
+**Critical**: Security monitoring only starts AFTER fullscreen prompt button click.
 
 ---
 
-### 4. **admin/dashboard.html**
+### 6. **teacher/results.html**
 
-**Purpose**: Main admin control panel
-
-**Key Sections**:
-
-1. **Stats Cards** - Total teachers, students, exams, pending approvals
-2. **Approval Lists** - Pending teacher & student registrations
-3. **Exam List** - Uses `exam-manager.js` with `role: 'admin'`
-4. **Violations Section** - Shows all violations across all exams
-5. **Monitor Modal** - Real-time exam monitoring
-
-**Data Sources**:
-
-- Stats & Approvals → `admin_api.php`
-- Exams & Monitor → `exam_api.php` (via exam-manager.js)
-- Violations → `admin_api.php` (get_security_logs)
-
-**Initialization**:
-
-```javascript
-examManager = new ExamManager({
-  containerId: "exam-list",
-  searchInputId: "examSearch",
-  role: "admin",
-  onExamAction: () => fetchAdminStats(),
-});
-```
-
----
-
-### 5. **teacher/dashboard.html**
-
-**Purpose**: Teacher's main control panel
-
-**Key Sections**:
-
-1. **Stats Cards** - Total exams, active exams, total students, average score
-2. **Quick Actions** - Create exam, bank soal, results, monitor, export
-3. **Exam List** - Uses `exam-manager.js` with `role: 'teacher'`
-4. **Violations Section** - Shows violations from teacher's exams only
-5. **Monitor Modal** - Real-time monitoring (same as admin)
-
-**Data Sources**:
-
-- Exams & Monitor → `exam_api.php` (via exam-manager.js)
-- Teacher Stats → `exam_api.php` (get_teacher_stats)
-- Profile → `exam_api.php` (get_profile)
-- Violations → `exam_api.php` (get_recent_violations)
-
-**Initialization**:
-
-```javascript
-examManager = new ExamManager({
-  containerId: "exam-list",
-  searchInputId: "examSearch",
-  role: "teacher",
-  onExamAction: () => updateStats(examManager.allExams),
-});
-```
-
----
-
-### 6. **php/ai_import.php**
-
-**Purpose**: Extract questions from documents using Google Gemini API
+**Purpose**: View exam results with violation tracking
 
 **Features**:
 
-- File upload (PDF, DOCX, TXT)
-- Text pasting
-- AI-powered question extraction
-- Supports multiple question types (multiple, checkbox, truefalse, essay)
-
-**Dependencies**:
-
-- Guzzle HTTP Client
-- smalot/pdfparser (PDF)
-- PhpOffice/PhpWord (DOCX)
-
-**Logging**: `logAIMessage()` → `logs/ai_import.log`
-
-**Key Actions**:
-
-- `action=extract` - Process text/file and extract questions
-- `action=test` - Test Gemini API connection with diagnostics
+- Results table with violation column (clickable badges)
+- Filter: "Tampilkan hanya siswa dengan pelanggaran"
+- Violation detail modal (reused from exam-manager)
 
 ---
 
-## Database Schema (Key Tables)
+### 7. **admin/dashboard.html**
 
-### Users & Authentication
+**Purpose**: Main admin control panel
 
-- `teachers` - id, full_name, gelar, nip, email, subject, password, approval_status, is_active
-- `students` - id, full_name, nisn, username, class, password, approval_status, is_active
-- `admins` - id, username, email, full_name, password, is_active
+**Violations Section** (Enhanced):
 
-### Exams & Questions
-
-- `exams` - id, teacher_id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, show_results_setting
-- `questions` - id, exam_id, question_text, question_type, options, correct_answer, points, difficulty, media_url
-
-### Submissions & Violations
-
-- `exam_submissions` - id, exam_id, student_id, answers_json, score, manual_score, total_score, status, time_taken_seconds, is_forced, submitted_at
-- `violations` - id, exam_id, student_id, reason, violation_count, created_at
-
-### Support Tables
-
-- `classes` - id, name
-- `subjects` - id, name, category
-- `question_bank` - id, teacher_id, question_text, question_type, options, correct_answer, points, difficulty, category, media_url
-- `teacher_settings` - teacher_id, gemini_api_key, gemini_model
+- Clickable violation rows that open detail modal
+- Delete violation button for admin
+- Auto-refresh every 30 seconds
+- Manual refresh button
 
 ---
 
-## Key Workflows
+## Database Schema Updates
 
-### 1. Exam Reset Flow (Admin/Teacher)
+### violations table (existing, no changes)
+
+- `id` - Primary key
+- `exam_id` - Foreign key to exams
+- `student_id` - Foreign key to students
+- `reason` - Violation description
+- `violation_count` - Counter (legacy, not used for blocking)
+- `created_at` - Timestamp
+
+---
+
+## Key Workflows (Updated)
+
+### 1. Reset Student Result Flow (With Violation Clearing)
 
 ```
-User clicks "Reset Hasil" in Monitor Modal
+Teacher clicks "Reset Hasil" (🔄) in Monitor Modal
   ↓
-confirm() dialog shows warning
+confirm() dialog warns: answers AND violations will be deleted
   ↓
 examManager.resetStudentResult()
   ↓
 POST to exam_api.php?action=reset_student_result
   ↓
-resetStudentResult() function:
+resetStudentResult() function (UPDATED):
   - Verify permissions (admin OR teacher owns exam)
-  - Get submission details for logging
-  - DELETE FROM exam_submissions (keep violations)
-  - Log to logs/exam_actions.log
+  - Get submission & violation details for logging
+  - BEGIN TRANSACTION
+  - DELETE FROM violations WHERE exam_id = ? AND student_id = ?
+  - DELETE FROM exam_submissions WHERE exam_id = ? AND student_id = ?
+  - COMMIT
+  - Log to logs/exam_actions.log with violation count cleared
   ↓
 Return success to frontend
   ↓
-Refresh monitor modal
+Monitor modal auto-refreshes (30s) → shows violation count as 0
 ```
 
-### 2. Toleransi Flow (Unlock Student)
+### 2. Student Exam Start Flow (Security Activation)
 
 ```
-Similar to Reset, but:
-  - DELETE FROM exam_submissions
-  - DELETE FROM violations
-  - Different confirmation message
-  - Different button (green, only for forced submissions)
+Student loads exam.html
+  ↓
+ExamSecurity.init() runs → NO listeners attached
+  ↓
+Agreement modal shown → Student checks rules → 10s countdown
+  ↓
+Click "Mulai Ujian" on agreement → shows FS prompt
+  ↓
+Click "Mulai Ujian" on FS prompt → calls startExam()
+  ↓
+startExam() calls ExamSecurity.start() → ATTACHES ALL LISTENERS
+  ↓
+ExamEngine.init() loads questions, starts timer
+  ↓
+Security monitoring ACTIVE for entire exam
+  ↓
+Violations logged to database (no blocking/force submit)
 ```
 
-### 3. Exam Monitoring Flow
+### 3. Violation Viewing Flow (Teacher/Admin)
 
 ```
-User clicks "Monitor" on exam card
+Teacher clicks violation badge (⚠️ 2) in Monitor Modal or Results page
   ↓
-examManager.showMonitor(examId, examName)
+showViolationDetails(studentId, studentName, examId)
   ↓
-GET exam_api.php?action=get_exam_monitor&exam_id={id}
+GET exam_api.php?action=get_student_violations
   ↓
-getExamMonitor() function:
-  - Get total students (by class)
-  - Get finished submissions count
-  - Get violations count
-  - Get participant list with scores and status
+Modal shows:
+  - Student name
+  - Total violation count
+  - List of violations with timestamps and reasons
+  - Delete button for each violation (admin/teacher)
   ↓
-Render modal with stats table
-  - Shows: student name, score, submit time, status
-  - Shows buttons based on status (Toleransi/Reset)
-```
-
-### 4. AI Question Import Flow
-
-```
-Teacher uploads file or pastes text
+Teacher can delete individual violations
   ↓
-POST to ai_import.php?action=extract
-  ↓
-Extract text (PDF/DOCX/TXT)
-  ↓
-Call Gemini API with structured prompt
-  ↓
-Parse JSON response
-  ↓
-Return question array to frontend
-  ↓
-Teacher reviews and saves to question bank or exam
+Monitor modal auto-refreshes with updated count
 ```
 
 ---
 
 ## Important Notes for Future Development
 
-### Role-Based Access Summary
+### Recent Changes Summary (2026-04-16)
 
-| Feature              | Admin             | Teacher                 | Student            |
-| -------------------- | ----------------- | ----------------------- | ------------------ |
-| View all exams       | ✅ (all teachers) | ✅ (own only)           | ✅ (eligible only) |
-| Create exam          | ❌                | ✅                      | ❌                 |
-| Edit exam            | ❌                | ✅ (own)                | ❌                 |
-| Delete exam          | ✅ (any)          | ✅ (own, if not active) | ❌                 |
-| Activate/Stop exam   | ✅ (any)          | ✅ (own)                | ❌                 |
-| Monitor exam         | ✅ (any)          | ✅ (own)                | ❌                 |
-| Reset student result | ✅ (any)          | ✅ (own exam)           | ❌                 |
-| Grant toleransi      | ✅ (any)          | ✅ (own exam)           | ❌                 |
-| View violations      | ✅ (all)          | ✅ (own exam)           | ❌                 |
-| Manage users         | ✅                | ❌                      | ❌                 |
-| Take exam            | ❌                | ❌                      | ✅                 |
+1. **Removed student blocking** - No more 3-strike force submit
+2. **Security only activates on exam start** - Listeners attached only when student clicks final "Mulai Ujian"
+3. **Reset result now clears violations** - Transaction-safe deletion of both submission and violations
+4. **Monitor modal improvements**:
+   - Search/filter by student name
+   - Auto-refresh every 30s
+   - Violation badges clickable for details
+   - Reset button always visible
+   - Removed Toleransi button (obsolete)
+   - Status icons instead of text
+5. **Violation management**:
+   - Teachers can view violation history
+   - Admin can delete any violation
+   - Violation detail modal with timestamps
+6. **Admin violations table** - Clickable rows with delete functionality
 
-### Critical Constraints
+### Critical Constraints (Updated)
 
 1. **Active exams cannot be deleted** (check in deleteExam function)
-2. **Reset only deletes submissions, keeps violations**
-3. **Toleransi deletes both submissions AND violations**
+2. **Reset now deletes submissions AND violations** (changed from "keeps violations")
+3. **Toleransi function is OBSOLETE** (students are no longer blocked/forced)
 4. **Admin duplicates preserve original teacher_id**
 5. **Session timeout: 2 hours**
+6. **Security listeners attached ONLY after exam officially starts** (no violations during agreement)
 
 ### Log Files
 
-- `logs/exam_actions.log` - All exam actions (activate, delete, reset, toleransi)
+- `logs/exam_actions.log` - All exam actions (activate, delete, reset with violation counts)
 - `logs/ai_import.log` - AI extraction operations
-
-### CSS Class Naming Conventions
-
-- `.exam-card` - Exam list item container
-- `.exam-card-info` - Exam details section
-- `.exam-card-actions` - Action buttons container
-- `.badge-*` - Status badges (success, danger, warning, secondary)
-- `.btn-*` - Button styles (primary, success, danger, warning, outline)
-- `.modal-overlay` - Modal background
-- `.skeleton-loader` - Loading animation
-
----
-
-## Common Debugging Points
-
-### If exams don't load:
-
-1. Check session: `var_dump($_SESSION)` in exam_api.php
-2. Check role: Should be 'admin' or 'guru'
-3. Check database connection in db.php
-
-### If buttons don't appear:
-
-1. Verify `exam-manager.js` is loaded
-2. Check `this.role` value in ExamManager
-3. Check exam status (active/draft/ended)
-4. For reset button: status must be 'graded' or 'pending'
-
-### If API returns 401:
-
-1. User not logged in
-2. Session expired (>2 hours)
-3. Role mismatch (e.g., teacher accessing admin endpoint)
-
-### If monitor modal doesn't open:
-
-1. Check element IDs: 'monitor-modal', 'monitor-tbody'
-2. Verify modal HTML exists in the page
-3. Check for JavaScript errors in console
-
----
-
-## Quick Reference: Most Common Modifications
-
-### Add a new exam action button:
-
-1. Add method to `exam-manager.js`
-2. Add API endpoint in `exam_api.php`
-3. Update `renderExamCard()` to show button (conditional by role)
-4. Add logging in API function
-
-### Add a new admin feature:
-
-1. Add endpoint in `admin_api.php`
-2. Add UI in `admin/dashboard.html`
-3. Call API from page-specific JavaScript (not exam-manager.js)
-
-### Modify button permissions:
-
-1. Edit `renderExamCard()` in exam-manager.js (lines ~130-160)
-2. Or edit `showMonitor()` for monitor modal buttons (lines ~300-350)
 
 ---
 
 ## Last Updated
 
-**Date**: 2026-01-15
-**Developer**: Full-stack implementation with role-based exam management
+**Date**: 2026-04-16
+**Developer**: Full-stack implementation with violation management and delayed security activation
 **Status**: Active development
 
 ---
@@ -449,7 +337,8 @@ Teacher reviews and saves to question bank or exam
 
 When returning to this project, review:
 
-1. `js/exam-manager.js` - Most complex logic
-2. `php/exam_api.php` - Critical API with role checks
-3. `admin/dashboard.html` - Admin UI with exam-manager integration
-4. This PROJECT_MAP.md - For relationship understanding
+1. `js/security.js` - Security starts ONLY on exam begin (critical for fair exams)
+2. `js/exam-manager.js` - Monitor modal with search, auto-refresh, violation details
+3. `php/exam_api.php` - resetStudentResult now clears violations with transaction
+4. `student/exam.html` - Agreement modal before security activation
+5. This PROJECT_MAP.md - For latest workflow understanding

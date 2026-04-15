@@ -189,6 +189,57 @@
       .modal-close:hover {
         color: var(--danger);
       }
+
+      /* Violation Styles */
+      .violation-row {
+        cursor: pointer;
+        transition: background 0.2s;
+      }
+      .violation-row:hover {
+        background: #f8fafc;
+      }
+      .violation-badge {
+        display: inline-block;
+        padding: 4px 10px;
+        border-radius: 50px;
+        font-size: 0.75rem;
+        font-weight: 600;
+      }
+      .violation-badge.low {
+        background: #fef3c7;
+        color: #92400e;
+      }
+      .violation-badge.medium {
+        background: #fed7aa;
+        color: #9a3412;
+      }
+      .violation-badge.high {
+        background: #fee2e2;
+        color: #991b1b;
+      }
+      .auto-refresh-indicator {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+      }
+      .auto-refresh-dot {
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #10b981;
+        animation: pulse-green 2s infinite;
+      }
+      @keyframes pulse-green {
+        0% {
+          opacity: 1;
+        }
+        50% {
+          opacity: 0.4;
+        }
+        100% {
+          opacity: 1;
+        }
+      }
     </style>
   </head>
   <body>
@@ -395,10 +446,32 @@
         <!-- Recent Violations Section -->
         <div class="card mt-3">
           <div
-            class="page-title"
-            style="font-size: 1.1rem; margin-bottom: 16px"
+            class="violations-header"
+            style="
+              display: flex;
+              justify-content: space-between;
+              align-items: center;
+              margin-bottom: 16px;
+            "
           >
-            ⚠️ Pelanggaran Terbaru (Semua Ujian)
+            <div class="page-title" style="font-size: 1.1rem; margin: 0">
+              ⚠️ Pelanggaran Terbaru (Semua Ujian)
+            </div>
+            <div style="display: flex; gap: 12px; align-items: center">
+              <span
+                class="auto-refresh-indicator"
+                style="font-size: 0.7rem; color: #64748b"
+              >
+                <span class="auto-refresh-dot"></span> Auto-refresh 30s
+              </span>
+              <button
+                class="btn btn-sm btn-outline"
+                onclick="refreshViolations()"
+                id="refresh-violations-btn"
+              >
+                🔄 Refresh
+              </button>
+            </div>
           </div>
           <div class="table-wrapper">
             <table>
@@ -413,7 +486,11 @@
                 </tr>
               </thead>
               <tbody id="violations-tbody">
-                <!-- Violations will be loaded here -->
+                <tr>
+                  <td colspan="6" style="text-align: center; padding: 20px">
+                    Memuat...
+                  </td>
+                </tr>
               </tbody>
             </table>
           </div>
@@ -423,7 +500,7 @@
 
     <!-- Monitor Modal -->
     <div class="modal-overlay" id="monitor-modal">
-      <div class="modal" style="max-width: 700px">
+      <div class="modal" style="max-width: 100%">
         <div class="modal-header">
           <div class="modal-title">👁️ Monitor Ujian</div>
           <button
@@ -500,9 +577,11 @@
             <thead>
               <tr>
                 <th>Siswa</th>
-                <th>Skor</th>
-                <th>Waktu Submit</th>
-                <th>Status</th>
+                <th style="text-align: center">Skor</th>
+                <th style="text-align: center">Waktu Submit</th>
+                <th style="text-align: center">Status</th>
+                <th style="text-align: center">Pelanggaran</th>
+                <th style="text-align: center">Aksi</th>
               </tr>
             </thead>
             <tbody id="monitor-tbody">
@@ -511,6 +590,32 @@
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Violation Detail Modal -->
+    <div class="modal-overlay" id="violation-detail-modal">
+      <div class="modal" style="max-width: 500px">
+        <div class="modal-header">
+          <div class="modal-title">📋 Detail Pelanggaran</div>
+          <button class="modal-close" onclick="closeViolationModal()">✕</button>
+        </div>
+        <div id="violation-detail-content" style="padding: 20px">Memuat...</div>
+        <div
+          style="padding: 20px; border-top: 1px solid #eee; text-align: right"
+        >
+          <button
+            class="btn btn-danger"
+            id="delete-violation-btn"
+            style="display: none"
+            onclick="deleteCurrentViolation()"
+          >
+            🗑️ Hapus Pelanggaran
+          </button>
+          <button class="btn btn-outline" onclick="closeViolationModal()">
+            Tutup
+          </button>
         </div>
       </div>
     </div>
@@ -538,6 +643,8 @@
 
       // Initialize ExamManager for admin
       let examManager = null;
+      let violationsRefreshInterval = null;
+      let currentViolationData = null;
 
       document.addEventListener("DOMContentLoaded", () => {
         // Initialize shared exam manager
@@ -584,6 +691,9 @@
 
           // Fetch security logs (all violations)
           await fetchSecurityLogs();
+
+          // Start auto-refresh for violations
+          startViolationsAutoRefresh();
         } catch (error) {
           console.error("Admin dashboard fetch error:", error);
         }
@@ -620,6 +730,171 @@
           console.error("Error fetching security logs:", error);
         }
       }
+
+      function renderSecurityLogs(logs) {
+        const container = document.getElementById("violations-tbody");
+        if (!container) return;
+
+        container.innerHTML =
+          logs.length === 0
+            ? '<tr><td colspan="6" style="text-align:center;padding:20px">Tidak ada aktivitas pelanggaran.</td></tr>'
+            : logs
+                .map((log, index) => {
+                  const isCritical = log.violation_count >= 3;
+                  let badgeClass = "low";
+                  if (log.violation_count === 1) badgeClass = "low";
+                  else if (log.violation_count === 2) badgeClass = "medium";
+                  else if (log.violation_count >= 3) badgeClass = "high";
+
+                  return `
+                <tr class="violation-row" 
+                    data-violation-id="${log.id}"
+                    data-student-name="${log.student_name}"
+                    data-student-id="${log.student_id}"
+                    data-exam-name="${log.exam_name}"
+                    data-exam-id="${log.exam_id}"
+                    data-teacher-name="${log.teacher_name || "-"}"
+                    data-reason="${log.reason}"
+                    data-time="${log.created_at}"
+                    data-count="${log.violation_count}"
+                    onclick="showViolationDetailFromRow(this)">
+                  <td><b>${log.student_name}</b></td>
+                  <td>${log.exam_name}</td>
+                  <td>${log.teacher_name || "-"}</td>
+                  <td><span class="violation-badge ${badgeClass}">⚠️ ${log.reason.substring(
+                    0,
+                    50
+                  )}${log.reason.length > 50 ? "..." : ""}</span></td>
+                  <td>${new Date(log.created_at).toLocaleString("id-ID")}</td>
+                  <td><span class="badge badge-${
+                    isCritical ? "danger" : "warning"
+                  }">${
+                    isCritical ? "Pelanggaran Berat" : "Peringatan"
+                  }</span></td>
+                </tr>
+              `;
+                })
+                .join("");
+      }
+
+      async function showViolationDetailFromRow(row) {
+        const violationId = row.dataset.violationId;
+        const studentName = row.dataset.studentName;
+        const examName = row.dataset.examName;
+        const teacherName = row.dataset.teacherName;
+        const reason = row.dataset.reason;
+        const time = row.dataset.time;
+        const count = row.dataset.count;
+
+        currentViolationData = {
+          id: violationId,
+          studentName,
+          examName,
+          teacherName,
+          reason,
+          time,
+          count,
+        };
+
+        const modal = document.getElementById("violation-detail-modal");
+        const content = document.getElementById("violation-detail-content");
+        const deleteBtn = document.getElementById("delete-violation-btn");
+
+        content.innerHTML = `
+          <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0">
+            <div><strong>Siswa:</strong> ${studentName}</div>
+            <div><strong>Ujian:</strong> ${examName}</div>
+            <div><strong>Guru:</strong> ${teacherName}</div>
+            <div><strong>Waktu:</strong> ${new Date(time).toLocaleString(
+              "id-ID"
+            )}</div>
+            <div><strong>Jumlah Pelanggaran:</strong> <span class="badge badge-danger">${count}</span></div>
+          </div>
+          <div style="padding: 12px; background: #fef3c7; border-radius: 8px">
+            <strong>Deskripsi Pelanggaran:</strong><br>
+            ${reason}
+          </div>
+        `;
+
+        deleteBtn.style.display = "block";
+        modal.classList.add("active");
+      }
+
+      async function deleteCurrentViolation() {
+        if (!currentViolationData) return;
+        if (
+          !confirm(
+            `Hapus catatan pelanggaran untuk ${currentViolationData.studentName}?`
+          )
+        )
+          return;
+
+        try {
+          const response = await fetch("../php/exam_api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              action: "delete_violation",
+              violation_id: currentViolationData.id,
+            }),
+          });
+          const data = await response.json();
+
+          if (data.success) {
+            alert("✅ Pelanggaran berhasil dihapus");
+            closeViolationModal();
+            fetchSecurityLogs(); // Refresh the list
+          } else {
+            alert("❌ Gagal menghapus: " + (data.message || "Unknown error"));
+          }
+        } catch (error) {
+          console.error("Error deleting violation:", error);
+          alert("Terjadi kesalahan saat menghapus pelanggaran");
+        }
+      }
+
+      function closeViolationModal() {
+        document
+          .getElementById("violation-detail-modal")
+          .classList.remove("active");
+        currentViolationData = null;
+      }
+
+      async function refreshViolations() {
+        const btn = document.getElementById("refresh-violations-btn");
+        if (btn) {
+          btn.classList.add("rotating");
+          setTimeout(() => btn.classList.remove("rotating"), 500);
+        }
+        await fetchSecurityLogs();
+      }
+
+      function startViolationsAutoRefresh() {
+        if (violationsRefreshInterval) clearInterval(violationsRefreshInterval);
+        violationsRefreshInterval = setInterval(() => {
+          fetchSecurityLogs();
+        }, 30000);
+      }
+
+      function stopViolationsAutoRefresh() {
+        if (violationsRefreshInterval) {
+          clearInterval(violationsRefreshInterval);
+          violationsRefreshInterval = null;
+        }
+      }
+
+      // Add rotation animation CSS
+      const rotationStyle = document.createElement("style");
+      rotationStyle.textContent = `
+        .rotating {
+          animation: rotateBtn 0.5s ease;
+        }
+        @keyframes rotateBtn {
+          from { transform: rotate(0deg); }
+          to { transform: rotate(360deg); }
+        }
+      `;
+      document.head.appendChild(rotationStyle);
 
       function renderPendingTeachers(teachers) {
         const container = document.getElementById("pending-teachers-list");
@@ -687,38 +962,6 @@
           `;
           container.appendChild(div);
         });
-      }
-
-      function renderSecurityLogs(logs) {
-        const container = document.getElementById("violations-tbody");
-        if (!container) return;
-
-        container.innerHTML =
-          logs.length === 0
-            ? '<tr><td colspan="6" style="text-align:center;padding:20px">Tidak ada aktivitas pelanggaran.</td></tr>'
-            : logs
-                .map((log) => {
-                  const isCritical = log.violation_count >= 3;
-                  return `
-                    <tr>
-                      <td><b>${log.student_name}</b></td>
-                      <td>${log.exam_name}</td>
-                      <td>${log.teacher_name || "-"}</td>
-                      <td>${log.reason}</td>
-                      <td>${new Date(log.created_at).toLocaleString(
-                        "id-ID"
-                      )}</td>
-                      <td>
-                        <span class="badge badge-${
-                          isCritical ? "danger" : "warning"
-                        }">
-                          ${isCritical ? "Pelanggaran Berat" : "Peringatan"}
-                        </span>
-                      </td>
-                    </tr>
-                  `;
-                })
-                .join("");
       }
 
       async function approveTeacher(id, name) {
@@ -800,6 +1043,11 @@
           }
         } catch (e) {}
       }
+
+      // Stop refresh on page unload
+      window.addEventListener("beforeunload", () => {
+        stopViolationsAutoRefresh();
+      });
     </script>
   </body>
 </html>

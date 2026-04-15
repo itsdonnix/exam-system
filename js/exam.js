@@ -35,6 +35,11 @@ const ExamEngine = {
     this.examId = examId;
     console.log("[ExamEngine] Initializing exam ID:", examId);
 
+    // Notify security module about examId
+    if (typeof ExamSecurity !== "undefined" && ExamSecurity.setExamId) {
+      ExamSecurity.setExamId(examId);
+    }
+
     try {
       const response = await fetch(
         `../php/exam_api.php?action=get_exam&exam_id=${examId}`

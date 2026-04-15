@@ -980,7 +980,7 @@
     </div>
 
     <script>
-      window.DEBUG_DISABLE_VIOLATIONS = true;
+      window.DEBUG_DISABLE_VIOLATIONS = false;
     </script>
     <script src="../js/security.js"></script>
     <script src="../js/exam.js"></script>
@@ -1095,6 +1095,11 @@
         document.getElementById("q-nav-container").style.display = "block";
         document.getElementById("exam-content").style.display = "block";
         document.getElementById("bottom-nav").style.display = "flex";
+
+        // START security monitoring NOW (attaches all listeners)
+        if (typeof ExamSecurity !== "undefined" && ExamSecurity.start) {
+          ExamSecurity.start();
+        }
 
         try {
           const el = document.documentElement;

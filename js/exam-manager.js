@@ -1,6 +1,7 @@
 /**
  * ExamManager - Shared module for exam management
  * Handles exam CRUD, monitoring, and filtering for both teacher and admin dashboards
+ * ENHANCED: Removed Toleransi, added search, simplified UI, kept Aktif stat
  */
 
 class ExamManager {
@@ -11,6 +12,9 @@ class ExamManager {
     this.onExamAction = options.onExamAction || (() => {});
     this.allExams = [];
     this.currentMonitorExamId = null;
+    this.monitorRefreshInterval = null;
+    this.currentParticipants = []; // Store for filtering
+    this.monitorSearchTerm = "";
     this.apiBaseUrl = "../php/exam_api.php";
 
     this.init();
@@ -20,6 +24,7 @@ class ExamManager {
     this.renderSkeleton();
     this.attachSearchListener();
     this.attachModalCloseListener();
+    this.injectViolationModal();
   }
 
   renderSkeleton() {
@@ -69,6 +74,31 @@ class ExamManager {
     }
   }
 
+  injectViolationModal() {
+    if (document.getElementById("violation-detail-modal")) return;
+
+    const modalHTML = `
+      <div class="modal-overlay" id="violation-detail-modal">
+        <div class="modal" style="max-width: 500px">
+          <div class="modal-header">
+            <div class="modal-title">📋 Detail Pelanggaran</div>
+            <button class="modal-close" onclick="document.getElementById('violation-detail-modal').classList.remove('active')">✕</button>
+          </div>
+          <div id="violation-detail-content" style="padding: 20px">
+            <div style="text-align: center; color: #64748b">Memuat...</div>
+          </div>
+          <div style="padding: 20px; border-top: 1px solid #eee; text-align: right">
+            <button class="btn btn-danger" id="delete-violation-btn" style="display: none;">
+              🗑️ Hapus Pelanggaran
+            </button>
+            <button class="btn btn-outline" onclick="document.getElementById('violation-detail-modal').classList.remove('active')">Tutup</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.insertAdjacentHTML("beforeend", modalHTML);
+  }
+
   async fetchExams() {
     try {
       const response = await fetch(`${this.apiBaseUrl}?action=get_exams`, {
@@ -98,7 +128,9 @@ class ExamManager {
       (exam) =>
         exam.name.toLowerCase().includes(query) ||
         exam.class.toLowerCase().includes(query) ||
-        exam.subject.toLowerCase().includes(query)
+        exam.subject.toLowerCase().includes(query) ||
+        (this.role === "admin" &&
+          exam.teacher_name?.toLowerCase().includes(query))
     );
 
     this.renderExams(filtered);
@@ -138,7 +170,6 @@ class ExamManager {
       minute: "2-digit",
     });
 
-    // Conditional buttons based on exam status - SAME for both admin and teacher
     let actionButtons = `
       ${
         exam.status === "draft" || exam.status === "ended"
@@ -157,7 +188,6 @@ class ExamManager {
       })">👯 Duplikat</button>
     `;
 
-    // Add Hasil button ONLY for teachers
     if (this.role === "teacher") {
       actionButtons += `<a href="results.html?exam_id=${exam.id}" class="btn btn-sm btn-outline">📊 Hasil</a>`;
     }
@@ -315,6 +345,7 @@ class ExamManager {
 
   async showMonitor(examId, examName) {
     this.currentMonitorExamId = examId;
+    this.monitorSearchTerm = "";
     const modal = document.getElementById("monitor-modal");
     if (!modal) {
       console.error("Monitor modal not found");
@@ -323,15 +354,72 @@ class ExamManager {
 
     modal.classList.add("active");
 
+    // Update modal structure with search row and footer
+    this.enhanceMonitorModalStructure(modal, examName);
+
+    await this.loadMonitorData(examId);
+    this.startMonitorRefresh(examId);
+  }
+
+  enhanceMonitorModalStructure(modal, examName) {
+    // Update title
     const titleElement = modal.querySelector(".modal-title");
     if (titleElement) {
-      titleElement.textContent = `👁️ Monitor Ujian — ${examName}`;
+      titleElement.innerHTML = `👁️ Monitor Ujian — ${examName}`;
     }
 
+    // Check if search row already exists
+    if (!modal.querySelector(".monitor-search-row")) {
+      const statsGrid = modal.querySelector(".stats-grid");
+      if (statsGrid) {
+        // Insert search row after stats grid
+        const searchRow = document.createElement("div");
+        searchRow.className = "monitor-search-row";
+        searchRow.style.cssText =
+          "padding: 12px 0; border-bottom: 1px solid #e2e8f0;";
+        searchRow.innerHTML = `
+          <div style="display: flex; align-items: center; gap: 12px;">
+            <span style="font-size: 0.85rem; color: #64748b;">🔍</span>
+            <input type="text" id="monitor-search-input" class="form-control" placeholder="Cari siswa..." style="flex: 1; padding: 8px 12px; font-size: 0.85rem;">
+          </div>
+        `;
+        statsGrid.insertAdjacentElement("afterend", searchRow);
+
+        // Add search event listener
+        const searchInput = document.getElementById("monitor-search-input");
+        if (searchInput) {
+          searchInput.addEventListener("keyup", (e) => {
+            this.monitorSearchTerm = e.target.value.toLowerCase();
+            this.renderMonitorTable(this.currentParticipants);
+          });
+        }
+      }
+    }
+
+    // Check if footer exists
+    if (!modal.querySelector(".monitor-footer")) {
+      const tableWrapper = modal.querySelector(".table-wrapper");
+      if (tableWrapper) {
+        const footer = document.createElement("div");
+        footer.className = "monitor-footer";
+        footer.style.cssText =
+          "padding: 12px 16px; border-top: 1px solid #e2e8f0; display: flex; justify-content: flex-end; align-items: center; gap: 8px; font-size: 0.7rem; color: #64748b;";
+        footer.innerHTML = `
+          <span class="auto-refresh-footer">
+            <span class="pulse-dot"></span>
+            Auto-refresh 30s
+          </span>
+        `;
+        tableWrapper.insertAdjacentElement("afterend", footer);
+      }
+    }
+  }
+
+  async loadMonitorData(examId) {
     const tbody = document.getElementById("monitor-tbody");
     if (tbody) {
       tbody.innerHTML =
-        '<tr><td colspan="4" style="text-align:center">Memuat...</td></tr>';
+        '<tr><td colspan="6" style="text-align:center">Memuat...</td></tr>';
     }
 
     try {
@@ -352,102 +440,240 @@ class ExamManager {
         if (finishedEl) finishedEl.textContent = data.stats.finished || 0;
         if (violationsEl) violationsEl.textContent = data.stats.violation || 0;
 
-        if (!data.participants || data.participants.length === 0) {
-          if (tbody)
-            tbody.innerHTML =
-              '<tr><td colspan="4" style="text-align:center;padding:20px">Belum ada siswa yang bergabung.</td></tr>';
-          return;
+        // Make sure active stat is visible
+        if (activeEl && activeEl.parentElement) {
+          activeEl.parentElement.style.display = null;
         }
 
-        if (tbody) {
-          tbody.innerHTML = data.participants
-            .map((p) => {
-              // Determine status badge
-              let statusBadge = "";
-              let statusText = "";
-              if (p.is_forced == 1) {
-                statusBadge = "danger";
-                statusText = "Dipaksa";
-              } else if (p.status === "graded") {
-                statusBadge = "success";
-                statusText = "Selesai";
-              } else if (p.status === "pending") {
-                statusBadge = "warning";
-                statusText = "Pending (Esai)";
-              } else {
-                statusBadge = "secondary";
-                statusText = "Dalam Proses";
-              }
-
-              // Format score display
-              const scoreDisplay =
-                p.total_score !== null && p.total_score !== undefined
-                  ? `${p.total_score} (${p.auto_score || p.score})`
-                  : p.score || "—";
-
-              return `
-                <tr>
-                  <td><strong>${p.full_name}</strong></td>
-                  <td>${scoreDisplay}</td>
-                  <td>${
-                    p.submitted_at
-                      ? new Date(p.submitted_at).toLocaleTimeString("id-ID")
-                      : "—"
-                  }</td>
-                  <td style="display:flex; align-items:center; gap:10px; flex-wrap:wrap;">
-                    <span class="badge badge-${statusBadge}">
-                      ${statusText}
-                    </span>
-                    ${
-                      p.v_count > 0
-                        ? `<span style="color:red; font-size:0.7rem">⚠️ ${p.v_count}x</span>`
-                        : ""
-                    }
-                    <div style="display:flex; gap:6px;">
-                      ${
-                        p.is_forced == 1
-                          ? `<button class="btn btn-sm btn-success" onclick="window.examManager.grantTolerance(${examId}, ${
-                              p.student_id
-                            }, '${p.full_name.replace(/'/g, "\\'")}')">
-                          🔓 Toleransi
-                        </button>`
-                          : ""
-                      }
-                      ${
-                        (p.status === "graded" || p.status === "pending") &&
-                        p.is_forced != 1
-                          ? `<button class="btn btn-sm btn-warning" onclick="window.examManager.resetStudentResult(${examId}, ${
-                              p.student_id
-                            }, '${p.full_name.replace(/'/g, "\\'")}', ${
-                              p.total_score || p.score || 0
-                            })">
-                          🔄 Reset Hasil
-                        </button>`
-                          : ""
-                      }
-                    </div>
-                  </td>
-                </tr>
-              `;
-            })
-            .join("");
-        }
+        this.currentParticipants = data.participants || [];
+        this.renderMonitorTable(this.currentParticipants);
       } else {
         if (tbody)
           tbody.innerHTML =
-            '<tr><td colspan="4" style="text-align:center;color:#64748b">Gagal memuat data monitor.</td></tr>';
+            '<tr><td colspan="6" style="text-align:center;color:#64748b">Gagal memuat data monitor.</td></tr>';
       }
     } catch (error) {
       console.error("Error loading monitor:", error);
       const tbody = document.getElementById("monitor-tbody");
       if (tbody)
         tbody.innerHTML =
-          '<tr><td colspan="4" style="text-align:center;color:#64748b">Terjadi kesalahan.</td></tr>';
+          '<tr><td colspan="6" style="text-align:center;color:#64748b">Terjadi kesalahan.</td></tr>';
+    }
+  }
+
+  renderMonitorTable(participants) {
+    const tbody = document.getElementById("monitor-tbody");
+    if (!tbody) return;
+
+    // Filter participants by search term
+    let filteredParticipants = participants;
+    if (this.monitorSearchTerm) {
+      filteredParticipants = participants.filter((p) =>
+        p.full_name.toLowerCase().includes(this.monitorSearchTerm)
+      );
+    }
+
+    if (!filteredParticipants || filteredParticipants.length === 0) {
+      tbody.innerHTML =
+        '<tr><td colspan="6" style="text-align:center;padding:20px">' +
+        (this.monitorSearchTerm
+          ? "Tidak ada siswa yang cocok."
+          : "Belum ada siswa yang bergabung.") +
+        "</td></tr>";
+      return;
+    }
+
+    tbody.innerHTML = filteredParticipants
+      .map((p) => {
+        // Score display
+        const scoreDisplay =
+          p.total_score !== null && p.total_score !== undefined
+            ? `${p.total_score}`
+            : p.score || "—";
+
+        // Status icon
+        let statusIcon = "";
+        let statusTooltip = "";
+        if (p.is_forced == 1) {
+          statusIcon = "❌";
+          statusTooltip = "Dipaksa keluar";
+        } else if (p.status === "graded") {
+          statusIcon = "✅";
+          statusTooltip = "Selesai";
+        } else if (p.status === "pending") {
+          statusIcon = "⏳";
+          statusTooltip = "Pending (Esai)";
+        } else {
+          statusIcon = "🟡";
+          statusTooltip = "Dalam Proses";
+        }
+
+        // Violation badge
+        let violationBadge = "";
+        if (p.v_count === 0) {
+          violationBadge = '<span class="violation-badge zero">🟢 0</span>';
+        } else if (p.v_count <= 2) {
+          violationBadge = `<span class="violation-badge low" onclick="window.examManager.showViolationDetails(${
+            p.student_id
+          }, '${p.full_name.replace(/'/g, "\\'")}', ${
+            this.currentMonitorExamId
+          })">⚠️ ${p.v_count}</span>`;
+        } else {
+          violationBadge = `<span class="violation-badge high" onclick="window.examManager.showViolationDetails(${
+            p.student_id
+          }, '${p.full_name.replace(/'/g, "\\'")}', ${
+            this.currentMonitorExamId
+          })">🔴 ${p.v_count}</span>`;
+        }
+
+        // Reset button (only if submitted)
+        const resetButton =
+          (p.status === "graded" || p.status === "pending") && p.is_forced != 1
+            ? `<button class="action-icon" onclick="window.examManager.resetStudentResult(${
+                this.currentMonitorExamId
+              }, ${p.student_id}, '${p.full_name.replace(/'/g, "\\'")}', ${
+                p.total_score || p.score || 0
+              })" title="Reset Hasil">🔄</button>`
+            : "";
+
+        return `
+        <tr>
+          <td><strong>${p.full_name}</strong></td>
+          <td style="text-align:center; font-weight:500;">${scoreDisplay}</td>
+          <td style="text-align:center;">${
+            p.submitted_at
+              ? new Date(p.submitted_at).toLocaleTimeString("id-ID")
+              : "—"
+          }</td>
+          <td style="text-align:center;">
+            <span title="${statusTooltip}">${statusIcon}</span>
+          </td>
+          <td style="text-align:center;">${violationBadge}</td>
+          <td style="text-align:center;">
+            <div class="row-actions">
+              ${resetButton}
+            </div>
+          </td>
+        </tr>
+      `;
+      })
+      .join("");
+  }
+
+  startMonitorRefresh(examId) {
+    if (this.monitorRefreshInterval) clearInterval(this.monitorRefreshInterval);
+    this.monitorRefreshInterval = setInterval(() => {
+      if (this.currentMonitorExamId === examId) {
+        this.loadMonitorData(examId);
+      }
+    }, 30000);
+  }
+
+  stopMonitorRefresh() {
+    if (this.monitorRefreshInterval) {
+      clearInterval(this.monitorRefreshInterval);
+      this.monitorRefreshInterval = null;
+    }
+  }
+
+  async showViolationDetails(studentId, studentName, examId) {
+    const modal = document.getElementById("violation-detail-modal");
+    const content = document.getElementById("violation-detail-content");
+    const deleteBtn = document.getElementById("delete-violation-btn");
+
+    if (!modal || !content) return;
+
+    content.innerHTML =
+      '<div style="text-align: center; color: #64748b">Memuat data pelanggaran...</div>';
+    deleteBtn.style.display = "none";
+    modal.classList.add("active");
+
+    try {
+      const response = await fetch(
+        `${this.apiBaseUrl}?action=get_student_violations&student_id=${studentId}&exam_id=${examId}`
+      );
+      const data = await response.json();
+
+      if (data.success && data.violations) {
+        if (data.violations.length === 0) {
+          content.innerHTML =
+            '<div style="text-align: center; color: #64748b">Tidak ada catatan pelanggaran untuk siswa ini.</div>';
+          return;
+        }
+
+        let html = `
+          <div style="margin-bottom: 16px; padding-bottom: 12px; border-bottom: 1px solid #e2e8f0">
+            <strong>Siswa:</strong> ${studentName}<br>
+            <strong>Total Pelanggaran:</strong> <span class="badge badge-danger">${data.total_count}</span>
+          </div>
+          <div style="max-height: 300px; overflow-y: auto;">
+        `;
+
+        data.violations.forEach((v, idx) => {
+          html += `
+            <div style="padding: 12px; margin-bottom: 8px; background: #f8fafc; border-radius: 8px; border-left: 3px solid ${
+              idx === 0 ? "#ef4444" : "#f59e0b"
+            }">
+              <div style="font-size: 0.8rem; color: #64748b; margin-bottom: 4px">
+                ${new Date(v.created_at).toLocaleString("id-ID")}
+              </div>
+              <div style="font-size: 0.9rem">${v.reason}</div>
+              <div style="margin-top: 8px">
+                <button class="btn btn-sm btn-danger" onclick="window.examManager.deleteViolation(${
+                  v.id
+                }, ${studentId}, ${examId}, '${studentName.replace(
+            /'/g,
+            "\\'"
+          )}')">
+                  🗑️ Hapus
+                </button>
+              </div>
+            </div>
+          `;
+        });
+
+        html += `</div>`;
+        content.innerHTML = html;
+      } else {
+        content.innerHTML =
+          '<div style="text-align: center; color: #ef4444">Gagal memuat data pelanggaran.</div>';
+      }
+    } catch (error) {
+      console.error("Error loading violation details:", error);
+      content.innerHTML =
+        '<div style="text-align: center; color: #ef4444">Terjadi kesalahan saat memuat data.</div>';
+    }
+  }
+
+  async deleteViolation(violationId, studentId, examId, studentName) {
+    if (!confirm(`Hapus catatan pelanggaran untuk ${studentName}?`)) return;
+
+    try {
+      const response = await fetch(this.apiBaseUrl, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "delete_violation",
+          violation_id: violationId,
+        }),
+      });
+      const data = await response.json();
+
+      if (data.success) {
+        alert("✅ Pelanggaran berhasil dihapus");
+        this.showViolationDetails(studentId, studentName, examId);
+        this.loadMonitorData(examId);
+      } else {
+        alert("❌ Gagal menghapus: " + (data.message || "Unknown error"));
+      }
+    } catch (error) {
+      console.error("Error deleting violation:", error);
+      alert("Terjadi kesalahan saat menghapus pelanggaran");
     }
   }
 
   async resetStudentResult(examId, studentId, studentName, currentScore) {
-    const confirmMsg = `⚠️ RESET HASIL UJIAN\n\nSiswa: ${studentName}\nNilai saat ini: ${currentScore}\n\nTindakan ini akan MENGHAPUS semua jawaban siswa.\nCatatan pelanggaran akan tetap tersimpan.\n\nApakah Anda yakin?`;
+    const confirmMsg = `⚠️ RESET HASIL UJIAN\n\nSiswa: ${studentName}\nNilai saat ini: ${currentScore}\n\nTindakan ini akan MENGHAPUS semua jawaban siswa serta seluruh catatan pelanggaran.\n\nApakah Anda yakin?`;
 
     if (!confirm(confirmMsg)) return;
 
@@ -465,12 +691,7 @@ class ExamManager {
 
       if (result.success) {
         alert("✅ " + result.message);
-        // Refresh monitor with current exam
-        const exam = this.allExams.find((e) => e.id === examId);
-        if (exam) {
-          this.showMonitor(examId, exam.name);
-        }
-        // Trigger onExamAction callback to refresh parent dashboard if needed
+        await this.loadMonitorData(examId);
         this.onExamAction();
       } else {
         alert("❌ " + result.message);
@@ -481,49 +702,105 @@ class ExamManager {
     }
   }
 
-  async grantTolerance(examId, studentId, name) {
-    if (
-      !confirm(
-        `Berikan toleransi kepada ${name}?\nSiswa akan dapat masuk kembali ke ujian ini.`
-      )
-    )
-      return;
-
-    try {
-      const response = await fetch(this.apiBaseUrl, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "unlock_student",
-          exam_id: examId,
-          student_id: studentId,
-        }),
-      });
-      const result = await response.json();
-
-      if (result.success) {
-        alert("✅ " + result.message);
-        this.showMonitor(
-          examId,
-          this.allExams.find((e) => e.id === examId)?.name || "Ujian"
-        );
-      } else {
-        alert("❌ " + result.message);
-      }
-    } catch (error) {
-      console.error("Error granting tolerance:", error);
-      alert("Terjadi kesalahan saat memberikan toleransi.");
-    }
-  }
-
   closeMonitor() {
+    this.stopMonitorRefresh();
     const modal = document.getElementById("monitor-modal");
     if (modal) {
       modal.classList.remove("active");
     }
     this.currentMonitorExamId = null;
+    this.currentParticipants = [];
+    this.monitorSearchTerm = "";
   }
 }
 
 // Make available globally
 window.ExamManager = ExamManager;
+
+// Add CSS for new styles if not present
+if (!document.querySelector("#monitor-styles")) {
+  const style = document.createElement("style");
+  style.id = "monitor-styles";
+  style.textContent = `
+    .violation-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+      min-width: 40px;
+    }
+    .violation-badge.low {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    .violation-badge.high {
+      background: #fee2e2;
+      color: #991b1b;
+    }
+    .violation-badge.zero {
+      background: #f1f5f9;
+      color: #64748b;
+      cursor: default;
+    }
+    .violation-badge:hover:not(.zero) {
+      transform: scale(1.05);
+    }
+    .row-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: center;
+    }
+    .action-icon {
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 6px 10px;
+      border-radius: 6px;
+      font-size: 1rem;
+      transition: all 0.2s;
+    }
+    .action-icon:hover {
+      background: #f1f5f9;
+      transform: scale(1.05);
+    }
+    .monitor-search-row input {
+      border: 1px solid #e2e8f0;
+      border-radius: 8px;
+      padding: 8px 12px;
+      font-size: 0.85rem;
+    }
+    .monitor-search-row input:focus {
+      outline: none;
+      border-color: var(--primary-light);
+      box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+    }
+    .auto-refresh-footer {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .pulse-dot {
+      width: 8px;
+      height: 8px;
+      background: #10b981;
+      border-radius: 50%;
+      animation: pulse-green 2s infinite;
+    }
+    @keyframes pulse-green {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+    @media (max-width: 768px) {
+      .monitor-search-row input {
+        width: 100%;
+      }
+    }
+  `;
+  document.head.appendChild(style);
+}

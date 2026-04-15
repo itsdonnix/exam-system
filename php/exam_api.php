@@ -106,6 +106,12 @@ try {
         case 'report_violation':
             reportViolation();
             break;
+        case 'get_student_violations':
+            getStudentViolations();
+            break;
+        case 'delete_violation':
+            deleteViolation();
+            break;
         case 'get_results':
             getResults();
             break;
@@ -785,24 +791,46 @@ function resetStudentResult()
         jsonResponse(['success' => false, 'message' => 'Data submission tidak ditemukan.']);
     }
 
+    // Get violation count before deletion for logging
+    $stmtViolationCount = $db->prepare("SELECT COUNT(*) as count FROM violations WHERE exam_id = ? AND student_id = ?");
+    $stmtViolationCount->execute([$examId, $studentId]);
+    $violationCount = $stmtViolationCount->fetchColumn();
+
     try {
-        // Delete exam_submissions record (keep violations)
+        // Start transaction
+        $db->beginTransaction();
+        
+        // Delete violations first
+        $stmtViolations = $db->prepare("DELETE FROM violations WHERE exam_id = ? AND student_id = ?");
+        $stmtViolations->execute([$examId, $studentId]);
+        $violationsDeleted = $stmtViolations->rowCount();
+        
+        // Delete exam_submissions record
         $stmtDelete = $db->prepare("DELETE FROM exam_submissions WHERE exam_id = ? AND student_id = ?");
         $stmtDelete->execute([$examId, $studentId]);
+        
+        // Commit transaction
+        $db->commit();
 
-        // Log successful reset
-        logExamAction('INFO', 'Student result reset', [
+        // Log successful reset with violation info
+        logExamAction('INFO', 'Student result reset and violations cleared', [
             'exam_id' => $examId,
             'exam_name' => $exam['name'],
             'student_id' => $studentId,
             'student_name' => $student['full_name'],
             'previous_score' => $submission['total_score'],
             'previous_status' => $submission['status'],
-            'submitted_at' => $submission['submitted_at']
+            'submitted_at' => $submission['submitted_at'],
+            'violations_cleared' => $violationsDeleted,
+            'total_violations_before' => $violationCount
         ]);
 
-        jsonResponse(['success' => true, 'message' => 'Hasil ujian siswa berhasil direset. Siswa dapat mengerjakan ulang.']);
+        jsonResponse(['success' => true, 'message' => 'Hasil ujian dan ' . $violationsDeleted . ' catatan pelanggaran berhasil direset. Siswa dapat mengerjakan ulang.']);
+        
     } catch (Exception $e) {
+        // Rollback transaction on error
+        $db->rollBack();
+        
         logExamAction('ERROR', 'Reset failed - database error', [
             'exam_id' => $examId,
             'student_id' => $studentId,
@@ -1070,6 +1098,97 @@ function reportViolation()
     $stmt->execute([$examId, $studentId, $reason, $count]);
 
     jsonResponse(['success' => true, 'message' => 'Pelanggaran dicatat']);
+}
+
+function getStudentViolations()
+{
+    // Check authentication (teacher or admin)
+    if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['guru', 'admin', 'siswa'])) {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $studentId = (int)($_GET['student_id'] ?? 0);
+    $examId = (int)($_GET['exam_id'] ?? 0);
+
+    if (!$studentId || !$examId) {
+        jsonResponse(['success' => false, 'message' => 'Student ID and Exam ID required'], 400);
+    }
+
+    $db = getDB();
+
+    // For teachers, verify they own this exam
+    if ($_SESSION['role'] === 'guru') {
+        $stmt = $db->prepare("SELECT id FROM exams WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+        if (!$stmt->fetch()) {
+            jsonResponse(['success' => false, 'message' => 'Unauthorized'], 403);
+        }
+    }
+
+    $stmt = $db->prepare("
+        SELECT id, reason, violation_count, created_at 
+        FROM violations 
+        WHERE student_id = ? AND exam_id = ? 
+        ORDER BY created_at DESC
+    ");
+    $stmt->execute([$studentId, $examId]);
+    $violations = $stmt->fetchAll();
+
+    jsonResponse([
+        'success' => true,
+        'violations' => $violations,
+        'total_count' => count($violations)
+    ]);
+}
+
+function deleteViolation()
+{
+    // Check authentication (teacher or admin only)
+    if (!isset($_SESSION['user_id']) || !in_array($_SESSION['role'], ['guru', 'admin'])) {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $data = getInput();
+    $violationId = (int)($data['violation_id'] ?? 0);
+
+    if (!$violationId) {
+        jsonResponse(['success' => false, 'message' => 'Violation ID required'], 400);
+    }
+
+    $db = getDB();
+
+    // Get violation details to verify ownership
+    $stmt = $db->prepare("
+        SELECT v.*, e.teacher_id 
+        FROM violations v
+        JOIN exams e ON e.id = v.exam_id
+        WHERE v.id = ?
+    ");
+    $stmt->execute([$violationId]);
+    $violation = $stmt->fetch();
+
+    if (!$violation) {
+        jsonResponse(['success' => false, 'message' => 'Violation not found'], 404);
+    }
+
+    // Check permission
+    if ($_SESSION['role'] === 'guru' && $violation['teacher_id'] != $_SESSION['user_id']) {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 403);
+    }
+
+    // Delete the violation
+    $stmt = $db->prepare("DELETE FROM violations WHERE id = ?");
+    $stmt->execute([$violationId]);
+
+    // Log the deletion
+    logExamAction('INFO', 'Violation deleted', [
+        'violation_id' => $violationId,
+        'student_id' => $violation['student_id'],
+        'exam_id' => $violation['exam_id'],
+        'reason' => $violation['reason']
+    ]);
+
+    jsonResponse(['success' => true, 'message' => 'Violation deleted successfully']);
 }
 
 function getResults()
