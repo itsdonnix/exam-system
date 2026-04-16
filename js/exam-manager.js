@@ -429,14 +429,15 @@ class ExamManager {
       const data = await response.json();
 
       if (data.success) {
-        // Update stats
+        // Update stats - USE data.stats for all counts
         const totalEl = document.getElementById("monitor-total");
         const activeEl = document.getElementById("monitor-active");
         const finishedEl = document.getElementById("monitor-finished");
         const violationsEl = document.getElementById("monitor-violations");
 
         if (totalEl) totalEl.textContent = data.stats.total || 0;
-        if (activeEl) activeEl.textContent = data.participants?.length || 0;
+        // FIXED: Use data.stats.active instead of participants length
+        if (activeEl) activeEl.textContent = data.stats.active || 0;
         if (finishedEl) finishedEl.textContent = data.stats.finished || 0;
         if (violationsEl) violationsEl.textContent = data.stats.violation || 0;
 
@@ -450,14 +451,14 @@ class ExamManager {
       } else {
         if (tbody)
           tbody.innerHTML =
-            '<tr><td colspan="6" style="text-align:center;color:#64748b">Gagal memuat data monitor.</td></tr>';
+            '<tr><td colspan="6" style="text-align:center;color:#64748b">Gagal memuat data monitor. </div>';
       }
     } catch (error) {
       console.error("Error loading monitor:", error);
       const tbody = document.getElementById("monitor-tbody");
       if (tbody)
         tbody.innerHTML =
-          '<tr><td colspan="6" style="text-align:center;color:#64748b">Terjadi kesalahan.</td></tr>';
+          '<tr><td colspan="6" style="text-align:center;color:#64748b">Terjadi kesalahan. </div>';
     }
   }
 
@@ -491,21 +492,30 @@ class ExamManager {
             ? `${p.total_score}`
             : p.score || "—";
 
-        // Status icon
+        // Status icon - use the status field from database
         let statusIcon = "";
         let statusTooltip = "";
         if (p.is_forced == 1) {
           statusIcon = "❌";
           statusTooltip = "Dipaksa keluar";
-        } else if (p.status === "graded") {
+        } else if (p.status === "submitted") {
           statusIcon = "✅";
           statusTooltip = "Selesai";
-        } else if (p.status === "pending") {
-          statusIcon = "⏳";
-          statusTooltip = "Pending (Esai)";
-        } else {
+        } else if (p.status === "in_progress") {
           statusIcon = "🟡";
-          statusTooltip = "Dalam Proses";
+          statusTooltip = "Sedang Mengerjakan";
+        } else {
+          // Fallback for old data
+          if (p.status === "graded") {
+            statusIcon = "✅";
+            statusTooltip = "Selesai";
+          } else if (p.status === "pending") {
+            statusIcon = "⏳";
+            statusTooltip = "Pending (Esai)";
+          } else {
+            statusIcon = "🟡";
+            statusTooltip = "Dalam Proses";
+          }
         }
 
         // Violation badge
@@ -528,7 +538,10 @@ class ExamManager {
 
         // Reset button (only if submitted)
         const resetButton =
-          (p.status === "graded" || p.status === "pending") && p.is_forced != 1
+          (p.status === "graded" ||
+            p.status === "pending" ||
+            p.status === "submitted") &&
+          p.is_forced != 1
             ? `<button class="action-icon" onclick="window.examManager.resetStudentResult(${
                 this.currentMonitorExamId
               }, ${p.student_id}, '${p.full_name.replace(/'/g, "\\'")}', ${

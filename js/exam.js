@@ -87,6 +87,43 @@ const ExamEngine = {
     }
   },
 
+  async startExam(examId) {
+    console.log("[ExamEngine] Starting exam session for ID:", examId);
+    
+    try {
+        const response = await fetch("../php/exam_api.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                action: "start_exam",
+                exam_id: examId
+            }),
+            credentials: "include",
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            console.log("[ExamEngine] Exam session started successfully");
+            if (data.already_started) {
+                console.log("[ExamEngine] Session already existed, continuing");
+            }
+            return true;
+        } else {
+            console.error("[ExamEngine] Failed to start exam:", data.message);
+            if (data.message && data.message.includes("sudah menyelesaikan")) {
+                alert("Anda sudah menyelesaikan ujian ini sebelumnya.");
+                window.location.href = "dashboard.php";
+            }
+            return false;
+        }
+    } catch (error) {
+        console.error("[ExamEngine] Error starting exam:", error);
+        alert("Terjadi kesalahan saat memulai ujian. Silakan coba lagi.");
+        return false;
+    }
+  },
+
   updateHeaderInfo() {
     // Update exam name and subject display
     const examNameEl = document.getElementById("exam-name-display");

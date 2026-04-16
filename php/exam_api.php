@@ -100,6 +100,9 @@ try {
         case 'get_exam_info':
             getExamInfo();
             break;
+        case 'start_exam':
+            startExam();
+            break;
         case 'submit_answers':
             submitAnswers();
             break;
@@ -450,13 +453,17 @@ function getExamMonitor()
         }
     }
 
-    $totalCount = $db->prepare("SELECT COUNT(*) FROM students s JOIN exams e ON e.class = s.class WHERE e.id = ?");
+    $totalCount = $db->prepare("SELECT COUNT(*) FROM exam_submissions WHERE exam_id = ?");
     $totalCount->execute([$examId]);
     $total = $totalCount->fetchColumn();
 
-    $finishedCount = $db->prepare("SELECT COUNT(*) FROM exam_submissions WHERE exam_id = ?");
+    $finishedCount = $db->prepare("SELECT COUNT(*) FROM exam_submissions WHERE exam_id = ? AND status != 'in_progress'");
     $finishedCount->execute([$examId]);
     $finished = $finishedCount->fetchColumn();
+
+    $activeCount = $db->prepare("SELECT COUNT(*) FROM exam_submissions WHERE exam_id = ? AND status = 'in_progress'");
+    $activeCount->execute([$examId]);
+    $active = $activeCount->fetchColumn();
 
     $violationCount = $db->prepare("SELECT COUNT(DISTINCT student_id) FROM violations WHERE exam_id = ?");
     $violationCount->execute([$examId]);
@@ -464,6 +471,7 @@ function getExamMonitor()
 
     $stats = [
         'total' => $total ?: 0,
+        'active' => $active ?: 0,
         'finished' => $finished ?: 0,
         'violation' => $violation ?: 0,
     ];
@@ -474,6 +482,7 @@ function getExamMonitor()
         FROM exam_submissions es
         JOIN students s ON s.id = es.student_id
         WHERE es.exam_id = ?
+        ORDER BY es.started_at ASC
     ");
     $stmt->execute([$examId, $examId]);
 
@@ -799,16 +808,16 @@ function resetStudentResult()
     try {
         // Start transaction
         $db->beginTransaction();
-        
+
         // Delete violations first
         $stmtViolations = $db->prepare("DELETE FROM violations WHERE exam_id = ? AND student_id = ?");
         $stmtViolations->execute([$examId, $studentId]);
         $violationsDeleted = $stmtViolations->rowCount();
-        
+
         // Delete exam_submissions record
         $stmtDelete = $db->prepare("DELETE FROM exam_submissions WHERE exam_id = ? AND student_id = ?");
         $stmtDelete->execute([$examId, $studentId]);
-        
+
         // Commit transaction
         $db->commit();
 
@@ -826,11 +835,10 @@ function resetStudentResult()
         ]);
 
         jsonResponse(['success' => true, 'message' => 'Hasil ujian dan ' . $violationsDeleted . ' catatan pelanggaran berhasil direset. Siswa dapat mengerjakan ulang.']);
-        
     } catch (Exception $e) {
         // Rollback transaction on error
         $db->rollBack();
-        
+
         logExamAction('ERROR', 'Reset failed - database error', [
             'exam_id' => $examId,
             'student_id' => $studentId,
@@ -889,6 +897,66 @@ function joinExamAction()
     ]);
 }
 
+function startExam()
+{
+    // Check authentication
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'siswa') {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $data = getInput();
+    $examId = (int)($data['exam_id'] ?? 0);
+
+    if (!$examId) {
+        jsonResponse(['success' => false, 'message' => 'Exam ID required'], 400);
+    }
+
+    $db = getDB();
+    $studentId = $_SESSION['user_id'];
+
+    // Verify exam exists and is active
+    $stmt = $db->prepare("SELECT id, name FROM exams WHERE id = ? AND status = 'active' LIMIT 1");
+    $stmt->execute([$examId]);
+    $exam = $stmt->fetch();
+
+    if (!$exam) {
+        jsonResponse(['success' => false, 'message' => 'Ujian tidak ditemukan atau tidak aktif'], 404);
+    }
+
+    // Check if already started or completed
+    $stmt = $db->prepare("
+        SELECT id, status, submitted_at FROM exam_submissions 
+        WHERE exam_id = ? AND student_id = ?
+        ORDER BY id DESC LIMIT 1
+    ");
+    $stmt->execute([$examId, $studentId]);
+    $existing = $stmt->fetch();
+
+    if ($existing) {
+        if ($existing['submitted_at']) {
+            jsonResponse(['success' => false, 'message' => 'Anda sudah menyelesaikan ujian ini sebelumnya'], 409);
+        }
+        if ($existing['status'] === 'in_progress') {
+            jsonResponse(['success' => true, 'message' => 'Ujian sudah dimulai sebelumnya', 'already_started' => true]);
+        }
+    }
+
+    // Insert new record - removed created_at column
+    $stmt = $db->prepare("
+        INSERT INTO exam_submissions (exam_id, student_id, started_at, status)
+        VALUES (?, ?, NOW(), 'in_progress')
+    ");
+    $stmt->execute([$examId, $studentId]);
+
+    logExamAction('INFO', 'Student started exam', [
+        'exam_id' => $examId,
+        'exam_name' => $exam['name'],
+        'student_id' => $studentId
+    ]);
+
+    jsonResponse(['success' => true, 'message' => 'Ujian dimulai']);
+}
+
 function getExam()
 {
     $examId = (int)($_GET['exam_id'] ?? 0);
@@ -916,9 +984,10 @@ function getExam()
     }
 
     if ($role === 'siswa') {
-        $stmt = $db->prepare("SELECT id FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
+        $stmt = $db->prepare("SELECT id, status FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
         $stmt->execute([$examId, $_SESSION['user_id']]);
-        if ($stmt->fetch()) {
+        $submission = $stmt->fetch();
+        if ($submission && $submission['status'] === 'submitted') {
             jsonResponse(['success' => false, 'message' => 'Anda sudah mengerjakan ujian ini'], 409);
         }
     }
@@ -970,9 +1039,20 @@ function submitAnswers()
 
     $db = getDB();
 
-    $stmt = $db->prepare("SELECT id FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
+    // Check if submission exists
+    $stmt = $db->prepare("
+        SELECT id, status FROM exam_submissions 
+        WHERE exam_id = ? AND student_id = ? 
+        ORDER BY id DESC LIMIT 1
+    ");
     $stmt->execute([$examId, $_SESSION['user_id']]);
-    if ($stmt->fetch()) {
+    $submission = $stmt->fetch();
+
+    if (!$submission) {
+        jsonResponse(['success' => false, 'message' => 'Session ujian tidak ditemukan. Silakan mulai ujian terlebih dahulu.'], 400);
+    }
+
+    if ($submission['status'] === 'submitted') {
         jsonResponse(['success' => false, 'message' => 'Jawaban sudah dikumpulkan sebelumnya'], 409);
     }
 
@@ -1055,28 +1135,36 @@ function submitAnswers()
     }
 
     $scorePercentage = ($totalPointsPossible > 0) ? ($earnedPointsAuto / $totalPointsPossible) * 100 : 0;
-    $status = $hasEssay ? 'pending' : 'graded';
+    $newStatus = $hasEssay ? 'pending' : 'graded';
 
+    // UPDATE instead of INSERT
     $stmt = $db->prepare("
-        INSERT INTO exam_submissions (exam_id, student_id, answers_json, score, manual_score, total_score, status, time_taken_seconds, is_forced, submitted_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, NOW())
+        UPDATE exam_submissions 
+        SET answers_json = ?, 
+            score = ?, 
+            manual_score = ?, 
+            total_score = ?, 
+            status = ?, 
+            submitted_at = NOW(), 
+            time_taken_seconds = ?, 
+            is_forced = ?
+        WHERE id = ?
     ");
     $stmt->execute([
-        $examId,
-        $_SESSION['user_id'],
         json_encode($answerLog),
         (float)round($scorePercentage, 2),
         0.00,
         (float)round($scorePercentage, 2),
-        $status,
+        $newStatus,
         $timeTaken,
-        $forced ? 1 : 0
+        $forced ? 1 : 0,
+        $submission['id']
     ]);
 
     jsonResponse([
         'success'    => true,
         'message'    => 'Jawaban berhasil dikumpulkan',
-        'status'     => $status,
+        'status'     => $newStatus,
         'has_essay'  => $hasEssay,
         'time_taken' => $timeTaken
     ]);
@@ -1349,11 +1437,12 @@ function getExams()
         foreach ($exams as &$exam) {
             $exam['is_authorized'] = in_array($exam['id'], $authorized);
 
-            $stmtS = $db->prepare("SELECT id, is_forced FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
+            $stmtS = $db->prepare("SELECT id, is_forced, status FROM exam_submissions WHERE exam_id = ? AND student_id = ? LIMIT 1");
             $stmtS->execute([$exam['id'], $_SESSION['user_id']]);
             $sub = $stmtS->fetch();
-            $exam['is_submitted'] = (bool)$sub;
+            $exam['is_submitted'] = (bool)$sub && $sub['status'] === 'submitted';
             $exam['is_forced'] = $sub ? (bool)$sub['is_forced'] : false;
+            $exam['is_in_progress'] = (bool)$sub && $sub['status'] === 'in_progress';
         }
 
         jsonResponse(['success' => true, 'exams' => $exams]);

@@ -3,7 +3,7 @@
     <meta charset="UTF-8" />
     <meta
       name="viewport"
-      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select=none"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-select:none"
     />
     <title>Ujian — ExamSafe</title>
     <link rel="stylesheet" href="../css/style.css" />
@@ -1106,21 +1106,29 @@
           if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
         } catch (e) {}
 
-        ExamEngine.init(examId).then(() => {
-          const subDisp = document.getElementById("exam-subject-display");
-          const stdDisp = document.getElementById("exam-student-display");
-          const subj = document.getElementById("exam-subject-title");
-          const name = document.getElementById("exam-student-name");
-          const count = document.getElementById("exam-question-count");
-          const nameDisp = document.getElementById("exam-name-display");
-          const title = document.getElementById("exam-title-display");
+        // Start exam session BEFORE loading questions - PASS examId
+        ExamEngine.startExam(examId).then((success) => {
+          if (success) {
+            ExamEngine.init(examId).then(() => {
+              const subDisp = document.getElementById("exam-subject-display");
+              const stdDisp = document.getElementById("exam-student-display");
+              const count = document.getElementById("exam-question-count");
+              const nameDisp = document.getElementById("exam-name-display");
 
-          if (nameDisp && title) nameDisp.textContent = title.textContent;
-          if (subDisp && subj) subDisp.textContent = subj.textContent;
-          if (stdDisp && name) stdDisp.textContent = name.textContent;
-          if (count) count.textContent = ExamEngine.questions.length;
+              if (nameDisp && ExamEngine.examData)
+                nameDisp.textContent = ExamEngine.examData.name || "Ujian";
+              if (subDisp && ExamEngine.examData)
+                subDisp.textContent = ExamEngine.examData.subject || "-";
+              if (stdDisp && ExamEngine.studentData)
+                stdDisp.textContent = ExamEngine.studentData.full_name;
+              if (count) count.textContent = ExamEngine.questions.length;
 
-          buildNav();
+              buildNav();
+            });
+          } else {
+            // Error message already shown in startExam()
+            window.location.href = "dashboard.php";
+          }
         });
       }
 
