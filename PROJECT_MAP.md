@@ -33,14 +33,20 @@ ExamSafe/
 │   ├── question-bank.html # Manage question bank
 │   ├── results.html      # View exam results
 │   ├── students.html     # Manage students
+│   ├── register.html     # Teacher registration (refactored)
 │   └── settings.html     # Teacher settings (API keys)
 ├── student/              # Student exam interface
 │   ├── dashboard.php     # Student dashboard (POST forms for exam access)
 │   ├── exam.php          # Take exam interface (POST-only access)
-│   └── exam.html         # REDIRECTS to dashboard.php (deprecated)
+│   ├── exam.html         # REDIRECTS to dashboard.php (deprecated)
+│   └── register.html     # Student registration (refactored)
 ├── css/
-│   └── style.css         # Global styles
+│   ├── style.css         # Global styles
+│   └── register.css      # Shared registration styles (NEW)
 ├── js/
+│   ├── api-client.js     # SHARED - Base API client wrapper
+│   ├── student-api.js    # Student-specific API endpoints
+│   ├── register-common.js # SHARED - Registration utilities (NEW)
 │   ├── exam-manager.js   # SHARED - Exam management logic
 │   ├── exam.js           # Exam engine (timer, answers, submission)
 │   └── security.js       # Anti-cheat monitoring (attaches on exam start)
@@ -51,6 +57,8 @@ ExamSafe/
 │   ├── auth.php         # Authentication handling + rate limiting
 │   ├── logout.php       # Logout handler
 │   ├── ai_import.php    # AI question extraction
+│   ├── student_register.php # Student registration API
+│   ├── register.php     # Teacher registration API
 │   └── logs/            # Log files directory
 │       ├── ai_import.log    # AI extraction logs
 │       └── exam_actions.log # Exam action logs (reset, toleransi, violations)
@@ -64,7 +72,7 @@ ExamSafe/
 
 ## Core Files & Their Relationships
 
-### 1. **includes/csrf.php** (NEW - Security Module)
+### 1. **includes/csrf.php** (Security Module)
 
 **Purpose**: CSRF protection for all forms
 
@@ -87,7 +95,7 @@ ExamSafe/
 
 - `isLoggedIn()`, `requireLogin()`, `setSession()`, `clearSession()`, `isSessionExpired()`
 
-**New Rate Limiting Functions**:
+**Rate Limiting Functions**:
 | Function | Purpose |
 |----------|---------|
 | `checkExamRateLimit($examId)` | Limits to 3 attempts per 1 minute per exam per student |
@@ -159,17 +167,87 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 5. **student/exam.html** (Deprecated - Redirects to Dashboard)
+### 5. **js/api-client.js** (Base API Client)
 
-**Current Behavior**: Immediately redirects to `dashboard.php`
+**Purpose**: Shared API wrapper for all AJAX calls
 
-**Purpose**: Handles legacy bookmarks/links - prevents broken access
+**Key Methods**:
+| Method | Purpose |
+|--------|---------|
+| `ApiClient.request({url, method, data, csrfToken})` | Generic request handler |
+| `ApiClient.get(url)` | GET request shortcut |
+| `ApiClient.post(url, data, csrfToken)` | POST request shortcut |
 
-**Note**: Will be removed after confirming no external links remain.
+**Features**:
+
+- Automatic JSON serialization/deserialization
+- Credentials included (session cookie handling)
+- Optional CSRF token support
+- Centralized error handling
 
 ---
 
-### 6. **js/exam-manager.js** (SHARED MODULE)
+### 6. **js/register-common.js** (NEW - Registration Module)
+
+**Purpose**: Shared utilities for student/teacher registration pages
+
+**Modules**:
+
+| Module               | Purpose         | Key Methods                                                                   |
+| -------------------- | --------------- | ----------------------------------------------------------------------------- |
+| `RegisterUI`         | UI helpers      | `showAlert()`, `clearAlert()`, `setLoading()`                                 |
+| `RegisterValidation` | Form validation | `validateEmail()`, `validatePasswordStrength()`, `validateConfirmPassword()`  |
+| `RegisterAPI`        | API calls       | `registerStudent()`, `registerTeacher()`, `fetchClasses()`, `fetchSubjects()` |
+| `RegisterWizard`     | Step wizard     | `init()`, `nextStep()`, `prevStep()`, `goToStep()`                            |
+
+**CSS Dependencies**: Uses `css/register.css` for styling
+
+**API Endpoints Used**:
+
+- `GET ../php/exam_api.php?action=get_classes` - Fetch class list
+- `GET ../php/exam_api.php?action=get_subjects` - Fetch subject list
+- `POST ../php/student_register.php` - Submit student registration
+- `POST ../php/register.php` - Submit teacher registration
+
+**Coding Conventions**:
+
+- Zero inline CSS (all styles extracted to `register.css`)
+- Follows existing `api-client.js` pattern
+- Modular design for reusability
+- No breaking changes to existing functionality
+
+---
+
+### 7. **css/register.css** (NEW - Registration Styles)
+
+**Purpose**: Shared styles for registration pages
+
+**Key Classes**:
+
+| Class                                                                                                 | Purpose                     |
+| ----------------------------------------------------------------------------------------------------- | --------------------------- |
+| `.register-wrapper`, `.register-card`, `.register-logo`                                               | Container layouts           |
+| `.step-title`, `.step-subtitle`                                                                       | Step wizard typography      |
+| `.step-dots`, `.dot`, `.dot.active`, `.dot.done`                                                      | Step indicator              |
+| `.pw-strength`                                                                                        | Password strength indicator |
+| `.alert-info-sm`                                                                                      | Small info alert variant    |
+| `.input-readonly`                                                                                     | Readonly input styling      |
+| `.checkbox-label`, `.checkbox-input`                                                                  | Custom checkbox styling     |
+| `.login-link-section`, `.login-link-section-sm`                                                       | Login link containers       |
+| `.login-link`, `.login-link-primary`, `.login-link-primary-light`                                     | Login link variants         |
+| `.nav-buttons`, `.nav-btn-flex-1`, `.nav-btn-flex-2`                                                  | Navigation button layout    |
+| `.register-success`, `.register-success-icon`, `.register-success-title`, `.register-success-message` | Success message display     |
+
+**Design Principles**:
+
+- Utility-first approach
+- Responsive (mobile/tablet/desktop breakpoints)
+- CSS variables for theming (`var(--primary)`, `var(--success)`, etc.)
+- No inline styles required
+
+---
+
+### 8. **js/exam-manager.js** (SHARED MODULE)
 
 **Purpose**: Centralized exam management for both admin and teacher dashboards
 
@@ -196,7 +274,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 7. **js/security.js** (Student Exam Security)
+### 9. **js/security.js** (Student Exam Security)
 
 **Purpose**: Anti-cheat monitoring that only activates when exam officially starts
 
@@ -220,7 +298,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 8. **js/exam.js** (Exam Engine)
+### 10. **js/exam.js** (Exam Engine)
 
 **Purpose**: Manages exam taking experience for students
 
@@ -239,7 +317,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 9. **php/exam_api.php** (SHARED API)
+### 11. **php/exam_api.php** (SHARED API)
 
 **Purpose**: Handles all exam-related operations for all roles
 
@@ -255,6 +333,8 @@ Normal exam flow (agreement → security → questions)
 | `log_agreement`          | Siswa       | Record student agreement to exam rules                   |
 | `join_exam`              | Siswa       | Validate exam code and authorize access                  |
 | `start_exam`             | Siswa       | Initialize exam session in database                      |
+| `get_classes`            | Public      | Fetch list of classes (for registration)                 |
+| `get_subjects`           | Public      | Fetch list of subjects (for registration)                |
 
 **reset_student_result**:
 
@@ -275,9 +355,52 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-## Key Workflows (Updated)
+## Key Workflows
 
-### 1. Student Exam Access Flow (POST-only with CSRF)
+### 1. Student Registration Flow (Refactored)
+
+```
+Student loads register.html
+  ↓
+CSS loaded: style.css + register.css
+JS loaded: api-client.js + register-common.js
+  ↓
+RegisterAPI.fetchClasses() populates class dropdown
+  ↓
+Student fills form (fullname, NISN, class, username, password)
+  ↓
+Password strength checker validates in real-time
+  ↓
+Form submission → RegisterAPI.registerStudent()
+  ↓
+On success: Show success message with login link
+On error: Show alert via RegisterUI.showAlert()
+```
+
+### 2. Teacher Registration Flow (Refactored - Step Wizard)
+
+```
+Teacher loads register.html
+  ↓
+CSS loaded: style.css + register.css
+JS loaded: api-client.js + register-common.js
+  ↓
+RegisterWizard.init(3) initializes 3-step wizard
+RegisterAPI.fetchSubjects() populates subject dropdown
+  ↓
+Step 1: Personal data (name, gelar, email, phone)
+Step 2: Teaching data (subject, school)
+Step 3: Password creation + agreement
+  ↓
+Each step validated before proceeding
+  ↓
+Final submission → RegisterAPI.registerTeacher()
+  ↓
+On success: Show success message with login link
+On error: Show alert via RegisterUI.showAlert()
+```
+
+### 3. Student Exam Access Flow (POST-only with CSRF)
 
 ```
 Student clicks "Mulai Ujian" on dashboard
@@ -303,7 +426,7 @@ Clear $_SESSION['active_exam_id']
 Load agreement modal → security starts → exam begins
 ```
 
-### 2. Reset Student Result Flow (With Violation Clearing)
+### 4. Reset Student Result Flow (With Violation Clearing)
 
 ```
 Teacher clicks "Reset Hasil" (🔄) in Monitor Modal
@@ -328,7 +451,7 @@ Return success to frontend
 Monitor modal auto-refreshes (30s) → shows violation count as 0
 ```
 
-### 3. Student Exam Start Flow (Security Activation)
+### 5. Student Exam Start Flow (Security Activation)
 
 ```
 Student loads exam.php (after POST redirect)
@@ -350,7 +473,7 @@ Security monitoring ACTIVE for entire exam
 Violations logged to database (no blocking/force submit)
 ```
 
-### 4. Join Exam with Code Flow (Updated)
+### 6. Join Exam with Code Flow
 
 ```
 Student enters 8-character code in dashboard
@@ -364,7 +487,7 @@ On success: create POST form dynamically
 Submit POST to exam.php (same flow as regular exam access)
 ```
 
-### 5. Violation Viewing Flow (Teacher/Admin)
+### 7. Violation Viewing Flow (Teacher/Admin)
 
 ```
 Teacher clicks violation badge (⚠️ 2) in Monitor Modal or Results page
@@ -388,9 +511,45 @@ Monitor modal auto-refreshes with updated count
 
 ## Important Notes for Future Development
 
-### Recent Changes Summary (2026-04-18)
+### Recent Changes Summary
 
-**Security Hardening - POST-only Exam Access**:
+**2026-04-19 - Registration Pages Refactoring**:
+
+1. **New shared CSS file** (`css/register.css`):
+
+   - Extracted all inline styles from registration pages
+   - Utility-first approach with meaningful class names
+   - Responsive design preserved
+   - CSS variables for theming
+
+2. **New shared JS module** (`js/register-common.js`):
+
+   - `RegisterUI` - Alert and loading state management
+   - `RegisterValidation` - Email, password, required field validation
+   - `RegisterAPI` - API calls for registration, fetching classes/subjects
+   - `RegisterWizard` - Generic step wizard controller
+
+3. **Refactored student/register.html**:
+
+   - Zero inline CSS
+   - Uses shared `register-common.js` and `register.css`
+   - Password strength checker uses shared validation
+   - Follows existing API client pattern
+
+4. **Refactored teacher/register.html**:
+
+   - Zero inline CSS
+   - Uses shared wizard component
+   - Step validation using shared functions
+   - Consistent alert/loading patterns
+
+5. **Coding conventions established**:
+   - No inline styles - all CSS must have meaningful class names
+   - Shared modules should follow `api-client.js` pattern
+   - UI helpers (alerts, loading) should use `RegisterUI` pattern
+   - Validation logic should use `RegisterValidation` pattern
+
+**2026-04-18 - Security Hardening - POST-only Exam Access**:
 
 1. **POST-only exam.php** - No longer accepts GET parameters, uses session-stored exam_id
 2. **CSRF protection** - All exam access forms include tokens validated via `includes/csrf.php`
@@ -401,7 +560,7 @@ Monitor modal auto-refreshes with updated count
 7. **Join exam updated** - Uses JavaScript POST form submission instead of GET redirect
 8. **exam.html deprecated** - Now redirects to dashboard (handles legacy bookmarks)
 
-**Previous Changes (2026-04-16)**:
+**2026-04-16 - Previous Changes**:
 
 1. Removed student blocking - No more 3-strike force submit
 2. Security only activates on exam start - Listeners attached only when student clicks final "Mulai Ujian"
@@ -410,7 +569,7 @@ Monitor modal auto-refreshes with updated count
 5. Violation management: Teachers can view violation history, Admin can delete any violation
 6. Admin violations table - Clickable rows with delete functionality
 
-### Critical Constraints (Updated)
+### Critical Constraints
 
 1. **Active exams cannot be deleted** (check in deleteExam function)
 2. **Reset now deletes submissions AND violations** (changed from "keeps violations")
@@ -421,6 +580,26 @@ Monitor modal auto-refreshes with updated count
 7. **exam.php requires POST then redirect** - Direct GET access without session → dashboard redirect
 8. **CSRF tokens required** for all exam access forms (dashboard, join exam)
 9. **Rate limiting active** - 3 failed attempts = 1 minute block
+10. **Registration pages use shared CSS/JS** - No inline styles allowed in register forms
+
+### Coding Conventions (New)
+
+**For Registration Pages**:
+
+- Use `css/register.css` for all styles
+- Import `js/register-common.js` for all functionality
+- Never use inline styles or inline scripts beyond initialization
+- Use `RegisterUI.showAlert()` for messages
+- Use `RegisterUI.setLoading()` for button states
+- Use `RegisterValidation` for form validation
+- Use `RegisterAPI` for all API calls
+- Use `RegisterWizard` for multi-step forms
+
+**For API Client**:
+
+- All AJAX calls must use `ApiClient` (not raw fetch)
+- Include credentials for session-based auth
+- Handle errors at component level
 
 ### Log Files
 
@@ -442,8 +621,8 @@ Monitor modal auto-refreshes with updated count
 
 ## Last Updated
 
-**Date**: 2026-04-18
-**Developer**: Security hardening - POST-only exam access with CSRF + rate limiting
+**Date**: 2026-04-19
+**Developer**: Registration pages refactoring - extracted inline CSS/JS to shared modules
 **Status**: Active development
 
 ---
@@ -459,7 +638,9 @@ When returning to this project, review:
 5. **`js/security.js`** - Security starts ONLY on exam begin (critical for fair exams)
 6. **`js/exam-manager.js`** - Monitor modal with search, auto-refresh, violation details
 7. **`php/exam_api.php`** - resetStudentResult now clears violations with transaction
-8. This PROJECT_MAP.md - For latest workflow understanding
+8. **`js/register-common.js`** - Registration utilities (alerts, validation, API, wizard)
+9. **`css/register.css`** - Registration page styles (utility-first, responsive)
+10. This PROJECT_MAP.md - For latest workflow understanding
 
 ## Breaking Changes for Future Development
 
@@ -468,3 +649,5 @@ When returning to this project, review:
 3. **Rate limit is per exam per student** - Different exams have separate counters
 4. **exam.html is deprecated** - Remove after confirming no external links remain
 5. **Session key `active_exam_id`** is single-use (cleared after reading)
+6. **Registration pages require shared CSS/JS** - No inline styles or scripts
+7. **New registration pages must follow pattern** - Use `register-common.js` and `register.css`

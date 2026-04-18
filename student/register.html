@@ -1,135 +1,193 @@
 <!DOCTYPE html>
 <html lang="id">
-<head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Daftar Siswa — ExamSafe</title>
-  <link rel="stylesheet" href="../css/style.css">
-  <style>
-    body { background: linear-gradient(135deg, #1a3c6e 0%, #2563eb 50%, #0ea5e9 100%); min-height: 100vh; display: flex; align-items: center; justify-content: center; padding: 20px; }
-    .register-wrapper { width: 100%; max-width: 500px; }
-    .register-card { background: #fff; border-radius: 20px; padding: 36px; box-shadow: 0 20px 60px rgba(0,0,0,0.25); }
-    .logo { text-align: center; margin-bottom: 24px; color: #fff; }
-    .logo h1 span { color: #fbbf24; }
-  </style>
-</head>
-<body>
-  <div class="register-wrapper">
-    <div class="logo">
-      <h1>🎓 Exam<span>Safe</span></h1>
-      <p>Pendaftaran Akun Siswa</p>
-    </div>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Daftar Siswa — ExamSafe</title>
+    <link rel="stylesheet" href="../css/style.css" />
+    <link rel="stylesheet" href="../css/register.css" />
+  </head>
+  <body>
+    <div class="register-wrapper">
+      <div class="register-logo">
+        <h1>🎓 Exam<span>Safe</span></h1>
+        <p>Pendaftaran Akun Siswa</p>
+      </div>
 
-    <div class="register-card">
-      <div id="alert-box"></div>
-      
-      <form id="reg-form" onsubmit="submitRegister(event)">
-        <div class="form-group">
-          <label>Nama Lengkap *</label>
-          <input type="text" id="fullname" class="form-control" placeholder="Nama sesuai ijazah" required>
-        </div>
-        <div class="form-row">
+      <div class="register-card">
+        <div id="alert-box"></div>
+
+        <form id="reg-form" onsubmit="submitRegister(event)">
           <div class="form-group">
-            <label>NISN *</label>
-            <input type="text" id="nisn" class="form-control" placeholder="10 digit NISN" required>
+            <label>Nama Lengkap *</label>
+            <input
+              type="text"
+              id="fullname"
+              class="form-control"
+              placeholder="Nama sesuai ijazah"
+              required
+            />
+          </div>
+          <div class="form-row">
+            <div class="form-group">
+              <label>NISN *</label>
+              <input
+                type="text"
+                id="nisn"
+                class="form-control"
+                placeholder="10 digit NISN"
+                required
+              />
+            </div>
+            <div class="form-group">
+              <label>Kelas *</label>
+              <select id="class" class="form-control" required>
+                <option value="">-- Pilih Kelas --</option>
+              </select>
+            </div>
           </div>
           <div class="form-group">
-            <label>Kelas *</label>
-            <select id="class" class="form-control" required>
-              <option value="">-- Pilih Kelas --</option>
-              <!-- Dynamic -->
-            </select>
+            <label>Username *</label>
+            <input
+              type="text"
+              id="username"
+              class="form-control"
+              placeholder="Untuk login (bebas)"
+              required
+            />
           </div>
-        </div>
-        <div class="form-group">
-          <label>Username *</label>
-          <input type="text" id="username" class="form-control" placeholder="Untuk login (bebas)" required>
-        </div>
-        <div class="form-group">
-          <label>Password *</label>
-          <input type="password" id="password" class="form-control" placeholder="Minimal 6 karakter" required>
-        </div>
-        
-        <div class="alert alert-info" style="font-size: 0.85rem;">
-          ℹ️ Akun Anda akan aktif setelah disetujui oleh Admin Sekolah.
-        </div>
+          <div class="form-group">
+            <label>Password *</label>
+            <input
+              type="password"
+              id="password"
+              class="form-control"
+              placeholder="Minimal 6 karakter"
+              required
+            />
+            <div id="pw-strength" class="pw-strength"></div>
+          </div>
 
-        <button type="submit" class="btn btn-primary btn-block btn-lg">Daftar Akun</button>
-      </form>
+          <div class="alert alert-info alert-info-sm">
+            ℹ️ Akun Anda akan aktif setelah disetujui oleh Admin Sekolah.
+          </div>
 
-        <div
-          style="
-            text-align: center;
-            margin-top: 20px;
-            font-size: 0.88rem;
-            color: #64748b;
-          "
-        >
-          Sudah punya akun?
-          <a href="../index.php" style="color: var(--primary); font-weight: 600"
-            >Login</a
+          <button
+            type="submit"
+            id="submit-btn"
+            class="btn btn-primary btn-block btn-lg"
           >
+            Daftar Akun
+          </button>
+        </form>
+
+        <div class="login-link-section">
+          Sudah punya akun?
+          <a href="../index.php" class="login-link login-link-primary">Login</a>
+        </div>
       </div>
     </div>
-  </div>
 
-  <script>
-    // Fetch classes
-    async function fetchClasses() {
-      try {
-        const response = await fetch('../php/exam_api.php?action=get_classes', { credentials: 'include' });
-        const data = await response.json();
-        if (data.success) {
-          const select = document.getElementById('class');
-          data.classes.forEach(c => {
-            const opt = document.createElement('option');
-            opt.value = c.name;
-            opt.textContent = c.name;
-            select.appendChild(opt);
-          });
+    <script src="../js/api-client.js"></script>
+    <script src="../js/register-common.js"></script>
+    <script>
+      // Load classes on page load
+      RegisterAPI.fetchClasses("class");
+
+      // Password strength checker
+      const passwordInput = document.getElementById("password");
+      const strengthDiv = document.getElementById("pw-strength");
+
+      passwordInput.addEventListener("input", function () {
+        const validation = RegisterValidation.validatePasswordStrength(
+          this.value
+        );
+        const strengthText = RegisterValidation.getPasswordStrengthText(
+          validation.strength
+        );
+        strengthDiv.innerHTML = `<span style="color: ${strengthText.color}">${strengthText.text}</span>`;
+      });
+
+      async function submitRegister(e) {
+        e.preventDefault();
+
+        const alertBox = "alert-box";
+        RegisterUI.clearAlert(alertBox);
+
+        // Validate form
+        const fullname = document.getElementById("fullname").value.trim();
+        const nisn = document.getElementById("nisn").value.trim();
+        const studentClass = document.getElementById("class").value;
+        const username = document.getElementById("username").value.trim();
+        const password = document.getElementById("password").value;
+
+        if (!fullname) {
+          RegisterUI.showAlert(alertBox, "Nama lengkap wajib diisi", "danger");
+          return;
         }
-      } catch (e) { console.error('Error fetching classes:', e); }
-    }
-    fetchClasses();
 
-    async function submitRegister(e) {
-      e.preventDefault();
-      const alertBox = document.getElementById('alert-box');
-      alertBox.innerHTML = '<div class="alert alert-info">Memproses pendaftaran...</div>';
+        if (!nisn) {
+          RegisterUI.showAlert(alertBox, "NISN wajib diisi", "danger");
+          return;
+        }
 
-      const data = {
-        full_name: document.getElementById('fullname').value,
-        nisn: document.getElementById('nisn').value,
-        class: document.getElementById('class').value,
-        username: document.getElementById('username').value,
-        password: document.getElementById('password').value
-      };
+        if (nisn.length < 10) {
+          RegisterUI.showAlert(alertBox, "NISN minimal 10 digit", "danger");
+          return;
+        }
 
-      try {
-        const response = await fetch('../php/student_register.php', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(data),
-          credentials: 'include'
-        });
-        const result = await response.json();
+        if (!studentClass) {
+          RegisterUI.showAlert(alertBox, "Kelas wajib dipilih", "danger");
+          return;
+        }
 
-        if (result.success) {
-          document.querySelector('.register-card').innerHTML = `
-            <div style="text-align:center; padding:20px">
-              <div style="font-size:4rem; margin-bottom:16px">⏳</div>
-              <h3 style="color:var(--primary); margin-bottom:8px">Pendaftaran Terkirim!</h3>
-              <p style="color:#64748b; margin-bottom:24px">Akun Anda sedang menunggu persetujuan Admin. Silakan cek secara berkala atau hubungi wali kelas.</p>
+        if (!username) {
+          RegisterUI.showAlert(alertBox, "Username wajib diisi", "danger");
+          return;
+        }
+
+        const passwordValidation =
+          RegisterValidation.validatePasswordStrength(password);
+        if (!passwordValidation.valid) {
+          RegisterUI.showAlert(alertBox, passwordValidation.message, "danger");
+          return;
+        }
+
+        const submitBtn = document.getElementById("submit-btn");
+        RegisterUI.setLoading(submitBtn, true, "Daftar Akun");
+
+        try {
+          const result = await RegisterAPI.registerStudent({
+            full_name: fullname,
+            nisn: nisn,
+            class: studentClass,
+            username: username,
+            password: password,
+          });
+
+          if (result.success) {
+            // Show success message
+            document.querySelector(".register-card").innerHTML = `
+            <div class="register-success">
+              <div class="register-success-icon">⏳</div>
+              <h3 class="register-success-title">Pendaftaran Terkirim!</h3>
+              <p class="register-success-message">Akun Anda sedang menunggu persetujuan Admin. Silakan cek secara berkala atau hubungi wali kelas.</p>
               <a href="../index.php" class="btn btn-primary btn-block">Kembali ke Login</a>
             </div>
           `;
-        } else {
-          alertBox.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
+          } else {
+            RegisterUI.showAlert(alertBox, `❌ ${result.message}`, "danger");
+            RegisterUI.setLoading(submitBtn, false, "Daftar Akun");
+          }
+        } catch (error) {
+          RegisterUI.showAlert(
+            alertBox,
+            "❌ Kesalahan koneksi ke server.",
+            "danger"
+          );
+          RegisterUI.setLoading(submitBtn, false, "Daftar Akun");
         }
-      } catch (error) {
-        alertBox.innerHTML = '<div class="alert alert-danger">❌ Kesalahan koneksi ke server.</div>';
       }
-    }
-  </script>
-</body>
+    </script>
+  </body>
 </html>
