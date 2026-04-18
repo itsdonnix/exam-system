@@ -1,60 +1,7 @@
 <?php
-session_set_cookie_params([
-  'lifetime' => 0,
-  'path' => '/',
-  'domain' => '',
-  'secure' => false,
-  'httponly' => true,
-  'samesite' => 'Lax'
-]);
-
-if (session_status() === PHP_SESSION_NONE) {
-  session_start();
-}
-
-// Include authentication helpers
-require_once '../includes/auth.php';
-
-// Require login with guru role, redirects to ../index.php if fails
-requireLogin('guru');
-
-// Refresh session timer to prevent timeout while viewing dashboard
-$_SESSION['login_time'] = time();
-
-// Fetch teacher data from database (eliminates get_profile API call)
-require_once '../php/db.php';
-$db = getDB();
-
-try {
-  $stmt = $db->prepare("SELECT full_name, gelar, subject FROM teachers WHERE id = ?");
-  $stmt->execute([$_SESSION['user_id']]);
-  $teacher = $stmt->fetch();
-
-  if (!$teacher) {
-    // Fallback to session data if database returns nothing
-    error_log("[Dashboard] Teacher not found in DB for user_id: " . $_SESSION['user_id'] . ", using session fallback");
-    $teacher = [
-      'full_name' => $_SESSION['full_name'] ?? 'Guru',
-      'gelar' => '',
-      'subject' => 'Guru'
-    ];
-  }
-} catch (Exception $e) {
-  // Log error but never break the page
-  error_log("[Dashboard] Failed to fetch teacher data: " . $e->getMessage() . " (user_id: " . $_SESSION['user_id'] . ")");
-  $teacher = [
-    'full_name' => $_SESSION['full_name'] ?? 'Guru',
-    'gelar' => '',
-    'subject' => 'Guru'
-  ];
-}
-
-// Build display name with gelar (e.g., "Dr. Ahmad, M.Pd")
-$fullNameWithGelar = trim($teacher['full_name'] . ($teacher['gelar'] ? ', ' . $teacher['gelar'] : ''));
-// Get first character for avatar (UTF-8 safe)
-$firstChar = !empty($teacher['full_name']) ? mb_strtoupper(mb_substr($teacher['full_name'], 0, 1, 'UTF-8'), 'UTF-8') : 'G';
-// Subject fallback to 'Guru' if not set
-$teacherSubject = !empty($teacher['subject']) ? $teacher['subject'] : 'Guru';
+// Initialize shared teacher data and authentication
+require_once 'includes/init.php';
+$activePage = 'dashboard';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -65,6 +12,7 @@ $teacherSubject = !empty($teacher['subject']) ? $teacher['subject'] : 'Guru';
   <title>Dashboard Guru — ExamSafe</title>
   <link rel="stylesheet" href="../css/style.css" />
   <style>
+    /* Page-specific styles only */
     .exam-card {
       background: #fff;
       border-radius: 14px;
@@ -181,277 +129,153 @@ $teacherSubject = !empty($teacher['subject']) ? $teacher['subject'] : 'Guru';
         background-position: -200% 0;
       }
     }
-
-    /* Modal Styles */
-    .modal-overlay {
-      display: none;
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0, 0, 0, 0.5);
-      z-index: 1000;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-overlay.active {
-      display: flex;
-    }
-
-    .modal {
-      background: #fff;
-      border-radius: 16px;
-      max-width: 900px;
-      width: 90%;
-      max-height: 85vh;
-      overflow-y: auto;
-      padding: 24px;
-      position: relative;
-    }
-
-    .modal-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      margin-bottom: 20px;
-      padding-bottom: 12px;
-      border-bottom: 1px solid #e2e8f0;
-    }
-
-    .modal-title {
-      font-size: 1.25rem;
-      font-weight: 700;
-      color: var(--primary);
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #64748b;
-      transition: color 0.2s;
-    }
-
-    .modal-close:hover {
-      color: var(--danger);
-    }
   </style>
 </head>
 
 <body>
-  <nav class="navbar">
-    <div style="display: flex; align-items: center; gap: 12px">
-      <button
-        class="hamburger-btn"
-        id="hamburgerBtn"
-        aria-label="Toggle menu">
-        <span></span><span></span><span></span>
-      </button>
-      <div class="navbar-brand">
-        🎓 Exam<span>Safe</span>
-        <span
-          style="
-              font-size: 0.75rem;
-              background: rgba(255, 255, 255, 0.2);
-              padding: 2px 8px;
-              border-radius: 50px;
-              margin-left: 8px;
-            ">GURU</span>
+  <?php include 'includes/header.php'; ?>
+  <?php include 'includes/sidebar.php'; ?>
+
+  <!-- Page Header -->
+  <div class="page-header">
+    <div>
+      <div class="page-title">Dashboard Guru</div>
+      <div class="page-subtitle">Selamat datang, <?= htmlspecialchars($teacherData['full_name_with_gelar']) ?> — <?= htmlspecialchars($teacherData['subject']) ?></div>
+    </div>
+    <a href="create-exam.html" class="btn btn-primary">➕ Buat Ujian Baru</a>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-grid">
+    <div class="stat-card">
+      <div class="stat-icon">📝</div>
+      <div>
+        <div class="stat-value">-</div>
+        <div class="stat-label">Total Ujian</div>
       </div>
     </div>
-    <div class="navbar-nav">
-      <div class="nav-user">
-        <div class="nav-avatar"><?= htmlspecialchars($firstChar) ?></div>
-        <span><?= htmlspecialchars($fullNameWithGelar) ?></span>
+    <div class="stat-card" style="border-left-color: var(--success)">
+      <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1)">
+        ✅
       </div>
-      <a
-        href="../php/logout.php"
-        class="btn btn-sm btn-outline"
-        style="color: #fff; border-color: rgba(255, 255, 255, 0.4)">Keluar</a>
+      <div>
+        <div class="stat-value" style="color: var(--success)">-</div>
+        <div class="stat-label">Ujian Aktif</div>
+      </div>
     </div>
-  </nav>
-
-  <div class="sidebar-overlay" id="sidebarOverlay"></div>
-
-  <div class="layout">
-    <aside class="sidebar" id="sidebar">
-      <div class="sidebar-avatar-section">
-        <div
-          class="sidebar-avatar"
-          id="sidebarAvatar"
-          style="background: var(--accent)">
-          <?= htmlspecialchars($firstChar) ?>
-        </div>
-        <div class="sidebar-avatar-name" id="sidebarAvatarName">
-          <?= htmlspecialchars($fullNameWithGelar) ?>
-        </div>
-        <div class="sidebar-avatar-role" id="sidebarAvatarRole">Guru</div>
+    <div class="stat-card" style="border-left-color: var(--accent)">
+      <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1)">
+        👨‍🎓
       </div>
-      <ul class="sidebar-menu">
-        <li>
-          <a href="dashboard.php" class="active"><span class="icon">🏠</span> Dashboard</a>
-        </li>
-        <li>
-          <a href="create-exam.html"><span class="icon">➕</span> Buat Ujian Baru</a>
-        </li>
-        <li>
-          <a href="question-bank.html"><span class="icon">📚</span> Bank Soal</a>
-        </li>
-        <li>
-          <a href="results.html"><span class="icon">📊</span> Hasil Ujian</a>
-        </li>
-        <li>
-          <a href="students.html"><span class="icon">👥</span> Data Siswa</a>
-        </li>
-        <li>
-          <a href="settings.html"><span class="icon">⚙️</span> Pengaturan</a>
-        </li>
-      </ul>
-    </aside>
-
-    <main class="main-content">
-      <div class="page-header">
-        <div>
-          <div class="page-title">Dashboard Guru</div>
-          <div class="page-subtitle">Selamat datang, <?= htmlspecialchars($fullNameWithGelar) ?> — <?= htmlspecialchars($teacherSubject) ?></div>
-        </div>
-        <a href="create-exam.html" class="btn btn-primary">➕ Buat Ujian Baru</a>
+      <div>
+        <div class="stat-value" style="color: var(--accent)">-</div>
+        <div class="stat-label">Total Siswa</div>
       </div>
+    </div>
+    <div class="stat-card" style="border-left-color: var(--secondary)">
+      <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1)">
+        ⭐
+      </div>
+      <div>
+        <div class="stat-value" style="color: var(--secondary)">-</div>
+        <div class="stat-label">Rata-rata Nilai</div>
+      </div>
+    </div>
+  </div>
 
-      <!-- Stats -->
-      <div class="stats-grid">
-        <div class="stat-card">
-          <div class="stat-icon">📝</div>
-          <div>
-            <div class="stat-value">-</div>
-            <div class="stat-label">Total Ujian</div>
-          </div>
-        </div>
-        <div class="stat-card" style="border-left-color: var(--success)">
-          <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1)">
-            ✅
-          </div>
-          <div>
-            <div class="stat-value" style="color: var(--success)">-</div>
-            <div class="stat-label">Ujian Aktif</div>
-          </div>
-        </div>
-        <div class="stat-card" style="border-left-color: var(--accent)">
-          <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1)">
-            👨‍🎓
-          </div>
-          <div>
-            <div class="stat-value" style="color: var(--accent)">-</div>
-            <div class="stat-label">Total Siswa</div>
-          </div>
-        </div>
-        <div class="stat-card" style="border-left-color: var(--secondary)">
-          <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1)">
-            ⭐
-          </div>
-          <div>
-            <div class="stat-value" style="color: var(--secondary)">-</div>
-            <div class="stat-label">Rata-rata Nilai</div>
-          </div>
+  <!-- Quick Actions -->
+  <div class="quick-actions">
+    <div
+      class="quick-action-card"
+      onclick="window.location.href='create-exam.html'">
+      <div class="icon">📝</div>
+      <h4>Buat Ujian Baru</h4>
+      <p>Tambah soal pilihan ganda & esai</p>
+    </div>
+    <div
+      class="quick-action-card"
+      onclick="window.location.href='question-bank.html'">
+      <div class="icon">📚</div>
+      <h4>Bank Soal</h4>
+      <p>Kelola soal untuk digunakan kembali</p>
+    </div>
+    <div
+      class="quick-action-card"
+      onclick="window.location.href='results.html'">
+      <div class="icon">📊</div>
+      <h4>Lihat Hasil Ujian</h4>
+      <p>Laporan nilai dan statistik siswa</p>
+    </div>
+    <div class="quick-action-card" onclick="showMonitorForFirstExam()">
+      <div class="icon">👁️</div>
+      <h4>Monitor Ujian</h4>
+      <p>Pantau aktivitas siswa real-time</p>
+    </div>
+    <div class="quick-action-card">
+      <div class="icon">📤</div>
+      <h4>Export Nilai</h4>
+      <p>Download laporan dalam format Excel</p>
+    </div>
+  </div>
+
+  <!-- Exam List -->
+  <div class="card">
+    <div
+      class="page-header"
+      style="margin-bottom: 20px; flex-wrap: wrap; gap: 12px">
+      <div style="flex: 1">
+        <div class="page-title" style="font-size: 1.1rem">
+          📋 Daftar Ujian Saya
         </div>
       </div>
-
-      <!-- Quick Actions -->
-      <div class="quick-actions">
-        <div
-          class="quick-action-card"
-          onclick="window.location.href='create-exam.html'">
-          <div class="icon">📝</div>
-          <h4>Buat Ujian Baru</h4>
-          <p>Tambah soal pilihan ganda & esai</p>
-        </div>
-        <div
-          class="quick-action-card"
-          onclick="window.location.href='question-bank.html'">
-          <div class="icon">📚</div>
-          <h4>Bank Soal</h4>
-          <p>Kelola soal untuk digunakan kembali</p>
-        </div>
-        <div
-          class="quick-action-card"
-          onclick="window.location.href='results.html'">
-          <div class="icon">📊</div>
-          <h4>Lihat Hasil Ujian</h4>
-          <p>Laporan nilai dan statistik siswa</p>
-        </div>
-        <div class="quick-action-card" onclick="showMonitorForFirstExam()">
-          <div class="icon">👁️</div>
-          <h4>Monitor Ujian</h4>
-          <p>Pantau aktivitas siswa real-time</p>
-        </div>
-        <div class="quick-action-card">
-          <div class="icon">📤</div>
-          <h4>Export Nilai</h4>
-          <p>Download laporan dalam format Excel</p>
-        </div>
-      </div>
-
-      <!-- Exam List -->
-      <div class="card">
-        <div
-          class="page-header"
-          style="margin-bottom: 20px; flex-wrap: wrap; gap: 12px">
-          <div style="flex: 1">
-            <div class="page-title" style="font-size: 1.1rem">
-              📋 Daftar Ujian Saya
-            </div>
-          </div>
-          <div
-            style="
+      <div
+        style="
                 display: flex;
                 gap: 10px;
                 flex: 2;
                 justify-content: flex-end;
                 flex-wrap: wrap;
               ">
-            <input
-              type="text"
-              id="examSearch"
-              class="form-control"
-              placeholder="Cari nama ujian atau kelas..."
-              style="max-width: 300px; padding: 8px 14px" />
-            <a href="create-exam.html" class="btn btn-primary btn-sm">+ Tambah</a>
-          </div>
-        </div>
+        <input
+          type="text"
+          id="examSearch"
+          class="form-control"
+          placeholder="Cari nama ujian atau kelas..."
+          style="max-width: 300px; padding: 8px 14px" />
+        <a href="create-exam.html" class="btn btn-primary btn-sm">+ Tambah</a>
+      </div>
+    </div>
 
-        <div id="exam-list">
+    <div id="exam-list">
+      <!-- Skeleton will be shown here -->
+    </div>
+  </div>
+
+  <!-- Recent Violations -->
+  <div class="card mt-3">
+    <div
+      class="page-title"
+      style="font-size: 1.1rem; margin-bottom: 16px">
+      ⚠️ Pelanggaran Terbaru
+    </div>
+    <div class="table-wrapper">
+      <table>
+        <thead>
+          <tr>
+            <th>Siswa</th>
+            <th>Ujian</th>
+            <th>Pelanggaran</th>
+            <th>Waktu</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="violations-tbody">
           <!-- Skeleton will be shown here -->
-        </div>
-      </div>
-
-      <!-- Recent Violations -->
-      <div class="card mt-3">
-        <div
-          class="page-title"
-          style="font-size: 1.1rem; margin-bottom: 16px">
-          ⚠️ Pelanggaran Terbaru
-        </div>
-        <div class="table-wrapper">
-          <table>
-            <thead>
-              <tr>
-                <th>Siswa</th>
-                <th>Ujian</th>
-                <th>Pelanggaran</th>
-                <th>Waktu</th>
-                <th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="violations-tbody">
-              <!-- Skeleton will be shown here -->
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </main>
+        </tbody>
+      </table>
+    </div>
+  </div>
+  </main>
   </div>
 
   <!-- Monitor Modal -->
@@ -542,26 +366,8 @@ $teacherSubject = !empty($teacher['subject']) ? $teacher['subject'] : 'Guru';
   </div>
 
   <script src="../js/exam-manager.js"></script>
+  <script src="../js/teacher-layout.js"></script>
   <script>
-    // Sidebar toggle functionality
-    const hamburgerBtn = document.getElementById("hamburgerBtn");
-    const sidebar = document.getElementById("sidebar");
-    const sidebarOverlay = document.getElementById("sidebarOverlay");
-
-    if (hamburgerBtn) {
-      hamburgerBtn.addEventListener("click", () => {
-        sidebar.classList.toggle("sidebar-open");
-        sidebarOverlay.classList.toggle("sidebar-overlay-visible");
-      });
-    }
-
-    if (sidebarOverlay) {
-      sidebarOverlay.addEventListener("click", () => {
-        sidebar.classList.remove("sidebar-open");
-        sidebarOverlay.classList.remove("sidebar-overlay-visible");
-      });
-    }
-
     // Initialize ExamManager for teacher
     let examManager = null;
 

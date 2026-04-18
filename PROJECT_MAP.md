@@ -28,12 +28,16 @@ ExamSafe/
 │   ├── settings.html     # System settings
 │   └── security-logs.html # Security violation logs
 ├── teacher/              # Teacher dashboard files
-│   ├── dashboard.php     # Main teacher dashboard (PHP with auth & server-side data)
+│   ├── includes/         # NEW - Shared teacher components
+│   │   ├── init.php      # Shared auth + teacher data fetch
+│   │   ├── header.php    # Reusable navbar
+│   │   └── sidebar.php   # Reusable sidebar with active page support
+│   ├── dashboard.php     # Main teacher dashboard (uses shared includes)
 │   ├── dashboard.html    # REDIRECTS to dashboard.php (deprecated)
-│   ├── create-exam.html  # Create/edit exams
-│   ├── question-bank.html # Manage question bank
-│   ├── results.html      # View exam results
-│   ├── students.html     # Manage students
+│   ├── create-exam.html  # Create/edit exams (to be migrated)
+│   ├── question-bank.html # Manage question bank (to be migrated)
+│   ├── results.html      # View exam results (to be migrated)
+│   ├── students.html     # Manage students (to be migrated)
 │   ├── register.html     # Teacher registration (refactored)
 │   └── settings.html     # Teacher settings (API keys)
 ├── student/              # Student exam interface
@@ -42,7 +46,7 @@ ExamSafe/
 │   ├── exam.html         # REDIRECTS to dashboard.php (deprecated)
 │   └── register.html     # Student registration (refactored)
 ├── css/
-│   ├── style.css         # Global styles
+│   ├── style.css         # Global styles (includes modal + sidebar styles)
 │   └── register.css      # Shared registration styles
 ├── js/
 │   ├── api-client.js     # SHARED - Base API client wrapper
@@ -50,7 +54,8 @@ ExamSafe/
 │   ├── register-common.js # SHARED - Registration utilities
 │   ├── exam-manager.js   # SHARED - Exam management logic
 │   ├── exam.js           # Exam engine (timer, answers, submission)
-│   └── security.js       # Anti-cheat monitoring (attaches on exam start)
+│   ├── security.js       # Anti-cheat monitoring (attaches on exam start)
+│   └── teacher-layout.js # NEW - Shared sidebar toggle for teacher pages
 ├── php/
 │   ├── db.php           # Database connection
 │   ├── exam_api.php     # SHARED - Exam operations API
@@ -106,48 +111,124 @@ ExamSafe/
 
 ---
 
-### 3. **teacher/dashboard.php** (UPDATED - Server-Side Teacher Data)
+### 3. **teacher/includes/init.php** (NEW - Shared Initialization)
 
-**Purpose**: Main teacher dashboard with server-side authentication and data injection
+**Purpose**: Centralized session config, authentication, and teacher data fetching for all teacher pages
 
 **Key Features**:
 
-- Session configuration matching `exam_api.php` (SameSite=Lax, path=/)
-- `requireLogin('guru')` authentication check
-- Session timer refresh on each load
-- **Database query to fetch teacher data** (full_name, gelar, subject) - eliminates `get_profile` API call
-- Teacher name, avatar, and subject rendered server-side (no "Memuat..." flicker)
-- UTF-8 multibyte support using `mb_substr()` and `mb_strtoupper()`
-- Error logging with fallbacks (never breaks UI)
-- Removed `get_profile` API call from JavaScript
+- Session cookie configuration (SameSite=Lax, path=/)
+- Session start with proper checks
+- `requireLogin('guru')` authentication
+- Session timer refresh
+- Database query for teacher data (full_name, gelar, subject)
+- Builds `$teacherData` array with:
+  - `full_name`, `gelar`, `full_name_with_gelar`, `subject`, `avatar_initial`
+- Error logging with session fallback
+- Sets default `$activePage` if not defined
+
+**Usage Pattern**:
+
+```php
+<?php
+require_once 'includes/init.php';
+$activePage = 'dashboard'; // or 'exams', 'students', etc.
+?>
+```
+
+---
+
+### 4. **teacher/includes/header.php** (NEW - Reusable Navbar)
+
+**Purpose**: Shared navbar component for all teacher pages
+
+**Dependencies**: Requires `$teacherData` array from `init.php`
+
+**Contents**:
+
+- Navbar with brand, user avatar, name, and logout button
+- Hamburger button for mobile (no JS - handled by teacher-layout.js)
+
+---
+
+### 5. **teacher/includes/sidebar.php** (NEW - Reusable Sidebar)
+
+**Purpose**: Shared sidebar component with active page highlighting
+
+**Dependencies**: Requires `$teacherData` array and `$activePage` variable from `init.php`
+
+**Features**:
+
+- Avatar section with teacher name
+- Menu items with conditional `active` class based on `$activePage`
+- Wraps main content opening tag (requires closing `</main></div>` in parent)
+
+**Menu Items**:
+
+- Dashboard (`dashboard`)
+- Buat Ujian Baru (`create-exam`)
+- Bank Soal (`question-bank`)
+- Hasil Ujian (`results`)
+- Data Siswa (`students`)
+- Pengaturan (`settings`)
+
+---
+
+### 6. **js/teacher-layout.js** (NEW - Shared Sidebar Toggle)
+
+**Purpose**: Centralized sidebar toggle functionality for all teacher pages
+
+**Features**:
+
+- Hamburger button click handler
+- Sidebar overlay click handler
+- Auto-close sidebar on mobile when menu link clicked
+- Uses CSS classes: `sidebar-open`, `sidebar-overlay-visible`
+
+**Integration**: Include after `exam-manager.js` in any teacher page
+
+---
+
+### 7. **teacher/dashboard.php** (UPDATED - Uses Shared Components)
+
+**Purpose**: Main teacher dashboard with server-side authentication and data injection
+
+**Changes**:
+
+- Now uses `require_once 'includes/init.php'` instead of inline session/auth/db code
+- Sets `$activePage = 'dashboard'` before includes
+- Uses `include 'includes/header.php'` and `include 'includes/sidebar.php'`
+- Removed inline navbar and sidebar HTML (70+ lines removed)
+- Page-specific styles remain (exam-card, quick-actions, skeleton loader)
+- Includes `teacher-layout.js` for sidebar functionality
+- Modal styles removed (already in style.css)
+
+**Key Features** (unchanged):
+
+- Database query to fetch teacher data (full_name, gelar, subject)
+- UTF-8 multibyte support
+- Error logging with fallbacks
+- No `get_profile` API call
 
 **Data Flow**:
 
 ```
-User accesses dashboard.php
+Teacher accesses dashboard.php
   ↓
-Session validation (requireLogin)
+init.php: Session validation + DB fetch for teacher data
   ↓
-Query teachers table for full_name, gelar, subject
+dashboard.php: Sets $activePage = 'dashboard'
   ↓
-If DB fails → fallback to $_SESSION + log error
+Includes header.php and sidebar.php (use $teacherData)
   ↓
-Render HTML with teacher data directly injected
+JavaScript: Loads stats, exams, violations
   ↓
-JavaScript loads only stats, exams, violations (no profile call)
+All data displayed
 ```
-
-**Error Handling**:
-
-- Database exception → logged to error_log, uses session fallback
-- Missing gelar/subject → defaults to empty string/'Guru'
-- XSS prevention via `htmlspecialchars()` on all output
-
-**Critical**: No longer relies on `get_profile` API endpoint for dashboard display
 
 ---
 
-### 4. **teacher/dashboard.html** (Redirector - Unchanged)
+### 8. **teacher/dashboard.html** (Redirector - Unchanged)
 
 **Purpose**: Legacy file that redirects to new PHP version
 
@@ -159,7 +240,7 @@ JavaScript loads only stats, exams, violations (no profile call)
 
 ---
 
-### 5. **student/exam.php** (POST-Only Access)
+### 9. **student/exam.php** (POST-Only Access)
 
 **Purpose**: Student exam taking interface with enhanced security
 
@@ -187,7 +268,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 6. **student/dashboard.php** (POST Forms)
+### 10. **student/dashboard.php** (POST Forms)
 
 **Purpose**: Student dashboard with POST-based exam access
 
@@ -198,7 +279,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 7. **js/api-client.js** (Base API Client)
+### 11. **js/api-client.js** (Base API Client)
 
 **Purpose**: Shared API wrapper for all AJAX calls
 
@@ -209,7 +290,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 8. **js/register-common.js** (Registration Module)
+### 12. **js/register-common.js** (Registration Module)
 
 **Purpose**: Shared utilities for registration pages
 
@@ -217,13 +298,13 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 9. **css/register.css** (Registration Styles)
+### 13. **css/register.css** (Registration Styles)
 
 **Purpose**: Shared styles for registration pages (utility-first, responsive)
 
 ---
 
-### 10. **js/exam-manager.js** (SHARED MODULE)
+### 14. **js/exam-manager.js** (SHARED MODULE)
 
 **Purpose**: Centralized exam management for admin and teacher dashboards
 
@@ -231,7 +312,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 11. **js/security.js** (Student Exam Security)
+### 15. **js/security.js** (Student Exam Security)
 
 **Purpose**: Anti-cheat monitoring that ONLY activates when exam officially starts
 
@@ -239,7 +320,7 @@ Normal exam flow (agreement → security → questions)
 
 ---
 
-### 12. **php/exam_api.php** (SHARED API)
+### 16. **php/exam_api.php** (SHARED API)
 
 **Purpose**: Handles all exam-related operations for all roles
 
@@ -270,16 +351,16 @@ Normal exam flow (agreement → security → questions)
 
 ## Key Workflows
 
-### 1. Teacher Dashboard Load Flow (UPDATED - No Profile API)
+### 1. Teacher Dashboard Load Flow (UPDATED - Uses Shared Components)
 
 ```
 Teacher accesses dashboard.php
   ↓
-PHP: Session validation (requireLogin)
+init.php: Session validation + DB fetch for teacher data
   ↓
-PHP: Query database for teacher data (full_name, gelar, subject)
+dashboard.php: Sets $activePage = 'dashboard'
   ↓
-PHP: Render HTML with teacher data injected directly
+header.php + sidebar.php: Render with injected teacher data
   ↓
 JavaScript: ExamManager.fetchExams() → GET exam_api.php?action=get_exams
   ↓
@@ -290,25 +371,49 @@ JavaScript: Fetch violations → GET exam_api.php?action=get_recent_violations
 All data displayed; NO get_profile API call
 ```
 
-### 2. Student Registration Flow
+### 2. Future Teacher Page Creation Pattern
+
+```php
+<?php
+require_once 'includes/init.php';
+$activePage = 'page-name'; // Must match sidebar menu item
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <!-- Page-specific meta, title, CSS -->
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
+    <main class="main-content">
+        <!-- Page content here -->
+    </main>
+    <script src="../js/teacher-layout.js"></script>
+    <!-- Page-specific scripts -->
+</body>
+</html>
+```
+
+### 3. Student Registration Flow
 
 ```
 Student loads register.html → RegisterAPI.fetchClasses() → Form validation → Submit → Success
 ```
 
-### 3. Teacher Registration Flow (Step Wizard)
+### 4. Teacher Registration Flow (Step Wizard)
 
 ```
 Teacher loads register.html → RegisterWizard.init(3) → Step 1-2-3 → Submit → Success
 ```
 
-### 4. Student Exam Access Flow (POST-only with CSRF)
+### 5. Student Exam Access Flow (POST-only with CSRF)
 
 ```
 POST form to exam.php → CSRF + rate limit → Store exam_id in session → Redirect → Exam begins
 ```
 
-### 5. Reset Student Result Flow
+### 6. Reset Student Result Flow
 
 ```
 Teacher clicks Reset → Confirm → DELETE transactions → Log → Auto-refresh monitor
@@ -319,6 +424,29 @@ Teacher clicks Reset → Confirm → DELETE transactions → Log → Auto-refres
 ## Important Notes for Future Development
 
 ### Recent Changes Summary
+
+**2026-04-19 (Night) - Teacher Layout Refactoring for Reusability**:
+
+1. **Created shared initialization** (`teacher/includes/init.php`):
+
+   - Centralized session config, auth, teacher data fetch
+   - Returns `$teacherData` array and sets `$activePage`
+   - Enables consistent teacher page setup
+
+2. **Created reusable components**:
+
+   - `teacher/includes/header.php` - Navbar component
+   - `teacher/includes/sidebar.php` - Sidebar with active page highlighting
+   - `js/teacher-layout.js` - Shared sidebar toggle logic
+
+3. **Refactored dashboard.php**:
+
+   - Replaced inline session/auth/db code with `init.php`
+   - Removed navbar/sidebar HTML (70+ lines)
+   - Now uses includes for header and sidebar
+   - Modal styles moved to global style.css
+
+4. **Why changed**: Enable code reuse across all teacher pages, reduce duplication, maintain consistent layout, simplify future teacher page creation
 
 **2026-04-19 (Late Evening) - Teacher Dashboard Optimization**:
 
@@ -374,8 +502,18 @@ Teacher clicks Reset → Confirm → DELETE transactions → Log → Auto-refres
 10. **Registration pages use shared CSS/JS** - No inline styles allowed
 11. **Teacher dashboard now requires PHP** - dashboard.html redirects to dashboard.php
 12. **Dashboard uses server-side teacher data** - No `get_profile` call on dashboard
+13. **Teacher pages must use shared components** - New teacher pages should follow pattern with `init.php`, header/sidebar includes, and `teacher-layout.js`
 
 ### Coding Conventions
+
+**For Teacher Pages**:
+
+- Start with `require_once 'includes/init.php'`
+- Set `$activePage` before any output
+- Use `include 'includes/header.php'` and `include 'includes/sidebar.php'`
+- Include `../js/teacher-layout.js` for sidebar functionality
+- Page-specific styles go in `<style>` block (not inline)
+- Use `$teacherData` array for teacher info (never fetch via API)
 
 **For Registration Pages**:
 
@@ -418,8 +556,8 @@ Teacher clicks Reset → Confirm → DELETE transactions → Log → Auto-refres
 
 ## Last Updated
 
-**Date**: 2026-04-19 (Late Evening)
-**Developer**: Teacher dashboard optimization - server-side data injection
+**Date**: 2026-04-19 (Night)
+**Developer**: Teacher layout refactoring - shared components architecture
 **Status**: Active development
 
 ---
@@ -430,16 +568,21 @@ When returning to this project, review:
 
 1. **`includes/csrf.php`** - CSRF token generation and validation
 2. **`includes/auth.php`** - Rate limiting and authentication helpers
-3. **`teacher/dashboard.php`** - UPDATED - Server-side teacher data injection
-4. **`teacher/dashboard.html`** - Redirects to PHP version
-5. **`student/exam.php`** - POST-only access pattern
-6. **`student/dashboard.php`** - POST forms for exam access
-7. **`js/security.js`** - Security starts ONLY on exam begin
-8. **`js/exam-manager.js`** - Monitor modal with violation management
-9. **`php/exam_api.php`** - API with session recovery (get_profile still available)
-10. **`js/register-common.js`** - Registration utilities
-11. **`css/register.css`** - Registration styles
-12. This PROJECT_MAP.md - For latest workflow understanding
+3. **`teacher/includes/init.php`** - NEW - Shared teacher initialization
+4. **`teacher/includes/header.php`** - NEW - Reusable navbar
+5. **`teacher/includes/sidebar.php`** - NEW - Reusable sidebar
+6. **`teacher/dashboard.php`** - UPDATED - Uses shared components
+7. **`teacher/dashboard.html`** - Redirects to PHP version
+8. **`js/teacher-layout.js`** - NEW - Shared sidebar toggle
+9. **`student/exam.php`** - POST-only access pattern
+10. **`student/dashboard.php`** - POST forms for exam access
+11. **`js/security.js`** - Security starts ONLY on exam begin
+12. **`js/exam-manager.js`** - Monitor modal with violation management
+13. **`php/exam_api.php`** - API with session recovery (get_profile still available)
+14. **`js/register-common.js`** - Registration utilities
+15. **`css/register.css`** - Registration styles
+16. **`css/style.css`** - Global styles (includes modal + sidebar)
+17. This PROJECT_MAP.md - For latest workflow understanding
 
 ## Breaking Changes for Future Development
 
@@ -453,3 +596,6 @@ When returning to this project, review:
 8. **Teacher dashboard now served via PHP** - dashboard.html redirects; update any direct links to use dashboard.php
 9. **Session cookie configuration must be consistent** - Always use SameSite=Lax, path=/, before session_start()
 10. **Dashboard no longer calls `get_profile`** - Server-side data injection instead; settings.html still uses API
+11. **New teacher pages MUST use shared components** - Include `init.php`, header/sidebar, and teacher-layout.js
+12. **Teacher pages must set `$activePage`** - Matches sidebar menu item for highlighting
+13. **Never hardcode navbar/sidebar HTML** - Always use includes from `teacher/includes/`
