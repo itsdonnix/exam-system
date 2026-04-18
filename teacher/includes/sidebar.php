@@ -43,7 +43,7 @@
         <a href="students.php" class="<?= $activePage === 'students' ? 'active' : '' ?>"><span class="icon">👥</span> Data Siswa</a>
       </li>
       <li>
-        <a href="settings.html" class="<?= $activePage === 'settings' ? 'active' : '' ?>">
+        <a href="settings.php" class="<?= $activePage === 'settings' ? 'active' : '' ?>">
           <span class="icon">⚙️</span> Pengaturan
         </a>
       </li>
