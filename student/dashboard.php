@@ -295,43 +295,6 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
             font-size: 0.82rem;
         }
 
-        /* Skeleton Loader Styles */
-        .skeleton-loader {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            padding: 12px;
-        }
-
-        .skeleton-line {
-            height: 12px;
-            background: linear-gradient(90deg,
-                    #f0f0f0 25%,
-                    #e0e0e0 50%,
-                    #f0f0f0 75%);
-            background-size: 200% 100%;
-            border-radius: 4px;
-            animation: shimmer 1.5s infinite;
-        }
-
-        @keyframes shimmer {
-            0% {
-                background-position: 200% 0;
-            }
-
-            100% {
-                background-position: -200% 0;
-            }
-        }
-
-        .exam-skeleton {
-            background: #fff;
-            border-radius: 14px;
-            padding: 22px 26px;
-            box-shadow: 0 4px 16px rgba(26, 60, 110, 0.08);
-            border-left: 5px solid #e2e8f0;
-        }
-
         .logout-btn {
             background: rgba(255, 255, 255, 0.2);
             color: white;
@@ -413,7 +376,9 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
             </div>
 
             <div class="exam-list" id="exam-list">
-                <!-- Skeleton will be shown here -->
+                <div style="text-align:center;padding:20px;color:#64748b">
+                    Memuat daftar ujian...
+                </div>
             </div>
         </div>
 
@@ -432,7 +397,11 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
                         </tr>
                     </thead>
                     <tbody id="history-tbody">
-                        <!-- Skeleton will be shown here -->
+                        <tr>
+                            <td colspan="4" style="text-align:center;padding:20px;color:#64748b">
+                                Memuat riwayat...
+                            </td>
+                        </tr>
                     </tbody>
                 </table>
             </div>
@@ -442,24 +411,6 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
     <script>
         const studentName = <?php echo json_encode($full_name); ?>;
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
-
-        function showExamListSkeletonLoader() {
-            const container = document.getElementById("exam-list");
-            container.innerHTML = `
-                <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 40%"></div><div class="skeleton-line" style="width: 60%"></div><div class="skeleton-line" style="width: 30%"></div></div></div>
-                <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 50%"></div><div class="skeleton-line" style="width: 70%"></div><div class="skeleton-line" style="width: 45%"></div></div></div>
-                <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 35%"></div><div class="skeleton-line" style="width: 55%"></div><div class="skeleton-line" style="width: 40%"></div></div></div>
-            `;
-        }
-
-        function showHistoryTableSkeletonLoader() {
-            const tbody = document.getElementById("history-tbody");
-            tbody.innerHTML = `
-                <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
-                <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
-                <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
-            `;
-        }
 
         function updateTime() {
             const now = new Date();
@@ -547,7 +498,6 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
 
                     if (result.success) {
                         alertEl.innerHTML = `<div class="alert alert-success" style="margin:0; padding:8px 12px; font-size:0.85rem">✅ ${result.message}</div>`;
-                        // Use POST form instead of GET redirect
                         const form = document.createElement('form');
                         form.method = 'POST';
                         form.action = 'exam.php';
@@ -569,13 +519,13 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
         }
 
         document.addEventListener("DOMContentLoaded", () => {
-            showExamListSkeletonLoader();
-            showHistoryTableSkeletonLoader();
             fetchExams();
             fetchHistory();
         });
 
         async function fetchExams() {
+            const container = document.getElementById("exam-list");
+
             try {
                 const response = await fetch("../php/exam_api.php?action=get_exams", {
                     credentials: "include",
@@ -585,24 +535,38 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
                 if (data.success) {
                     renderExams(data.exams);
                     updateStats(data.exams);
-                    fetchHistory();
+                } else {
+                    container.innerHTML = `
+                        <div style="text-align:center;padding:40px;color:#64748b">
+                            Terjadi kesalahan saat memuat daftar ujian.
+                        </div>`;
                 }
             } catch (error) {
                 console.error("Error fetching exams:", error);
+                container.innerHTML = `
+                    <div style="text-align:center;padding:40px;color:#64748b">
+                        Terjadi kesalahan saat memuat daftar ujian.
+                    </div>`;
             }
         }
 
         async function fetchHistory() {
+            const tbody = document.getElementById("history-tbody");
+
             try {
                 const response = await fetch("../php/exam_api.php?action=get_student_history", {
                     credentials: "include"
                 });
                 const data = await response.json();
 
-                const tbody = document.getElementById("history-tbody");
                 if (data.success) {
                     if (data.history.length === 0) {
-                        tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:20px">Belum ada riwayat ujian.</td></tr>';
+                        tbody.innerHTML = `
+                            <tr>
+                                <td colspan="4" style="text-align:center;padding:20px">
+                                    Belum ada riwayat ujian.
+                                </td>
+                            </tr>`;
                         return;
                     }
 
@@ -618,11 +582,17 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
                             </tr>
                         `;
                     }).join("");
+                } else {
+                    throw new Error("API error");
                 }
             } catch (error) {
                 console.error("History fetch error:", error);
-                const tbody = document.getElementById("history-tbody");
-                tbody.innerHTML = '<tr><td colspan="4" style="text-align:center;padding:40px;color:#64748b">Terjadi kesalahan saat memuat riwayat.</td></tr>';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="4" style="text-align:center;padding:40px;color:#64748b">
+                            Terjadi kesalahan saat memuat riwayat.
+                        </td>
+                    </tr>`;
             }
         }
 
@@ -634,8 +604,6 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
             }
 
             container.innerHTML = exams.map((exam) => {
-                const isStarted = new Date(exam.start_time) <= new Date();
-                const isEnded = new Date(exam.end_time) < new Date();
                 const isSubmitted = exam.is_submitted || false;
                 const isForced = exam.is_forced || false;
 
@@ -654,7 +622,6 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
                 } else {
                     statusHtml = `<span class="countdown-badge">⏳ Tersedia</span>`;
                     if (exam.is_authorized) {
-                        // Use POST form instead of GET link
                         actionHtml = `
                             <form method="POST" action="exam.php" style="display:inline" onsubmit="return confirm('Mulai ujian ${exam.name.replace(/'/g, "\\'")}?')">
                                 <input type="hidden" name="exam_id" value="${exam.id}">
