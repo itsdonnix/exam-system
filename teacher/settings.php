@@ -284,7 +284,7 @@ $_SESSION['csrf_token_ai'] = $csrf_token_ai;
                 <p style="margin-bottom: 20px; color: #64748b">
                     Konfigurasi API Key dan model untuk fitur
                     <strong>Impor Soal Otomatis</strong> di halaman
-                    <a href="create-exam.html">Buat Ujian</a>.
+                    <a href="create-exam.php">Buat Ujian</a>.
                 </p>
                 <div id="alert-ai-settings"></div>
                 <form id="ai-settings-form" onsubmit="saveAISettings(event)">

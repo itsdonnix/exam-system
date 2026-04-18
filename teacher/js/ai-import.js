@@ -630,7 +630,7 @@ function importQuestionsToExam() {
       difficulty: q.difficulty || "sedang",
     };
 
-    // Call existing addQuestion function from create-exam.html
+    // Call existing addQuestion function from create-exam.php
     if (typeof window.addQuestion === "function") {
       window.addQuestion(q.type, newQuestion);
     } else {

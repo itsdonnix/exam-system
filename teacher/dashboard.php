@@ -143,7 +143,7 @@ $activePage = 'dashboard';
         <div class="page-title">Dashboard Guru</div>
         <div class="page-subtitle">Selamat datang, <?= htmlspecialchars($teacherData['full_name_with_gelar']) ?> — <?= htmlspecialchars($teacherData['subject']) ?></div>
       </div>
-      <a href="create-exam.html" class="btn btn-primary">➕ Buat Ujian Baru</a>
+      <a href="create-exam.php" class="btn btn-primary">➕ Buat Ujian Baru</a>
     </div>
 
     <!-- Stats -->
@@ -188,7 +188,7 @@ $activePage = 'dashboard';
     <div class="quick-actions">
       <div
         class="quick-action-card"
-        onclick="window.location.href='create-exam.html'">
+        onclick="window.location.href='create-exam.php'">
         <div class="icon">📝</div>
         <h4>Buat Ujian Baru</h4>
         <p>Tambah soal pilihan ganda & esai</p>
@@ -243,7 +243,7 @@ $activePage = 'dashboard';
             class="form-control"
             placeholder="Cari nama ujian atau kelas..."
             style="max-width: 300px; padding: 8px 14px" />
-          <a href="create-exam.html" class="btn btn-primary btn-sm">+ Tambah</a>
+          <a href="create-exam.php" class="btn btn-primary btn-sm">+ Tambah</a>
         </div>
       </div>
 
