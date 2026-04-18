@@ -408,6 +408,9 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
         </div>
     </div>
 
+    <script src="../js/api-client.js"></script>
+    <script src="../js/student-api.js"></script>
+
     <script>
         const studentName = <?php echo json_encode($full_name); ?>;
         const csrfToken = <?php echo json_encode($csrf_token); ?>;
@@ -467,37 +470,25 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
                 const rawCode = codeInput.value.trim();
 
                 if (!rawCode) {
-                    alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">⚠️ Masukkan kode ujian!</div>';
-                    codeInput.focus();
+                    alertEl.innerHTML = '<div class="alert alert-danger">⚠️ Masukkan kode ujian!</div>';
                     return;
                 }
 
                 const code = rawCode.toUpperCase();
 
                 if (code.length !== 8 || !/^[A-Z0-9]{8}$/.test(code)) {
-                    alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">⚠️ Format kode tidak valid! Kode harus 8 karakter alfanumerik.</div>';
+                    alertEl.innerHTML = '<div class="alert alert-danger">⚠️ Format kode tidak valid!</div>';
                     return;
                 }
 
-                alertEl.innerHTML = '<div class="alert alert-info" style="margin:0; padding:8px 12px; font-size:0.85rem">⌛ Memverifikasi kode...</div>';
+                alertEl.innerHTML = '<div class="alert alert-info">⌛ Memverifikasi kode...</div>';
 
                 try {
-                    const response = await fetch("../php/exam_api.php", {
-                        method: "POST",
-                        headers: {
-                            "Content-Type": "application/json"
-                        },
-                        body: JSON.stringify({
-                            action: "join_exam",
-                            exam_code: code
-                        }),
-                        credentials: "include"
-                    });
-
-                    const result = await response.json();
+                    const result = await StudentAPI.joinExam(code);
 
                     if (result.success) {
-                        alertEl.innerHTML = `<div class="alert alert-success" style="margin:0; padding:8px 12px; font-size:0.85rem">✅ ${result.message}</div>`;
+                        alertEl.innerHTML = `<div class="alert alert-success">✅ ${result.message}</div>`;
+
                         const form = document.createElement('form');
                         form.method = 'POST';
                         form.action = 'exam.php';
@@ -508,12 +499,11 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
                         document.body.appendChild(form);
                         form.submit();
                     } else {
-                        alertEl.innerHTML = `<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">❌ ${result.message}</div>`;
-                        codeInput.focus();
+                        alertEl.innerHTML = `<div class="alert alert-danger">❌ ${result.message}</div>`;
                     }
                 } catch (error) {
                     console.error("Join exam error:", error);
-                    alertEl.innerHTML = '<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">❌ Terjadi kesalahan koneksi.</div>';
+                    alertEl.innerHTML = '<div class="alert alert-danger">❌ Terjadi kesalahan koneksi.</div>';
                 }
             });
         }
@@ -527,19 +517,13 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
             const container = document.getElementById("exam-list");
 
             try {
-                const response = await fetch("../php/exam_api.php?action=get_exams", {
-                    credentials: "include",
-                });
-                const data = await response.json();
+                const data = await StudentAPI.getExams();
 
                 if (data.success) {
                     renderExams(data.exams);
                     updateStats(data.exams);
                 } else {
-                    container.innerHTML = `
-                        <div style="text-align:center;padding:40px;color:#64748b">
-                            Terjadi kesalahan saat memuat daftar ujian.
-                        </div>`;
+                    throw new Error(data.message);
                 }
             } catch (error) {
                 console.error("Error fetching exams:", error);
@@ -554,10 +538,7 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
             const tbody = document.getElementById("history-tbody");
 
             try {
-                const response = await fetch("../php/exam_api.php?action=get_student_history", {
-                    credentials: "include"
-                });
-                const data = await response.json();
+                const data = await StudentAPI.getHistory();
 
                 if (data.success) {
                     if (data.history.length === 0) {
@@ -583,7 +564,7 @@ $student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
                         `;
                     }).join("");
                 } else {
-                    throw new Error("API error");
+                    throw new Error(data.message);
                 }
             } catch (error) {
                 console.error("History fetch error:", error);
