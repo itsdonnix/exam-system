@@ -30,6 +30,7 @@ $_SESSION['login_time'] = time();
 $csrf_token = generateCSRFToken();
 
 $full_name = $_SESSION['full_name'] ?? 'Siswa';
+$student_class = $_SESSION['class'] ?? 'Kelas tidak tersedia';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -361,7 +362,7 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
         <div class="welcome-banner" id="welcome-banner">
             <div>
                 <h2>Selamat Datang, <?php echo htmlspecialchars($full_name); ?>! 👋</h2>
-                <p id="student-class">Memuat data...</p>
+                <p><?php echo htmlspecialchars($student_class); ?> — SMA Kristen Mercusuar Kupang</p>
                 <div class="info-row">
                     <span class="info-chip">📅 <span id="current-date">Memuat...</span> •
                         <span id="current-time">--:--</span></span>
@@ -571,22 +572,8 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
             showExamListSkeletonLoader();
             showHistoryTableSkeletonLoader();
             fetchExams();
-            fetchProfile();
+            fetchHistory();
         });
-
-        async function fetchProfile() {
-            try {
-                const response = await fetch("../php/exam_api.php?action=get_profile", {
-                    credentials: "include"
-                });
-                const data = await response.json();
-                if (data.success && data.user.class) {
-                    document.getElementById("student-class").textContent = `${data.user.class} — SMA Kristen Mercusuar Kupang`;
-                }
-            } catch (e) {
-                console.error("Profile fetch error:", e);
-            }
-        }
 
         async function fetchExams() {
             try {

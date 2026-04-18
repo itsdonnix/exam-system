@@ -33,6 +33,11 @@ function setSession($user, $role)
     $_SESSION['full_name'] = $user['full_name'];
     $_SESSION['login_time'] = time();
     $_SESSION['ip_address'] = $_SERVER['REMOTE_ADDR'];
+
+    // Store class only for students
+    if ($role === 'siswa' && isset($user['class'])) {
+        $_SESSION['class'] = $user['class'];
+    }
 }
 
 function clearSession()

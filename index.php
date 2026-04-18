@@ -127,7 +127,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $stmt = $db->prepare("SELECT * FROM teachers WHERE (nip = ? OR email = ?) AND is_active = 1 LIMIT 1");
                         $stmt->execute([$username, $username]);
                     } elseif ($role === 'siswa') {
-                        $stmt = $db->prepare("SELECT * FROM students WHERE (username = ? OR nisn = ? OR email = ?) AND is_active = 1 LIMIT 1");
+                        // Explicitly select all fields including 'class'
+                        $stmt = $db->prepare("SELECT id, username, nisn, email, full_name, class, password, is_active FROM students WHERE (username = ? OR nisn = ? OR email = ?) AND is_active = 1 LIMIT 1");
                         $stmt->execute([$username, $username, $username]);
                     } else {
                         $stmt = $db->prepare("SELECT * FROM admins WHERE (username = ? OR email = ?) AND is_active = 1 LIMIT 1");
@@ -154,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             // Clear login attempts
                             $db->prepare("DELETE FROM login_attempts WHERE ip = ?")->execute([$ip]);
 
-                            // Set session
+                            // Set session - now includes class for students
                             setSession($user, $role);
 
                             // Handle Remember Me
