@@ -136,145 +136,146 @@ $activePage = 'dashboard';
   <?php include 'includes/header.php'; ?>
   <?php include 'includes/sidebar.php'; ?>
 
-  <!-- Page Header -->
-  <div class="page-header">
-    <div>
-      <div class="page-title">Dashboard Guru</div>
-      <div class="page-subtitle">Selamat datang, <?= htmlspecialchars($teacherData['full_name_with_gelar']) ?> — <?= htmlspecialchars($teacherData['subject']) ?></div>
+  <main class="main-content">
+    <!-- Page Header -->
+    <div class="page-header">
+      <div>
+        <div class="page-title">Dashboard Guru</div>
+        <div class="page-subtitle">Selamat datang, <?= htmlspecialchars($teacherData['full_name_with_gelar']) ?> — <?= htmlspecialchars($teacherData['subject']) ?></div>
+      </div>
+      <a href="create-exam.html" class="btn btn-primary">➕ Buat Ujian Baru</a>
     </div>
-    <a href="create-exam.html" class="btn btn-primary">➕ Buat Ujian Baru</a>
-  </div>
 
-  <!-- Stats -->
-  <div class="stats-grid">
-    <div class="stat-card">
-      <div class="stat-icon">📝</div>
-      <div>
-        <div class="stat-value">-</div>
-        <div class="stat-label">Total Ujian</div>
-      </div>
-    </div>
-    <div class="stat-card" style="border-left-color: var(--success)">
-      <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1)">
-        ✅
-      </div>
-      <div>
-        <div class="stat-value" style="color: var(--success)">-</div>
-        <div class="stat-label">Ujian Aktif</div>
-      </div>
-    </div>
-    <div class="stat-card" style="border-left-color: var(--accent)">
-      <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1)">
-        👨‍🎓
-      </div>
-      <div>
-        <div class="stat-value" style="color: var(--accent)">-</div>
-        <div class="stat-label">Total Siswa</div>
-      </div>
-    </div>
-    <div class="stat-card" style="border-left-color: var(--secondary)">
-      <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1)">
-        ⭐
-      </div>
-      <div>
-        <div class="stat-value" style="color: var(--secondary)">-</div>
-        <div class="stat-label">Rata-rata Nilai</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Quick Actions -->
-  <div class="quick-actions">
-    <div
-      class="quick-action-card"
-      onclick="window.location.href='create-exam.html'">
-      <div class="icon">📝</div>
-      <h4>Buat Ujian Baru</h4>
-      <p>Tambah soal pilihan ganda & esai</p>
-    </div>
-    <div
-      class="quick-action-card"
-      onclick="window.location.href='question-bank.html'">
-      <div class="icon">📚</div>
-      <h4>Bank Soal</h4>
-      <p>Kelola soal untuk digunakan kembali</p>
-    </div>
-    <div
-      class="quick-action-card"
-      onclick="window.location.href='results.html'">
-      <div class="icon">📊</div>
-      <h4>Lihat Hasil Ujian</h4>
-      <p>Laporan nilai dan statistik siswa</p>
-    </div>
-    <div class="quick-action-card" onclick="showMonitorForFirstExam()">
-      <div class="icon">👁️</div>
-      <h4>Monitor Ujian</h4>
-      <p>Pantau aktivitas siswa real-time</p>
-    </div>
-    <div class="quick-action-card">
-      <div class="icon">📤</div>
-      <h4>Export Nilai</h4>
-      <p>Download laporan dalam format Excel</p>
-    </div>
-  </div>
-
-  <!-- Exam List -->
-  <div class="card">
-    <div
-      class="page-header"
-      style="margin-bottom: 20px; flex-wrap: wrap; gap: 12px">
-      <div style="flex: 1">
-        <div class="page-title" style="font-size: 1.1rem">
-          📋 Daftar Ujian Saya
+    <!-- Stats -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-icon">📝</div>
+        <div>
+          <div class="stat-value">-</div>
+          <div class="stat-label">Total Ujian</div>
         </div>
       </div>
+      <div class="stat-card" style="border-left-color: var(--success)">
+        <div class="stat-icon" style="background: rgba(16, 185, 129, 0.1)">
+          ✅
+        </div>
+        <div>
+          <div class="stat-value" style="color: var(--success)">-</div>
+          <div class="stat-label">Ujian Aktif</div>
+        </div>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--accent)">
+        <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1)">
+          👨‍🎓
+        </div>
+        <div>
+          <div class="stat-value" style="color: var(--accent)">-</div>
+          <div class="stat-label">Total Siswa</div>
+        </div>
+      </div>
+      <div class="stat-card" style="border-left-color: var(--secondary)">
+        <div class="stat-icon" style="background: rgba(14, 165, 233, 0.1)">
+          ⭐
+        </div>
+        <div>
+          <div class="stat-value" style="color: var(--secondary)">-</div>
+          <div class="stat-label">Rata-rata Nilai</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
       <div
-        style="
+        class="quick-action-card"
+        onclick="window.location.href='create-exam.html'">
+        <div class="icon">📝</div>
+        <h4>Buat Ujian Baru</h4>
+        <p>Tambah soal pilihan ganda & esai</p>
+      </div>
+      <div
+        class="quick-action-card"
+        onclick="window.location.href='question-bank.html'">
+        <div class="icon">📚</div>
+        <h4>Bank Soal</h4>
+        <p>Kelola soal untuk digunakan kembali</p>
+      </div>
+      <div
+        class="quick-action-card"
+        onclick="window.location.href='results.html'">
+        <div class="icon">📊</div>
+        <h4>Lihat Hasil Ujian</h4>
+        <p>Laporan nilai dan statistik siswa</p>
+      </div>
+      <div class="quick-action-card" onclick="showMonitorForFirstExam()">
+        <div class="icon">👁️</div>
+        <h4>Monitor Ujian</h4>
+        <p>Pantau aktivitas siswa real-time</p>
+      </div>
+      <div class="quick-action-card">
+        <div class="icon">📤</div>
+        <h4>Export Nilai</h4>
+        <p>Download laporan dalam format Excel</p>
+      </div>
+    </div>
+
+    <!-- Exam List -->
+    <div class="card">
+      <div
+        class="page-header"
+        style="margin-bottom: 20px; flex-wrap: wrap; gap: 12px">
+        <div style="flex: 1">
+          <div class="page-title" style="font-size: 1.1rem">
+            📋 Daftar Ujian Saya
+          </div>
+        </div>
+        <div
+          style="
                 display: flex;
                 gap: 10px;
                 flex: 2;
                 justify-content: flex-end;
                 flex-wrap: wrap;
               ">
-        <input
-          type="text"
-          id="examSearch"
-          class="form-control"
-          placeholder="Cari nama ujian atau kelas..."
-          style="max-width: 300px; padding: 8px 14px" />
-        <a href="create-exam.html" class="btn btn-primary btn-sm">+ Tambah</a>
+          <input
+            type="text"
+            id="examSearch"
+            class="form-control"
+            placeholder="Cari nama ujian atau kelas..."
+            style="max-width: 300px; padding: 8px 14px" />
+          <a href="create-exam.html" class="btn btn-primary btn-sm">+ Tambah</a>
+        </div>
+      </div>
+
+      <div id="exam-list">
+        <!-- Skeleton will be shown here -->
       </div>
     </div>
 
-    <div id="exam-list">
-      <!-- Skeleton will be shown here -->
+    <!-- Recent Violations -->
+    <div class="card mt-3">
+      <div
+        class="page-title"
+        style="font-size: 1.1rem; margin-bottom: 16px">
+        ⚠️ Pelanggaran Terbaru
+      </div>
+      <div class="table-wrapper">
+        <table>
+          <thead>
+            <tr>
+              <th>Siswa</th>
+              <th>Ujian</th>
+              <th>Pelanggaran</th>
+              <th>Waktu</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="violations-tbody">
+            <!-- Skeleton will be shown here -->
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-
-  <!-- Recent Violations -->
-  <div class="card mt-3">
-    <div
-      class="page-title"
-      style="font-size: 1.1rem; margin-bottom: 16px">
-      ⚠️ Pelanggaran Terbaru
-    </div>
-    <div class="table-wrapper">
-      <table>
-        <thead>
-          <tr>
-            <th>Siswa</th>
-            <th>Ujian</th>
-            <th>Pelanggaran</th>
-            <th>Waktu</th>
-            <th>Status</th>
-          </tr>
-        </thead>
-        <tbody id="violations-tbody">
-          <!-- Skeleton will be shown here -->
-        </tbody>
-      </table>
-    </div>
-  </div>
   </main>
   </div>
 
@@ -364,6 +365,7 @@ $activePage = 'dashboard';
       </div>
     </div>
   </div>
+  </main>
 
   <script src="../js/exam-manager.js"></script>
   <script src="../js/teacher-layout.js"></script>

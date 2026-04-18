@@ -51,5 +51,3 @@
       </li>
     </ul>
   </aside>
-
-  <main class="main-content">
