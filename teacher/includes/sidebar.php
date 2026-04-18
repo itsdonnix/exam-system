@@ -35,7 +35,7 @@
         </a>
       </li>
       <li>
-        <a href="results.html" class="<?= $activePage === 'results' ? 'active' : '' ?>">
+        <a href="results.php" class="<?= $activePage === 'results' ? 'active' : '' ?>">
           <span class="icon">📊</span> Hasil Ujian
         </a>
       </li>
