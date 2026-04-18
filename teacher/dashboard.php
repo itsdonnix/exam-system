@@ -21,9 +21,40 @@ requireLogin('guru');
 // Refresh session timer to prevent timeout while viewing dashboard
 $_SESSION['login_time'] = time();
 
-// Store teacher ID for potential use (though API will use session)
-$teacherId = $_SESSION['user_id'];
-$teacherName = $_SESSION['full_name'] ?? 'guru';
+// Fetch teacher data from database (eliminates get_profile API call)
+require_once '../php/db.php';
+$db = getDB();
+
+try {
+  $stmt = $db->prepare("SELECT full_name, gelar, subject FROM teachers WHERE id = ?");
+  $stmt->execute([$_SESSION['user_id']]);
+  $teacher = $stmt->fetch();
+
+  if (!$teacher) {
+    // Fallback to session data if database returns nothing
+    error_log("[Dashboard] Teacher not found in DB for user_id: " . $_SESSION['user_id'] . ", using session fallback");
+    $teacher = [
+      'full_name' => $_SESSION['full_name'] ?? 'Guru',
+      'gelar' => '',
+      'subject' => 'Guru'
+    ];
+  }
+} catch (Exception $e) {
+  // Log error but never break the page
+  error_log("[Dashboard] Failed to fetch teacher data: " . $e->getMessage() . " (user_id: " . $_SESSION['user_id'] . ")");
+  $teacher = [
+    'full_name' => $_SESSION['full_name'] ?? 'Guru',
+    'gelar' => '',
+    'subject' => 'Guru'
+  ];
+}
+
+// Build display name with gelar (e.g., "Dr. Ahmad, M.Pd")
+$fullNameWithGelar = trim($teacher['full_name'] . ($teacher['gelar'] ? ', ' . $teacher['gelar'] : ''));
+// Get first character for avatar (UTF-8 safe)
+$firstChar = !empty($teacher['full_name']) ? mb_strtoupper(mb_substr($teacher['full_name'], 0, 1, 'UTF-8'), 'UTF-8') : 'G';
+// Subject fallback to 'Guru' if not set
+$teacherSubject = !empty($teacher['subject']) ? $teacher['subject'] : 'Guru';
 ?>
 <!DOCTYPE html>
 <html lang="id">
@@ -233,8 +264,8 @@ $teacherName = $_SESSION['full_name'] ?? 'guru';
     </div>
     <div class="navbar-nav">
       <div class="nav-user">
-        <div class="nav-avatar">G</div>
-        <span>Memuat...</span>
+        <div class="nav-avatar"><?= htmlspecialchars($firstChar) ?></div>
+        <span><?= htmlspecialchars($fullNameWithGelar) ?></span>
       </div>
       <a
         href="../php/logout.php"
@@ -252,10 +283,10 @@ $teacherName = $_SESSION['full_name'] ?? 'guru';
           class="sidebar-avatar"
           id="sidebarAvatar"
           style="background: var(--accent)">
-          G
+          <?= htmlspecialchars($firstChar) ?>
         </div>
         <div class="sidebar-avatar-name" id="sidebarAvatarName">
-          Memuat...
+          <?= htmlspecialchars($fullNameWithGelar) ?>
         </div>
         <div class="sidebar-avatar-role" id="sidebarAvatarRole">Guru</div>
       </div>
@@ -285,7 +316,7 @@ $teacherName = $_SESSION['full_name'] ?? 'guru';
       <div class="page-header">
         <div>
           <div class="page-title">Dashboard Guru</div>
-          <div class="page-subtitle"></div>
+          <div class="page-subtitle">Selamat datang, <?= htmlspecialchars($fullNameWithGelar) ?> — <?= htmlspecialchars($teacherSubject) ?></div>
         </div>
         <a href="create-exam.html" class="btn btn-primary">➕ Buat Ujian Baru</a>
       </div>
@@ -551,7 +582,7 @@ $teacherName = $_SESSION['full_name'] ?? 'guru';
       // Make examManager globally available for modal buttons
       window.examManager = examManager;
 
-      // Load all dashboard data
+      // Load all dashboard data (excluding profile - now server-side)
       fetchDashboardData();
     });
 
@@ -578,45 +609,6 @@ $teacherName = $_SESSION['full_name'] ?? 'guru';
             statValues[2].textContent = statsData.total_students || 0;
           if (statValues[3])
             statValues[3].textContent = statsData.average_score || 0;
-        }
-
-        // Fetch Profile for name
-        const profileRes = await fetch(
-          "../php/exam_api.php?action=get_profile", {
-            credentials: "include",
-          }
-        );
-        const profileData = await profileRes.json();
-        if (profileData.success) {
-          const user = profileData.user;
-          const fullNameWithGelar =
-            user.full_name + (user.gelar ? ", " + user.gelar : "");
-
-          // Update Navbar
-          const navUserSpan = document.querySelector(".nav-user span");
-          if (navUserSpan) navUserSpan.textContent = fullNameWithGelar;
-          const navAvatar = document.querySelector(".nav-avatar");
-          if (navAvatar)
-            navAvatar.textContent = user.full_name.charAt(0).toUpperCase();
-
-          // Update Sidebar
-          const sidebarAvatar = document.getElementById("sidebarAvatar");
-          if (sidebarAvatar)
-            sidebarAvatar.textContent = user.full_name
-            .charAt(0)
-            .toUpperCase();
-          const sidebarAvatarName =
-            document.getElementById("sidebarAvatarName");
-          if (sidebarAvatarName)
-            sidebarAvatarName.textContent = fullNameWithGelar;
-
-          // Update Welcome Subtitle
-          const pageSubtitle = document.querySelector(".page-subtitle");
-          if (pageSubtitle) {
-            pageSubtitle.textContent = `Selamat datang, ${fullNameWithGelar} — ${
-                user.subject || "Guru"
-              }`;
-          }
         }
 
         // Fetch violations
@@ -649,9 +641,9 @@ $teacherName = $_SESSION['full_name'] ?? 'guru';
             .map(
               (v) => `
               <tr>
-                <td><b>${v.student_name}</b></td>
-                <td>${v.exam_name}</td>
-                <td>${v.reason}</td>
+                <td><b>${escapeHtml(v.student_name)}</b></td>
+                <td>${escapeHtml(v.exam_name)}</td>
+                <td>${escapeHtml(v.reason)}</td>
                 <td>${new Date(v.created_at).toLocaleTimeString("id-ID")}</td>
                 <td><span class="badge badge-${
                   v.violation_count >= 3 ? "danger" : "warning"
@@ -674,6 +666,17 @@ $teacherName = $_SESSION['full_name'] ?? 'guru';
             '<tr><td colspan="5" style="text-align:center;padding:40px;color:#64748b">Terjadi kesalahan saat memuat data pelanggaran.</td></tr>';
         }
       }
+    }
+
+    // Helper function to prevent XSS
+    function escapeHtml(str) {
+      if (!str) return '';
+      return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
     }
 
     function updateStats(exams) {
