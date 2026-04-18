@@ -370,6 +370,13 @@ function updateProfile()
     }
 
     $data = getInput();
+
+    // CSRF validation - FIXED: Pass session token as second argument
+    if (!isset($data['csrf_token']) || !verifyCSRFToken($data['csrf_token'], $_SESSION['csrf_token'])) {
+        logExamAction('WARNING', 'CSRF token validation failed for profile update', ['ip' => $_SERVER['REMOTE_ADDR']]);
+        jsonResponse(['success' => false, 'message' => 'Token keamanan tidak valid. Silakan refresh halaman.'], 403);
+    }
+
     $db = getDB();
 
     $fullName = sanitize($data['full_name'] ?? '');
