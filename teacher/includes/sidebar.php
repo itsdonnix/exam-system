@@ -40,9 +40,7 @@
         </a>
       </li>
       <li>
-        <a href="students.html" class="<?= $activePage === 'students' ? 'active' : '' ?>">
-          <span class="icon">👥</span> Data Siswa
-        </a>
+        <a href="students.php" class="<?= $activePage === 'students' ? 'active' : '' ?>"><span class="icon">👥</span> Data Siswa</a>
       </li>
       <li>
         <a href="settings.html" class="<?= $activePage === 'settings' ? 'active' : '' ?>">

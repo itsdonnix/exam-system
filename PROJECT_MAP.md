@@ -19,12 +19,13 @@ ExamSafe is a secure online exam platform with three user roles: Admin, Teacher,
 
 | Task                    | Key Files                                                                     | Notes                                                                              |
 | ----------------------- | ----------------------------------------------------------------------------- | ---------------------------------------------------------------------------------- |
-| Create new teacher page | `teacher/includes/init.php`, `header.php`, `sidebar.php`, `teacher-layout.js` | Use the pattern in `teacher/settings.php`                                          |
+| Create new teacher page | `teacher/includes/init.php`, `header.php`, `sidebar.php`, `teacher-layout.js` | Use the pattern in `teacher/settings.php` or `teacher/students.php`                |
 | Add CSRF protection     | `includes/csrf.php`                                                           | Call `generateCSRFToken()` and `verifyCSRFToken($posted, $_SESSION['csrf_token'])` |
 | Add rate limiting       | `includes/auth.php`                                                           | Use `checkExamRateLimit($examId)` and `clearExamRateLimit($examId)`                |
 | Create API endpoint     | `php/exam_api.php`                                                            | Add action handler, check role, add CSRF if state-changing                         |
 | Debug session issues    | `teacher/includes/init.php`, `includes/auth.php`                              | Check `$_SESSION['role']`, `user_id`, `login_time`                                 |
 | Handle exam access      | `student/exam.php`, `student/dashboard.php`                                   | Always POST with CSRF, then redirect to GET                                        |
+| Fetch static data       | Server-side PHP in teacher page                                               | Use server-side DB query instead of API call when data doesn't change frequently   |
 
 ---
 
@@ -47,12 +48,13 @@ ExamSafe/
 │   │   └── sidebar.php   # Reusable sidebar (depends on init.php + $activePage)
 │   ├── dashboard.php     # Main teacher dashboard (uses shared includes)
 │   ├── dashboard.html    # REDIRECTS to dashboard.php (deprecated)
-│   ├── settings.php      # ★ Teacher settings with CSRF (uses shared includes)
+│   ├── settings.php      # Teacher settings with CSRF (uses shared includes)
 │   ├── settings.html     # REDIRECTS to settings.php (deprecated)
+│   ├── students.php      # ★ Student list (server-side data, uses shared includes)
+│   ├── students.html     # REDIRECTS to students.php (deprecated)
 │   ├── create-exam.html  # Create/edit exams (to be migrated to PHP)
 │   ├── question-bank.html # Manage question bank (to be migrated)
 │   ├── results.html      # View exam results (to be migrated)
-│   ├── students.html     # Manage students (to be migrated)
 │   └── register.html     # Teacher registration (refactored)
 ├── student/              # Student exam interface
 │   ├── dashboard.php     # Student dashboard (POST forms for exam access)
@@ -161,7 +163,7 @@ $csrf_token = generateCSRFToken();
 ```php
 <?php
 require_once 'includes/init.php';
-$activePage = 'dashboard'; // or 'create-exam', 'results', 'settings', etc.
+$activePage = 'dashboard'; // or 'create-exam', 'results', 'settings', 'students', etc.
 // Then include header and sidebar
 ?>
 ```
@@ -232,6 +234,8 @@ $activePage = 'dashboard'; // or 'create-exam', 'results', 'settings', etc.
 - `students` → Data Siswa
 - `settings` → Pengaturan
 
+**Note**: Links in sidebar should point to `.php` files (e.g., `students.php`, `settings.php`)
+
 ---
 
 #### **js/teacher-layout.js** (Sidebar Toggle - Include on All Teacher Pages)
@@ -274,7 +278,7 @@ $activePage = 'dashboard'; // or 'create-exam', 'results', 'settings', etc.
 
 ---
 
-#### **teacher/settings.php** (Settings with CSRF - NEW Pattern)
+#### **teacher/settings.php** (Settings with CSRF)
 
 **Purpose**: Teacher profile and AI settings management
 
@@ -295,14 +299,57 @@ Page loads → generateCSRFToken() creates token
             → Token regenerated after successful save
 ```
 
-**API Endpoints Called**:
-| Endpoint | Method | CSRF | Purpose |
-|----------|--------|------|---------|
-| `exam_api.php?action=get_profile` | GET | No | Fetch profile data |
-| `exam_api.php?action=update_profile` | POST | **Yes** | Save profile changes |
-| `get_ai_settings.php` | GET | No | Fetch AI settings |
-| `save_ai_settings.php` | POST | **Yes** | Save API key/model |
-| `ai_import.php?action=test` | POST | No | Test Gemini connection |
+---
+
+#### **teacher/students.php** (Student List with Server-Side Data - NEW)
+
+**Purpose**: Display list of students in teacher's classes (read-only)
+
+**Pattern**: Server-side data injection (no API call)
+
+**Key Features**:
+
+- Uses `init.php` for session/auth/teacher data
+- **Server-side database query** for student data
+- **No JavaScript required** for data loading (except sidebar toggle)
+- **No CSRF needed** (read-only page)
+- Follows optimization pattern from `dashboard.php`
+
+**Data Flow**:
+
+```
+Teacher accesses students.php (GET)
+  ↓
+init.php: Session validation + teacher data fetch
+  ↓
+students.php: Sets $activePage = 'students'
+  ↓
+Direct database query:
+  SELECT DISTINCT s.* FROM students s
+  JOIN exams e ON e.class = s.class
+  WHERE e.teacher_id = ?
+  ↓
+Includes header.php and sidebar.php
+  ↓
+Table renders with student data immediately
+  ↓
+No loading spinner, no API call
+```
+
+**Why server-side instead of API**:
+
+- Student data doesn't change frequently during a session
+- Eliminates loading flicker
+- Follows dashboard.php optimization pattern
+- Reduces network requests
+
+**Error Handling**:
+
+- Database errors logged to PHP error_log
+- User-friendly error message displayed in table
+- Empty state shows "Belum ada data siswa di kelas Anda"
+
+**API Endpoints Called**: None (all data server-side)
 
 ---
 
@@ -375,9 +422,12 @@ Page loads → generateCSRFToken() creates token
 | `get_teacher_stats` | guru | No | Fetch total students + avg score | JSON stats |
 | `get_profile` | guru, siswa | No | Fetch user profile data | profile JSON |
 | `update_profile` | guru | **Yes** | Update teacher name/email/phone/password | success/error |
+| `get_students` | guru | No | Fetch students from teacher's classes | JSON array |
 | `get_recent_violations` | guru | No | Fetch 10 latest violations | JSON array |
 | `get_classes` | public | No | Fetch list of classes | JSON array |
 | `get_subjects` | public | No | Fetch list of subjects | JSON array |
+
+**Note**: `get_students` endpoint is still available for API use, but `students.php` now uses server-side fetching for better performance.
 
 **Session Recovery** (Built-in):
 
@@ -401,7 +451,7 @@ if (!verifyCSRFToken($input['csrf_token'], $_SESSION['csrf_token'])) {
 
 ---
 
-#### **php/save_ai_settings.php** (AI Settings with CSRF - NEW)
+#### **php/save_ai_settings.php** (AI Settings with CSRF)
 
 **Purpose**: Save teacher's Gemini API settings
 
@@ -450,10 +500,10 @@ if (!isset($input['csrf_token']) ||
 
 ## Critical Workflows
 
-### Teacher Settings Page Load (Complete Flow)
+### Teacher Students Page Load (Server-Side Data - NEW)
 
 ```
-Browser requests settings.php (GET)
+Browser requests students.php (GET)
   ↓
 init.php executes:
   - Session cookie configuration (SameSite=Lax)
@@ -462,31 +512,45 @@ init.php executes:
   - Fetch teacher record from DB
   - Build $teacherData array
   ↓
-settings.php sets $activePage = 'settings'
+students.php sets $activePage = 'students'
   ↓
-Generates CSRF tokens:
-  - $csrf_token = generateCSRFToken()
-  - Stored in $_SESSION['csrf_token']
+Direct database query for students:
+  - JOIN exams ON class to find teacher's classes
+  - ORDER BY class, full_name
   ↓
 Includes header.php and sidebar.php:
   - Use $teacherData for user info
-  - sidebar.php highlights 'settings' menu item
+  - sidebar.php highlights 'students' menu item
   ↓
-Page HTML renders with:
-  - Forms with hidden CSRF token inputs
-  - JavaScript code to fetch data
+Page HTML renders with student data already in table
+  ↓
+No loading spinner (data appears immediately)
+  ↓
+JavaScript only handles sidebar toggle (teacher-layout.js)
+```
+
+### Teacher Settings Page Load (API-Based Data)
+
+```
+Browser requests settings.php (GET)
+  ↓
+init.php executes: session validation + teacher data fetch
+  ↓
+settings.php sets $activePage = 'settings'
+  ↓
+Generates CSRF tokens
+  ↓
+Includes header.php and sidebar.php
+  ↓
+Page HTML renders with empty forms
   ↓
 JavaScript (on page ready):
   - Fetch /php/exam_api.php?action=get_profile
-    - Retrieves name, email, phone
   - Fetch /php/get_ai_settings.php
-    - Retrieves API key (masked), model
   ↓
-User interacts with forms and clicks Save
+Forms populate with data
   ↓
-Form POST with CSRF token in body
-  ↓
-Server validates and updates database
+User saves → POST with CSRF token
 ```
 
 ### Teacher Profile Update (CSRF Flow)
@@ -543,47 +607,85 @@ Prevent: Reuse of same POST request (session key cleared)
 
 ---
 
-## Creating New Teacher Pages (Copy This Pattern)
+## Creating New Teacher Pages (Two Patterns)
+
+### Pattern A: Read-Only Pages with Server-Side Data (like students.php)
+
+Use when data doesn't change frequently and you want optimal performance.
 
 ```php
 <?php
 require_once 'includes/init.php';
-$activePage = 'page-key'; // Must match sidebar.php menu item
+$activePage = 'page-key';
 
-// If page has forms that modify data:
-require_once '../includes/csrf.php';
-$csrf_token = generateCSRFToken();
+// Fetch data server-side
+$items = [];
+try {
+    $db = getDB();
+    $stmt = $db->prepare("SELECT * FROM table WHERE teacher_id = ?");
+    $stmt->execute([$_SESSION['user_id']]);
+    $items = $stmt->fetchAll();
+} catch (Exception $e) {
+    error_log("Page error: " . $e->getMessage());
+    $error = "Gagal memuat data.";
+}
 ?>
 <!DOCTYPE html>
-<html lang="id">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Page Title - ExamSafe</title>
+    <title>Page Title</title>
     <link rel="stylesheet" href="../css/style.css">
-    <style>
-        /* Page-specific styles only */
-    </style>
 </head>
 <body>
     <?php include 'includes/header.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
     <main class="main-content">
-        <!-- Page content here -->
-        <input type="hidden" id="csrf-token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        <!-- Display $items directly -->
+        <?php if ($error): ?>
+            <div class="alert alert-danger"><?php echo htmlspecialchars($error); ?></div>
+        <?php elseif (empty($items)): ?>
+            <p>Tidak ada data.</p>
+        <?php else: ?>
+            <?php foreach ($items as $item): ?>
+                <!-- Render item -->
+            <?php endforeach; ?>
+        <?php endif; ?>
     </main>
-    </div> <!-- Closes sidebar.php -->
+    </div>
+    <script src="../js/teacher-layout.js"></script>
+</body>
+</html>
+```
 
+### Pattern B: Interactive Pages with API Calls (like settings.php)
+
+Use when data changes frequently or requires real-time updates.
+
+```php
+<?php
+require_once 'includes/init.php';
+$activePage = 'page-key';
+require_once '../includes/csrf.php';
+$csrf_token = generateCSRFToken();
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Page Title</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+<body>
+    <?php include 'includes/header.php'; ?>
+    <?php include 'includes/sidebar.php'; ?>
+    <main class="main-content">
+        <input type="hidden" id="csrf-token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        <!-- Forms and dynamic content -->
+    </main>
+    </div>
     <script src="../js/api-client.js"></script>
     <script src="../js/teacher-layout.js"></script>
     <script>
-        const csrfToken = document.getElementById('csrf-token').value;
-
-        // All API calls must include CSRF token for POST requests:
-        // const response = await ApiClient.post('/php/exam_api.php?action=update_profile', {
-        //     csrf_token: csrfToken,
-        //     name: 'New Name'
-        // });
+        // Fetch data via API, include CSRF token in POST requests
     </script>
 </body>
 </html>
@@ -643,6 +745,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 7. ✅ Include `teacher-layout.js` on all teacher pages
 8. ✅ Set session cookie params before `session_start()`
 9. ✅ Log errors but never expose to users
+10. ✅ **Use server-side data fetching for read-only pages** (like students.php)
 
 ### Session Configuration (Always This Way)
 
@@ -676,7 +779,23 @@ clearExamRateLimit($exam_id);
 
 ### Recent Changes Summary
 
-**2026-04-19 (Latest) - Teacher Settings Migration to PHP with CSRF**:
+**2026-04-19 (Latest) - Teacher Students Page Migration to PHP**:
+
+- New file: `teacher/students.php` (migrated from HTML)
+- **Server-side data injection** (no API call, no loading spinner)
+- Uses shared components (init.php, header, sidebar)
+- Read-only display (no edit/delete)
+- `teacher/students.html` now redirects to `.php` version
+- Updated sidebar link from `students.html` to `students.php`
+
+**Why server-side instead of API**:
+
+- Student data is static during session
+- Eliminates "Memuat..." flicker
+- Follows optimization pattern from dashboard.php
+- Reduces network requests
+
+**2026-04-19 - Teacher Settings Migration to PHP with CSRF**:
 
 - New file: `teacher/settings.php` (migrated from HTML)
 - Uses shared components (init.php, header, sidebar)
@@ -706,7 +825,7 @@ clearExamRateLimit($exam_id);
 
 ## Session Recovery Checklist (When Resuming Project)
 
-When coming back to this project, verify these 5 files first:
+When coming back to this project, verify these 6 files first:
 
 1. **`includes/csrf.php`** - CSRF generation/validation (2-arg verify required)
 2. **`includes/auth.php`** - Rate limiting + authentication helpers
@@ -716,11 +835,12 @@ When coming back to this project, verify these 5 files first:
 
 Then review these files for latest patterns:
 
-6. **`teacher/settings.php`** - New PHP template (use this pattern for new teacher pages)
-7. **`teacher/dashboard.php`** - Uses shared components example
-8. **`student/exam.php`** - POST-only access pattern with CSRF
-9. **`student/dashboard.php`** - POST forms for exam access
-10. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
+6. **`teacher/students.php`** - Server-side data pattern (NEW)
+7. **`teacher/settings.php`** - API-based pattern with CSRF
+8. **`teacher/dashboard.php`** - Uses shared components example
+9. **`student/exam.php`** - POST-only access pattern with CSRF
+10. **`student/dashboard.php`** - POST forms for exam access
+11. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
 
 ---
 
@@ -733,32 +853,41 @@ Then review these files for latest patterns:
 5. **Rate limit is per exam per student** - Different exams = separate counters
 6. **Dashboard data is server-side** - No `get_profile` API call needed
 7. **Settings data is API-based** - Profile still fetched dynamically (real-time sync)
-8. **Teacher pages must use init.php** - Start every teacher page with this include
-9. **Active exams cannot be deleted** - Only draft exams can be removed
-10. **Toleransi is obsolete** - Function removed, do not use
-
----
-
-## Last Updated
-
-**Date**: 2026-04-19  
-**Latest Change**: Teacher settings migration with CSRF protection  
-**Status**: Active development  
-**Maintainer Notes**: Focus on CSRF implementation consistency and teacher page refactoring pattern
+8. **Students data is server-side** - No API call for student list (static during session)
+9. **Teacher pages must use init.php** - Start every teacher page with this include
+10. **Active exams cannot be deleted** - Only draft exams can be removed
+11. **Toleransi is obsolete** - Function removed, do not use
+12. **Sidebar links must point to .php files** - Update when migrating pages
 
 ---
 
 ## File Dependencies at a Glance
 
 ```
-teacher/settings.php (NEW)
-  └─ includes/init.php
-      ├─ includes/auth.php
-      ├─ ../includes/db.php
-      ├─ ../includes/csrf.php
+teacher/students.php (NEW - Server-side data)
+  ├─ includes/init.php
+  │   ├─ includes/auth.php
+  │   ├─ ../includes/db.php
+  │   ├─ ../includes/csrf.php
   ├─ includes/header.php (depends on init.php)
   ├─ includes/sidebar.php (depends on init.php + $activePage)
   └─ js/teacher-layout.js
+
+teacher/settings.php (API-based with CSRF)
+  ├─ includes/init.php
+  ├─ includes/header.php
+  ├─ includes/sidebar.php
+  ├─ js/api-client.js
+  ├─ js/teacher-layout.js
+  └─ (API calls to exam_api.php, get_ai_settings.php, save_ai_settings.php)
+
+teacher/dashboard.php (Mixed - server-side + API)
+  ├─ includes/init.php
+  ├─ includes/header.php
+  ├─ includes/sidebar.php
+  ├─ js/exam-manager.js
+  ├─ js/teacher-layout.js
+  └─ (API calls for stats, violations)
 
 student/exam.php
   ├─ includes/csrf.php
@@ -775,10 +904,13 @@ php/save_ai_settings.php
   ├─ includes/db.php
   ├─ includes/csrf.php
   └─ logs/ (optional)
-
-teacher/dashboard.php
-  ├─ includes/init.php
-  ├─ includes/header.php
-  ├─ includes/sidebar.php
-  └─ js/teacher-layout.js
 ```
+
+---
+
+## Last Updated
+
+**Date**: 2026-04-19  
+**Latest Change**: Teacher students page migration with server-side data injection  
+**Status**: Active development  
+**Maintainer Notes**: Focus on using server-side data for read-only pages (performance), API calls only when real-time updates needed
