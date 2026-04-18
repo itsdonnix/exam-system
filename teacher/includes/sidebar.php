@@ -30,9 +30,7 @@
         </a>
       </li>
       <li>
-        <a href="question-bank.html" class="<?= $activePage === 'question-bank' ? 'active' : '' ?>">
-          <span class="icon">📚</span> Bank Soal
-        </a>
+        <a href="question-bank.php" class="<?= $activePage === 'question-bank' ? 'active' : '' ?>"><span class="icon">📚</span> Bank Soal</a>
       </li>
       <li>
         <a href="results.php" class="<?= $activePage === 'results' ? 'active' : '' ?>">
