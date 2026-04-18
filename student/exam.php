@@ -10,6 +10,66 @@ session_set_cookie_params([
 session_start();
 
 require_once '../includes/auth.php';
+require_once '../includes/csrf.php';
+
+// ============================================================
+// HANDLE POST REQUESTS (Initial exam access)
+// ============================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+  // Validate CSRF token
+  $csrf_token = $_POST['csrf_token'] ?? '';
+  if (!verifyCSRFToken($csrf_token, $_SESSION['csrf_token'] ?? null)) {
+    $_SESSION['error'] = 'Token keamanan tidak valid. Silakan coba lagi.';
+    header('Location: dashboard.php');
+    exit;
+  }
+
+  // Get exam_id from POST
+  $exam_id = (int)($_POST['exam_id'] ?? 0);
+  if (!$exam_id) {
+    $_SESSION['error'] = 'ID ujian tidak valid.';
+    header('Location: dashboard.php');
+    exit;
+  }
+
+  // Rate limiting check
+  if (!checkExamRateLimit($exam_id)) {
+    $error = $_SESSION['rate_limit_error'] ?? 'Terlalu banyak percobaan. Silakan tunggu.';
+    unset($_SESSION['rate_limit_error']);
+    $_SESSION['error'] = $error;
+    header('Location: dashboard.php');
+    exit;
+  }
+
+  // Store exam_id in session and clear rate limit on success
+  $_SESSION['active_exam_id'] = $exam_id;
+  clearExamRateLimit($exam_id);
+
+  // Regenerate CSRF token after successful validation to prevent replay attacks
+  generateCSRFToken();
+
+  // Redirect to clean URL (removes POST data)
+  header('Location: exam.php');
+  exit;
+}
+
+// ============================================================
+// HANDLE GET REQUESTS (Retrieve exam_id from session)
+// ============================================================
+$exam_id = $_SESSION['active_exam_id'] ?? 0;
+
+// Clear from session immediately to prevent reuse
+unset($_SESSION['active_exam_id']);
+
+if (!$exam_id) {
+  $_SESSION['error'] = 'Akses tidak sah. Silakan pilih ujian dari dashboard.';
+  header('Location: dashboard.php');
+  exit;
+}
+
+// ============================================================
+// NORMAL EXAM VALIDATION (unchanged from original)
+// ============================================================
 
 // Check if logged in as student
 requireLogin('siswa');
@@ -25,18 +85,11 @@ if (isSessionExpired(7200)) {
 // Refresh login time
 $_SESSION['login_time'] = time();
 
-// Validate exam_id parameter
-$exam_id = isset($_GET['exam_id']) ? (int)$_GET['exam_id'] : 0;
-if (!$exam_id) {
-  $_SESSION['error'] = 'ID ujian tidak valid.';
-  header('Location: dashboard.php');
-  exit;
-}
-
 // Security headers
 header('X-Frame-Options: DENY');
 header('Content-Security-Policy: frame-ancestors \'none\'');
 header('X-Content-Type-Options: nosniff');
+header('Referrer-Policy: strict-origin-when-cross-origin');
 
 $full_name = $_SESSION['full_name'] ?? 'Siswa';
 ?>
@@ -186,10 +239,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       flex: 1;
     }
 
-    .scroll-warning {
-      display: none;
-    }
-
     .agreement-footer {
       padding: 1.5rem;
       background: #f8fafc;
@@ -250,7 +299,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       box-shadow: 0 4px 12px rgba(22, 163, 74, 0.3);
     }
 
-    /* EXISTING STYLES */
     .exam-header {
       background: #fff;
       color: #1e293b;
@@ -435,8 +483,7 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       background: #fff;
       border-radius: 16px;
       padding: 1.5em;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1),
-        0 2px 4px -1px rgba(0, 0, 0, 0.06);
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
       margin-bottom: 1.5em;
     }
 
@@ -704,152 +751,49 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
 <body>
   <!-- ZOOM MODAL -->
-  <div
-    id="zoom-modal"
-    style="
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: rgba(0, 0, 0, 0.85);
-        z-index: 10000;
-        align-items: center;
-        justify-content: center;
-        cursor: zoom-out;
-      "
-    onclick="ExamEngine.closeZoom()">
-    <img
-      id="zoom-img"
-      src=""
-      style="
-          max-width: 95%;
-          max-height: 95%;
-          object-fit: contain;
-          border-radius: 8px;
-        " />
+  <div id="zoom-modal" style="display: none; position: fixed; inset: 0; background: rgba(0, 0, 0, 0.85); z-index: 10000; align-items: center; justify-content: center; cursor: zoom-out;" onclick="ExamEngine.closeZoom()">
+    <img id="zoom-img" src="" style="max-width: 95%; max-height: 95%; object-fit: contain; border-radius: 8px;" />
   </div>
 
   <!-- AGREEMENT MODAL -->
   <div id="agreement-modal" class="agreement-modal">
     <div class="agreement-content">
       <div class="agreement-header">
-        <h2>
-          <span>📋</span>
-          Peraturan Ujian Online
-        </h2>
+        <h2><span>📋</span> Peraturan Ujian Online</h2>
         <p>Bacalah dengan teliti sebelum memulai ujian</p>
       </div>
 
       <div class="rules-scroll-container" id="rules-scroll-container">
         <div class="rule-section">
-          <div class="rule-section-title">
-            <span>🔒</span>
-            <span>Aturan Keamanan Ujian</span>
-          </div>
-
-          <div class="rule-item" id="rule-1">
-            <input type="checkbox" id="chk1" />
-            <label class="rule-text">Saya tidak akan membuka tab atau jendela browser lain selama
-              ujian berlangsung</label>
-          </div>
-
-          <div class="rule-item" id="rule-2">
-            <input type="checkbox" id="chk2" />
-            <label class="rule-text">Saya tidak akan melakukan copy-paste (Ctrl+C, Ctrl+V,
-              Ctrl+X)</label>
-          </div>
-
-          <div class="rule-item" id="rule-3">
-            <input type="checkbox" id="chk3" />
-            <label class="rule-text">Saya tidak akan menggunakan klik kanan (right-click)</label>
-          </div>
-
-          <div class="rule-item" id="rule-4">
-            <input type="checkbox" id="chk4" />
-            <label class="rule-text">Saya tidak akan keluar dari mode layar penuh</label>
-          </div>
-
-          <div class="rule-item" id="rule-5">
-            <input type="checkbox" id="chk5" />
-            <label class="rule-text">Saya tidak akan membuka Developer Tools (F12 /
-              Ctrl+Shift+I)</label>
-          </div>
-
-          <div class="rule-item" id="rule-6">
-            <input type="checkbox" id="chk6" />
-            <label class="rule-text">Saya tidak akan menggunakan tombol pintas browser (Ctrl+T,
-              Ctrl+W, Ctrl+R, F5)</label>
-          </div>
-
-          <div class="rule-item" id="rule-7">
-            <input type="checkbox" id="chk7" />
-            <label class="rule-text">Saya tidak akan berpindah ke aplikasi lain (Alt+Tab)</label>
-          </div>
-
-          <div class="rule-item" id="rule-8">
-            <input type="checkbox" id="chk8" />
-            <label class="rule-text">Saya memahami bahwa pelanggaran maksimal 3 kali akan mengakhiri
-              ujian secara paksa</label>
-          </div>
-
-          <div class="rule-item" id="rule-9">
-            <input type="checkbox" id="chk9" />
-            <label class="rule-text">Jawaban hanya dapat dikirim satu kali dan tidak dapat
-              diubah</label>
-          </div>
+          <div class="rule-section-title"><span>🔒</span><span>Aturan Keamanan Ujian</span></div>
+          <div class="rule-item" id="rule-1"><input type="checkbox" id="chk1" /><label class="rule-text">Saya tidak akan membuka tab atau jendela browser lain selama ujian berlangsung</label></div>
+          <div class="rule-item" id="rule-2"><input type="checkbox" id="chk2" /><label class="rule-text">Saya tidak akan melakukan copy-paste (Ctrl+C, Ctrl+V, Ctrl+X)</label></div>
+          <div class="rule-item" id="rule-3"><input type="checkbox" id="chk3" /><label class="rule-text">Saya tidak akan menggunakan klik kanan (right-click)</label></div>
+          <div class="rule-item" id="rule-4"><input type="checkbox" id="chk4" /><label class="rule-text">Saya tidak akan keluar dari mode layar penuh</label></div>
+          <div class="rule-item" id="rule-5"><input type="checkbox" id="chk5" /><label class="rule-text">Saya tidak akan membuka Developer Tools (F12 / Ctrl+Shift+I)</label></div>
+          <div class="rule-item" id="rule-6"><input type="checkbox" id="chk6" /><label class="rule-text">Saya tidak akan menggunakan tombol pintas browser (Ctrl+T, Ctrl+W, Ctrl+R, F5)</label></div>
+          <div class="rule-item" id="rule-7"><input type="checkbox" id="chk7" /><label class="rule-text">Saya tidak akan berpindah ke aplikasi lain (Alt+Tab)</label></div>
+          <div class="rule-item" id="rule-8"><input type="checkbox" id="chk8" /><label class="rule-text">Saya memahami bahwa pelanggaran maksimal 3 kali akan mengakhiri ujian secara paksa</label></div>
+          <div class="rule-item" id="rule-9"><input type="checkbox" id="chk9" /><label class="rule-text">Jawaban hanya dapat dikirim satu kali dan tidak dapat diubah</label></div>
         </div>
 
         <div class="rule-section">
-          <div class="rule-section-title">
-            <span>📱</span>
-            <span>Persyaratan Perangkat</span>
-          </div>
-
-          <div class="rule-item" id="rule-10">
-            <input type="checkbox" id="chk10" />
-            <label class="rule-text">Saya telah mengatur screen timeout perangkat minimal 30 menit
-              (atau mengaktifkan fitur "Never Sleep")</label>
-          </div>
-
-          <div class="rule-item" id="rule-11">
-            <input type="checkbox" id="chk11" />
-            <label class="rule-text">Saya telah mengaktifkan mode Jangan Ganggu / Do Not Disturb
-              (DND) pada perangkat saya</label>
-          </div>
-
-          <div class="rule-item" id="rule-12">
-            <input type="checkbox" id="chk12" />
-            <label class="rule-text">Saya memastikan koneksi internet stabil selama ujian
-              berlangsung</label>
-          </div>
+          <div class="rule-section-title"><span>📱</span><span>Persyaratan Perangkat</span></div>
+          <div class="rule-item" id="rule-10"><input type="checkbox" id="chk10" /><label class="rule-text">Saya telah mengatur screen timeout perangkat minimal 30 menit (atau mengaktifkan fitur "Never Sleep")</label></div>
+          <div class="rule-item" id="rule-11"><input type="checkbox" id="chk11" /><label class="rule-text">Saya telah mengaktifkan mode Jangan Ganggu / Do Not Disturb (DND) pada perangkat saya</label></div>
+          <div class="rule-item" id="rule-12"><input type="checkbox" id="chk12" /><label class="rule-text">Saya memastikan koneksi internet stabil selama ujian berlangsung</label></div>
         </div>
 
         <div class="rule-section">
-          <div class="rule-section-title">
-            <span>✅</span>
-            <span>Persetujuan Akhir</span>
-          </div>
-
-          <div class="rule-item" id="rule-13">
-            <input type="checkbox" id="chk13" />
-            <label class="rule-text">Saya telah membaca dan memahami seluruh peraturan ujian</label>
-          </div>
-
-          <div class="rule-item" id="rule-14">
-            <input type="checkbox" id="chk14" />
-            <label class="rule-text">Saya bersedia menerima sanksi jika terbukti melanggar
-              peraturan</label>
-          </div>
+          <div class="rule-section-title"><span>✅</span><span>Persetujuan Akhir</span></div>
+          <div class="rule-item" id="rule-13"><input type="checkbox" id="chk13" /><label class="rule-text">Saya telah membaca dan memahami seluruh peraturan ujian</label></div>
+          <div class="rule-item" id="rule-14"><input type="checkbox" id="chk14" /><label class="rule-text">Saya bersedia menerima sanksi jika terbukti melanggar peraturan</label></div>
         </div>
       </div>
 
       <div class="agreement-footer">
-        <div class="countdown-timer" id="countdown-timer">
-          Silakan baca dengan teliti...
-          <span id="countdown-seconds">10</span> detik
-        </div>
-        <button class="btn-start-exam" id="btn-start-exam" disabled>
-          Mulai Ujian
-        </button>
+        <div class="countdown-timer" id="countdown-timer">Silakan baca dengan teliti... <span id="countdown-seconds">10</span> detik</div>
+        <button class="btn-start-exam" id="btn-start-exam" disabled>Mulai Ujian</button>
       </div>
     </div>
   </div>
@@ -858,15 +802,8 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
   <div id="fs-prompt" style="display: none">
     <div style="font-size: 4rem; margin-bottom: 1.5em">🔒</div>
     <h2 style="font-weight: 800; margin-bottom: 0.75em">Mode Ujian Aman</h2>
-    <p style="color: #64748b; margin-bottom: 2em">
-      Ujian ini memerlukan mode layar penuh untuk menjaga integritas dan
-      keamanan.
-    </p>
-    <button
-      class="btn btn-primary btn-lg btn-block fs-start-btn"
-      onclick="startExam()">
-      Mulai Ujian
-    </button>
+    <p style="color: #64748b; margin-bottom: 2em">Ujian ini memerlukan mode layar penuh untuk menjaga integritas dan keamanan.</p>
+    <button class="btn btn-primary btn-lg btn-block fs-start-btn" onclick="startExam()">Mulai Ujian</button>
   </div>
 
   <!-- VIOLATION OVERLAY -->
@@ -874,20 +811,8 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
     <div style="font-size: 4rem; margin-bottom: 1em">⚠️</div>
     <h2>Pelanggaran Terdeteksi!</h2>
     <p id="violation-msg">Aktivitas mencurigakan terdeteksi</p>
-    <div
-      id="violation-count"
-      style="
-          margin: 1.25em 0;
-          background: rgba(255, 255, 255, 0.2);
-          padding: 0.625em 1.5em;
-          border-radius: 50px;
-          font-weight: 700;
-        ">
-      Pelanggaran 1/3
-    </div>
-    <p style="font-size: 0.85rem; opacity: 0.8">
-      Pengawas telah diberitahu. Jangan ulangi!
-    </p>
+    <div id="violation-count" style="margin: 1.25em 0; background: rgba(255, 255, 255, 0.2); padding: 0.625em 1.5em; border-radius: 50px; font-weight: 700;">Pelanggaran 1/3</div>
+    <p style="font-size: 0.85rem; opacity: 0.8">Pengawas telah diberitahu. Jangan ulangi!</p>
   </div>
 
   <!-- EXAM HEADER -->
@@ -910,20 +835,13 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
     </div>
     <div class="header-right">
       <div id="exam-timer" class="timer-pill timer-normal">⏱️ 00:00</div>
-      <div
-        onclick="toggleGrid()"
-        class="nav-grid-trigger"
-        title="Navigasi Soal">
-        ☰
-      </div>
+      <div onclick="toggleGrid()" class="nav-grid-trigger" title="Navigasi Soal">☰</div>
     </div>
   </div>
 
   <!-- TOP NAV SCROLL -->
   <div class="q-nav-container" id="q-nav-container" style="display: none">
-    <div class="q-nav-scroll" id="q-nav-scroll">
-      <!-- Buttons injected here -->
-    </div>
+    <div class="q-nav-scroll" id="q-nav-scroll"></div>
   </div>
 
   <!-- EXAM CONTENT -->
@@ -933,18 +851,9 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
   <!-- BOTTOM NAV -->
   <div class="bottom-nav" id="bottom-nav" style="display: none">
-    <button class="nav-btn btn-prev" onclick="ExamEngine.prevQuestion()">
-      <span>Sebelumnya</span>
-    </button>
-    <button class="nav-btn btn-ragu" id="btn-mark" onclick="toggleMark()">
-      <span>Ragu-ragu</span>
-    </button>
-    <button
-      class="nav-btn btn-next"
-      id="btn-next-main"
-      onclick="ExamEngine.nextQuestion()">
-      <span>Selanjutnya</span>
-    </button>
+    <button class="nav-btn btn-prev" onclick="ExamEngine.prevQuestion()"><span>Sebelumnya</span></button>
+    <button class="nav-btn btn-ragu" id="btn-mark" onclick="toggleMark()"><span>Ragu-ragu</span></button>
+    <button class="nav-btn btn-next" id="btn-next-main" onclick="ExamEngine.nextQuestion()"><span>Selanjutnya</span></button>
   </div>
 
   <!-- NAV GRID MODAL -->
@@ -952,67 +861,22 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
     <div class="nav-grid-content" onclick="event.stopPropagation()">
       <div class="grid-header">
         <div class="grid-title">Navigasi Soal</div>
-        <div
-          onclick="toggleGrid()"
-          style="cursor: pointer; font-size: 1.5rem">
-          &times;
-        </div>
+        <div onclick="toggleGrid()" style="cursor: pointer; font-size: 1.5rem">&times;</div>
       </div>
-      <div class="grid-items" id="modal-nav-grid">
-        <!-- Grid items injected here -->
-      </div>
-      <div
-        style="
-            margin-top: 1.5em;
-            border-top: 1px solid #eee;
-            padding-top: 1.25em;
-          ">
-        <button
-          class="btn btn-success btn-block"
-          onclick="ExamEngine.submitExam()">
-          Kumpulkan Ujian
-        </button>
+      <div class="grid-items" id="modal-nav-grid"></div>
+      <div style="margin-top: 1.5em; border-top: 1px solid #eee; padding-top: 1.25em;">
+        <button class="btn btn-success btn-block" onclick="ExamEngine.submitExam()">Kumpulkan Ujian</button>
       </div>
     </div>
   </div>
 
   <!-- RESULT SCREEN -->
-  <div
-    id="exam-result"
-    style="
-        display: none;
-        position: fixed;
-        inset: 0;
-        background: #fff;
-        z-index: 5000;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        padding: 2em;
-        text-align: center;
-      ">
+  <div id="exam-result" style="display: none; position: fixed; inset: 0; background: #fff; z-index: 5000; flex-direction: column; align-items: center; justify-content: center; padding: 2em; text-align: center;">
     <div style="font-size: 4rem; margin-bottom: 1.25em">✅</div>
-    <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 0.5em">
-      Ujian Selesai
-    </h2>
-    <div
-      style="
-          font-size: 1.5rem;
-          font-weight: 600;
-          color: #16a34a;
-          margin-bottom: 1em;
-        ">
-      Terima kasih telah mengerjakan ujian
-    </div>
-    <p style="color: #64748b; margin-bottom: 2em; max-width: 300px">
-      Jawaban Anda telah disimpan. Hasil ujian akan diumumkan oleh guru.
-    </p>
-    <a
-      href="../student/dashboard.php"
-      class="btn btn-primary"
-      style="max-width: 18.75rem; display: inline-block; padding: 12px 24px">
-      Kembali ke Dashboard
-    </a>
+    <h2 style="font-weight: 800; font-size: 2rem; margin-bottom: 0.5em">Ujian Selesai</h2>
+    <div style="font-size: 1.5rem; font-weight: 600; color: #16a34a; margin-bottom: 1em;">Terima kasih telah mengerjakan ujian</div>
+    <p style="color: #64748b; margin-bottom: 2em; max-width: 300px">Jawaban Anda telah disimpan. Hasil ujian akan diumumkan oleh guru.</p>
+    <a href="../student/dashboard.php" class="btn btn-primary" style="max-width: 18.75rem; display: inline-block; padding: 12px 24px">Kembali ke Dashboard</a>
   </div>
 
   <script src="../js/security.js"></script>
@@ -1024,10 +888,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
     // Use examIdFromUrl instead of URL parameter
     const examId = examIdFromUrl;
-
-    // ============================================
-    // AGREEMENT MODAL LOGIC (No scroll requirement)
-    // ============================================
 
     if (!examId) {
       alert("ID Ujian tidak ditemukan!");
@@ -1042,7 +902,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
     const countdownSeconds = document.getElementById("countdown-seconds");
     const startBtn = document.getElementById("btn-start-exam");
 
-    // Initialize checkboxes - ENABLED IMMEDIATELY
     function initCheckboxes() {
       for (let i = 1; i <= 14; i++) {
         const chk = document.getElementById(`chk${i}`);
@@ -1058,9 +917,7 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
     function validateAllChecked() {
       if (countdownActive) return;
-
       const allChecked = allCheckboxes.every((chk) => chk.checked);
-
       if (allChecked && !countdownActive) {
         startCountdown(10);
       }
@@ -1075,7 +932,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       countdownInterval = setInterval(() => {
         remaining--;
         countdownSeconds.textContent = remaining;
-
         if (remaining <= 0) {
           clearInterval(countdownInterval);
           countdownTimer.classList.remove("active");
@@ -1094,21 +950,16 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
     async function handleStartExam() {
       if (startBtn.disabled) return;
-
-      // Log agreement to server
       try {
         await ExamEngine.logAgreement(examId);
         console.log("[Agreement] Successfully logged to server");
       } catch (error) {
         console.error("[Agreement] Failed to log:", error);
       }
-
-      // Hide agreement modal and show FS prompt
       document.getElementById("agreement-modal").style.display = "none";
       document.getElementById("fs-prompt").style.display = "flex";
     }
 
-    // MARKED QUESTIONS & NAVIGATION
     let markedQuestions = new Set();
 
     function toggleMark() {
@@ -1133,7 +984,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       document.getElementById("exam-content").style.display = "block";
       document.getElementById("bottom-nav").style.display = "flex";
 
-      // START security monitoring NOW (attaches all listeners)
       if (typeof ExamSecurity !== "undefined" && ExamSecurity.start) {
         ExamSecurity.start();
       }
@@ -1143,7 +993,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
         if (el.requestFullscreen) el.requestFullscreen().catch(() => {});
       } catch (e) {}
 
-      // Start exam session BEFORE loading questions - PASS examId
       ExamEngine.startExam(examId).then((success) => {
         if (success) {
           ExamEngine.init(examId).then(() => {
@@ -1163,7 +1012,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
             buildNav();
           });
         } else {
-          // Error message already shown in startExam()
           window.location.href = "dashboard.php";
         }
       });
@@ -1182,9 +1030,7 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
         btn.textContent = i + 1;
         btn.onclick = () => {
           ExamEngine.goToQuestion(i);
-          if (
-            document.getElementById("nav-grid-modal").style.display === "flex"
-          )
+          if (document.getElementById("nav-grid-modal").style.display === "flex")
             toggleGrid();
         };
         scrollContainer.appendChild(btn);
@@ -1199,7 +1045,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
     function updateNavUI() {
       if (!ExamEngine.questions) return;
-
       ExamEngine.questions.forEach((q, i) => {
         const isAnswered = ExamEngine.answers[q.id] !== undefined;
         const isCurrent = ExamEngine.currentQuestion === i;
@@ -1246,9 +1091,7 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
         markBtn.style.borderColor = "transparent";
       }
 
-      const curBtn = document.getElementById(
-        `nav-q${ExamEngine.currentQuestion}`
-      );
+      const curBtn = document.getElementById(`nav-q${ExamEngine.currentQuestion}`);
       if (curBtn) {
         curBtn.scrollIntoView({
           behavior: "smooth",
@@ -1258,7 +1101,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       }
     }
 
-    // Override ExamEngine methods
     const originalGoTo = ExamEngine.goToQuestion;
     ExamEngine.goToQuestion = function(idx) {
       originalGoTo.call(this, idx);
@@ -1271,7 +1113,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       updateNavUI();
     };
 
-    // Initialize agreement modal
     initCheckboxes();
   </script>
 </body>

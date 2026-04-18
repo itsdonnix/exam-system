@@ -10,6 +10,7 @@ session_set_cookie_params([
 session_start();
 
 require_once '../includes/auth.php';
+require_once '../includes/csrf.php';
 
 // Check if logged in as student
 requireLogin('siswa');
@@ -24,6 +25,9 @@ if (isSessionExpired(3600)) {
 
 // Refresh login time
 $_SESSION['login_time'] = time();
+
+// Generate CSRF token for forms
+$csrf_token = generateCSRFToken();
 
 $full_name = $_SESSION['full_name'] ?? 'Siswa';
 ?>
@@ -167,7 +171,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
             }
 
             .join-exam-alert {
-                /* position: absolute; */
                 top: 100%;
                 left: 0;
                 right: 0;
@@ -368,7 +371,7 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
             <div class="welcome-icon">📚</div>
         </div>
 
-        <!-- Join Exam Section (IMPROVED) -->
+        <!-- Join Exam Section -->
         <div class="card join-exam-card">
             <div id="join-alert" class="join-exam-alert"></div>
             <div class="join-exam-container">
@@ -392,7 +395,6 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
                         class="btn btn-primary join-exam-button">
                         🚀 Masuk Ujian
                     </button>
-
                 </form>
             </div>
         </div>
@@ -438,23 +440,24 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
     <script>
         const studentName = <?php echo json_encode($full_name); ?>;
+        const csrfToken = <?php echo json_encode($csrf_token); ?>;
 
         function showExamListSkeletonLoader() {
             const container = document.getElementById("exam-list");
             container.innerHTML = `
-        <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 40%"></div><div class="skeleton-line" style="width: 60%"></div><div class="skeleton-line" style="width: 30%"></div></div></div>
-        <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 50%"></div><div class="skeleton-line" style="width: 70%"></div><div class="skeleton-line" style="width: 45%"></div></div></div>
-        <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 35%"></div><div class="skeleton-line" style="width: 55%"></div><div class="skeleton-line" style="width: 40%"></div></div></div>
-      `;
+                <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 40%"></div><div class="skeleton-line" style="width: 60%"></div><div class="skeleton-line" style="width: 30%"></div></div></div>
+                <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 50%"></div><div class="skeleton-line" style="width: 70%"></div><div class="skeleton-line" style="width: 45%"></div></div></div>
+                <div class="exam-skeleton"><div class="skeleton-loader"><div class="skeleton-line" style="width: 35%"></div><div class="skeleton-line" style="width: 55%"></div><div class="skeleton-line" style="width: 40%"></div></div></div>
+            `;
         }
 
         function showHistoryTableSkeletonLoader() {
             const tbody = document.getElementById("history-tbody");
             tbody.innerHTML = `
-        <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
-        <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
-        <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
-      `;
+                <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
+                <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
+                <tr><td colspan="4"><div class="skeleton-loader"><div class="skeleton-line" style="width: 100%"></div></div></td></tr>
+            `;
         }
 
         function updateTime() {
@@ -543,9 +546,16 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
 
                     if (result.success) {
                         alertEl.innerHTML = `<div class="alert alert-success" style="margin:0; padding:8px 12px; font-size:0.85rem">✅ ${result.message}</div>`;
-                        setTimeout(() => {
-                            window.location.href = `exam.html?exam_id=${result.exam_id}`;
-                        }, 1000);
+                        // Use POST form instead of GET redirect
+                        const form = document.createElement('form');
+                        form.method = 'POST';
+                        form.action = 'exam.php';
+                        form.innerHTML = `
+                            <input type="hidden" name="exam_id" value="${result.exam_id}">
+                            <input type="hidden" name="csrf_token" value="${csrfToken}">
+                        `;
+                        document.body.appendChild(form);
+                        form.submit();
                     } else {
                         alertEl.innerHTML = `<div class="alert alert-danger" style="margin:0; padding:8px 12px; font-size:0.85rem">❌ ${result.message}</div>`;
                         codeInput.focus();
@@ -570,11 +580,8 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
                     credentials: "include"
                 });
                 const data = await response.json();
-                if (data.success) {
-                    const user = data.user;
-                    if (user.class) {
-                        document.getElementById("student-class").textContent = `${user.class} — SMA Kristen Mercusuar Kupang`;
-                    }
+                if (data.success && data.user.class) {
+                    document.getElementById("student-class").textContent = `${data.user.class} — SMA Kristen Mercusuar Kupang`;
                 }
             } catch (e) {
                 console.error("Profile fetch error:", e);
@@ -616,13 +623,13 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
                         const status = h.status === "graded" ? "Selesai" : "Sedang Diproses";
                         const badge = h.status === "graded" ? "success" : "info";
                         return `
-              <tr>
-                <td><b>${h.subject}</b> — ${h.name}</td>
-                <td>${new Date(h.submitted_at).toLocaleDateString("id-ID")}</td>
-                <td>${Math.round(h.time_taken_seconds / 60)} menit</td>
-                <td><span class="badge badge-${badge}">${status}</span></td>
-              </tr>
-            `;
+                            <tr>
+                                <td><b>${h.subject}</b> — ${h.name}</td>
+                                <td>${new Date(h.submitted_at).toLocaleDateString("id-ID")}</td>
+                                <td>${Math.round(h.time_taken_seconds / 60)} menit</td>
+                                <td><span class="badge badge-${badge}">${status}</span></td>
+                            </tr>
+                        `;
                     }).join("");
                 }
             } catch (error) {
@@ -660,26 +667,33 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
                 } else {
                     statusHtml = `<span class="countdown-badge">⏳ Tersedia</span>`;
                     if (exam.is_authorized) {
-                        actionHtml = `<a href="exam.html?exam_id=${exam.id}" class="btn btn-primary">Mulai Ujian →</a>`;
+                        // Use POST form instead of GET link
+                        actionHtml = `
+                            <form method="POST" action="exam.php" style="display:inline" onsubmit="return confirm('Mulai ujian ${exam.name.replace(/'/g, "\\'")}?')">
+                                <input type="hidden" name="exam_id" value="${exam.id}">
+                                <input type="hidden" name="csrf_token" value="${csrfToken}">
+                                <button type="submit" class="btn btn-primary">Mulai Ujian →</button>
+                            </form>
+                        `;
                     } else {
                         actionHtml = `<button class="btn btn-outline" onclick="focusJoinCode()" style="border-color:var(--accent); color:var(--accent)">🔑 Butuh Kode</button>`;
                     }
                 }
 
                 return `
-          <div class="${itemClass}">
-            <div>
-              <div class="exam-name">${exam.name}</div>
-              <div class="exam-meta">
-                <span>📚 ${exam.subject}</span>
-                <span>⏱️ ${exam.duration_minutes} menit</span>
-                <span>📝 ${exam.question_count} soal</span>
-              </div>
-              <div class="exam-meta">${statusHtml}</div>
-            </div>
-            <div style="text-align:right">${actionHtml}</div>
-          </div>
-        `;
+                    <div class="${itemClass}">
+                        <div>
+                            <div class="exam-name">${exam.name}</div>
+                            <div class="exam-meta">
+                                <span>📚 ${exam.subject}</span>
+                                <span>⏱️ ${exam.duration_minutes} menit</span>
+                                <span>📝 ${exam.question_count} soal</span>
+                            </div>
+                            <div class="exam-meta">${statusHtml}</div>
+                        </div>
+                        <div style="text-align:right">${actionHtml}</div>
+                    </div>
+                `;
             }).join("");
         }
 

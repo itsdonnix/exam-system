@@ -10,6 +10,7 @@ ExamSafe is a secure online exam platform with three user roles: Admin, Teacher,
 - **Backend**: PHP 7.4+
 - **Database**: MySQL/MariaDB
 - **Authentication**: Session-based
+- **Security**: CSRF tokens, Rate limiting, POST-only sensitive endpoints
 - **File Upload**: PDF/DOCX/TXT parsing via Composer packages
 
 ---
@@ -34,7 +35,9 @@ ExamSafe/
 │   ├── students.html     # Manage students
 │   └── settings.html     # Teacher settings (API keys)
 ├── student/              # Student exam interface
-│   └── exam.html         # Take exam interface
+│   ├── dashboard.php     # Student dashboard (POST forms for exam access)
+│   ├── exam.php          # Take exam interface (POST-only access)
+│   └── exam.html         # REDIRECTS to dashboard.php (deprecated)
 ├── css/
 │   └── style.css         # Global styles
 ├── js/
@@ -45,12 +48,15 @@ ExamSafe/
 │   ├── db.php           # Database connection
 │   ├── exam_api.php     # SHARED - Exam operations API
 │   ├── admin_api.php    # Admin-specific API
-│   ├── auth.php         # Authentication handling
+│   ├── auth.php         # Authentication handling + rate limiting
 │   ├── logout.php       # Logout handler
 │   ├── ai_import.php    # AI question extraction
 │   └── logs/            # Log files directory
 │       ├── ai_import.log    # AI extraction logs
 │       └── exam_actions.log # Exam action logs (reset, toleransi, violations)
+├── includes/            # Shared PHP utilities
+│   ├── auth.php         # Authentication helpers
+│   └── csrf.php         # CSRF token generation & validation
 └── vendor/              # Composer dependencies
 ```
 
@@ -58,7 +64,112 @@ ExamSafe/
 
 ## Core Files & Their Relationships
 
-### 1. **js/exam-manager.js** (SHARED MODULE)
+### 1. **includes/csrf.php** (NEW - Security Module)
+
+**Purpose**: CSRF protection for all forms
+
+**Key Functions**:
+| Function | Purpose |
+|----------|---------|
+| `generateCSRFToken()` | Creates/retrieves session-based CSRF token |
+| `verifyCSRFToken($token1, $token2)` | Validates token using hash_equals() |
+| `csrfField($token)` | Generates hidden input HTML |
+
+**Critical**: Tokens stored in `$_SESSION['csrf_token']`, regenerated after successful exam access to prevent replay attacks.
+
+---
+
+### 2. **includes/auth.php** (Updated - Added Rate Limiting)
+
+**Purpose**: Authentication handling + exam access rate limiting
+
+**Key Functions** (existing):
+
+- `isLoggedIn()`, `requireLogin()`, `setSession()`, `clearSession()`, `isSessionExpired()`
+
+**New Rate Limiting Functions**:
+| Function | Purpose |
+|----------|---------|
+| `checkExamRateLimit($examId)` | Limits to 3 attempts per 1 minute per exam per student |
+| `clearExamRateLimit($examId)` | Resets rate limit on successful access |
+
+**Rate Limit Behavior**:
+
+- Attempts 1-3: Allowed within 60-second window
+- After 3 failures: 60-second block
+- Block message stored in `$_SESSION['rate_limit_error']`
+
+---
+
+### 3. **student/exam.php** (Updated - POST-Only Access)
+
+**Purpose**: Student exam taking interface with enhanced security
+
+**Security Flow**:
+
+```
+POST request (from dashboard form)
+  ↓
+Validate CSRF token (verifyCSRFToken)
+  ↓
+Check rate limit (checkExamRateLimit)
+  ↓
+Store exam_id in $_SESSION['active_exam_id']
+  ↓
+Regenerate CSRF token (prevent replay)
+  ↓
+Redirect 302 to clean URL (exam.php)
+  ↓
+GET request retrieves exam_id from session
+  ↓
+Clear session variable (prevent reuse)
+  ↓
+Normal exam flow (agreement → security → questions)
+```
+
+**Critical Changes**:
+
+- **NO LONGER accepts GET parameter** - exam_id must come from session
+- Direct access without POST → redirect to dashboard with error
+- Session-based exam_id prevents bookmarking/sharing
+- Rate limiting prevents brute force attempts
+
+---
+
+### 4. **student/dashboard.php** (Updated - POST Forms)
+
+**Purpose**: Student dashboard with POST-based exam access
+
+**Changes**:
+
+- Includes `csrf.php` and generates token via `generateCSRFToken()`
+- All "Mulai Ujian" buttons converted to POST forms
+- Join exam flow uses JavaScript POST form submission
+- CSRF token passed as hidden field in all exam access forms
+
+**Exam Link Format** (replaces anchor tags):
+
+```html
+<form method="POST" action="exam.php" onsubmit="return confirm('...')">
+  <input type="hidden" name="exam_id" value="123" />
+  <input type="hidden" name="csrf_token" value="..." />
+  <button type="submit" class="btn btn-primary">Mulai Ujian →</button>
+</form>
+```
+
+---
+
+### 5. **student/exam.html** (Deprecated - Redirects to Dashboard)
+
+**Current Behavior**: Immediately redirects to `dashboard.php`
+
+**Purpose**: Handles legacy bookmarks/links - prevents broken access
+
+**Note**: Will be removed after confirming no external links remain.
+
+---
+
+### 6. **js/exam-manager.js** (SHARED MODULE)
 
 **Purpose**: Centralized exam management for both admin and teacher dashboards
 
@@ -75,7 +186,7 @@ ExamSafe/
 | `showViolationDetails()` | View violation history for a student | `get_student_violations` |
 | `deleteViolation()` | Remove a specific violation record | `delete_violation` |
 
-**Monitor Modal Features** (Updated):
+**Monitor Modal Features**:
 
 - Search/filter students by name
 - Auto-refresh every 30 seconds (indicator in footer)
@@ -85,14 +196,14 @@ ExamSafe/
 
 ---
 
-### 2. **js/security.js** (Student Exam Security)
+### 7. **js/security.js** (Student Exam Security)
 
 **Purpose**: Anti-cheat monitoring that only activates when exam officially starts
 
 **Key Behavior**:
 
 - `init()` - Sets up debug mode, attaches NO listeners
-- `start()` - Called from `exam.html` when student clicks "Mulai Ujian" on fullscreen prompt
+- `start()` - Called from `exam.php` when student clicks "Mulai Ujian" on fullscreen prompt
 - Attaches all security listeners ONLY after `start()` is called
 - Logs violations to database without blocking/forcing submit
 - Shows toast notifications for blocked actions
@@ -109,7 +220,7 @@ ExamSafe/
 
 ---
 
-### 3. **js/exam.js** (Exam Engine)
+### 8. **js/exam.js** (Exam Engine)
 
 **Purpose**: Manages exam taking experience for students
 
@@ -128,24 +239,26 @@ ExamSafe/
 
 ---
 
-### 4. **php/exam_api.php** (SHARED API)
+### 9. **php/exam_api.php** (SHARED API)
 
 **Purpose**: Handles all exam-related operations for all roles
 
-**Key Endpoints** (Updated):
+**Key Endpoints**:
 
-| Action                   | Role Access | Description                                                       |
-| ------------------------ | ----------- | ----------------------------------------------------------------- |
-| `get_exam_monitor`       | Guru, Admin | Returns participants with violation counts                        |
-| `reset_student_result`   | Guru, Admin | **NEW**: Deletes submission AND all violations (transaction-safe) |
-| `get_student_violations` | Guru, Admin | Fetch violation history for a specific student+exam               |
-| `delete_violation`       | Guru, Admin | Delete a single violation record                                  |
-| `report_violation`       | Siswa       | Log violation to database (no blocking)                           |
-| `log_agreement`          | Siswa       | Record student agreement to exam rules                            |
+| Action                   | Role Access | Description                                              |
+| ------------------------ | ----------- | -------------------------------------------------------- |
+| `get_exam_monitor`       | Guru, Admin | Returns participants with violation counts               |
+| `reset_student_result`   | Guru, Admin | Deletes submission AND all violations (transaction-safe) |
+| `get_student_violations` | Guru, Admin | Fetch violation history for a specific student+exam      |
+| `delete_violation`       | Guru, Admin | Delete a single violation record                         |
+| `report_violation`       | Siswa       | Log violation to database (no blocking)                  |
+| `log_agreement`          | Siswa       | Record student agreement to exam rules                   |
+| `join_exam`              | Siswa       | Validate exam code and authorize access                  |
+| `start_exam`             | Siswa       | Initialize exam session in database                      |
 
-**reset_student_result Changes**:
+**reset_student_result**:
 
-- Now deletes both `exam_submissions` AND `violations` records
+- Deletes both `exam_submissions` AND `violations` records
 - Wrapped in database transaction for atomicity
 - Logs number of violations cleared to `exam_actions.log`
 
@@ -162,65 +275,35 @@ ExamSafe/
 
 ---
 
-### 5. **student/exam.html**
-
-**Purpose**: Student exam taking interface
-
-**Flow**:
-
-1. Load page → Shows agreement modal with 14 rules checkboxes
-2. Student checks all boxes → 10-second countdown
-3. Countdown finishes → "Mulai Ujian" enabled
-4. Click → Logs agreement, shows fullscreen prompt
-5. Click "Mulai Ujian" on FS prompt → Calls `startExam()`
-6. `startExam()` calls `ExamSecurity.start()` → **Security monitoring begins**
-7. Calls `ExamEngine.init()` → Loads questions, starts timer
-
-**Critical**: Security monitoring only starts AFTER fullscreen prompt button click.
-
----
-
-### 6. **teacher/results.html**
-
-**Purpose**: View exam results with violation tracking
-
-**Features**:
-
-- Results table with violation column (clickable badges)
-- Filter: "Tampilkan hanya siswa dengan pelanggaran"
-- Violation detail modal (reused from exam-manager)
-
----
-
-### 7. **admin/dashboard.html**
-
-**Purpose**: Main admin control panel
-
-**Violations Section** (Enhanced):
-
-- Clickable violation rows that open detail modal
-- Delete violation button for admin
-- Auto-refresh every 30 seconds
-- Manual refresh button
-
----
-
-## Database Schema Updates
-
-### violations table (existing, no changes)
-
-- `id` - Primary key
-- `exam_id` - Foreign key to exams
-- `student_id` - Foreign key to students
-- `reason` - Violation description
-- `violation_count` - Counter (legacy, not used for blocking)
-- `created_at` - Timestamp
-
----
-
 ## Key Workflows (Updated)
 
-### 1. Reset Student Result Flow (With Violation Clearing)
+### 1. Student Exam Access Flow (POST-only with CSRF)
+
+```
+Student clicks "Mulai Ujian" on dashboard
+  ↓
+POST form submitted to exam.php with:
+  - exam_id (hidden field)
+  - csrf_token (hidden field)
+  ↓
+exam.php validates CSRF token (verifyCSRFToken)
+  ↓
+checkExamRateLimit() → 3 attempts per minute max
+  ↓
+Store exam_id in $_SESSION['active_exam_id']
+  ↓
+Regenerate CSRF token (generateCSRFToken)
+  ↓
+Redirect 302 to exam.php (clean URL)
+  ↓
+GET request reads exam_id from session
+  ↓
+Clear $_SESSION['active_exam_id']
+  ↓
+Load agreement modal → security starts → exam begins
+```
+
+### 2. Reset Student Result Flow (With Violation Clearing)
 
 ```
 Teacher clicks "Reset Hasil" (🔄) in Monitor Modal
@@ -231,7 +314,7 @@ examManager.resetStudentResult()
   ↓
 POST to exam_api.php?action=reset_student_result
   ↓
-resetStudentResult() function (UPDATED):
+resetStudentResult() function:
   - Verify permissions (admin OR teacher owns exam)
   - Get submission & violation details for logging
   - BEGIN TRANSACTION
@@ -245,10 +328,10 @@ Return success to frontend
 Monitor modal auto-refreshes (30s) → shows violation count as 0
 ```
 
-### 2. Student Exam Start Flow (Security Activation)
+### 3. Student Exam Start Flow (Security Activation)
 
 ```
-Student loads exam.html
+Student loads exam.php (after POST redirect)
   ↓
 ExamSecurity.init() runs → NO listeners attached
   ↓
@@ -267,7 +350,21 @@ Security monitoring ACTIVE for entire exam
 Violations logged to database (no blocking/force submit)
 ```
 
-### 3. Violation Viewing Flow (Teacher/Admin)
+### 4. Join Exam with Code Flow (Updated)
+
+```
+Student enters 8-character code in dashboard
+  ↓
+JavaScript POST to exam_api.php?action=join_exam
+  ↓
+Server validates code & exam status
+  ↓
+On success: create POST form dynamically
+  ↓
+Submit POST to exam.php (same flow as regular exam access)
+```
+
+### 5. Violation Viewing Flow (Teacher/Admin)
 
 ```
 Teacher clicks violation badge (⚠️ 2) in Monitor Modal or Results page
@@ -291,23 +388,27 @@ Monitor modal auto-refreshes with updated count
 
 ## Important Notes for Future Development
 
-### Recent Changes Summary (2026-04-16)
+### Recent Changes Summary (2026-04-18)
 
-1. **Removed student blocking** - No more 3-strike force submit
-2. **Security only activates on exam start** - Listeners attached only when student clicks final "Mulai Ujian"
-3. **Reset result now clears violations** - Transaction-safe deletion of both submission and violations
-4. **Monitor modal improvements**:
-   - Search/filter by student name
-   - Auto-refresh every 30s
-   - Violation badges clickable for details
-   - Reset button always visible
-   - Removed Toleransi button (obsolete)
-   - Status icons instead of text
-5. **Violation management**:
-   - Teachers can view violation history
-   - Admin can delete any violation
-   - Violation detail modal with timestamps
-6. **Admin violations table** - Clickable rows with delete functionality
+**Security Hardening - POST-only Exam Access**:
+
+1. **POST-only exam.php** - No longer accepts GET parameters, uses session-stored exam_id
+2. **CSRF protection** - All exam access forms include tokens validated via `includes/csrf.php`
+3. **Rate limiting** - 3 attempts per 1 minute per exam per student (prevents brute force)
+4. **Clean URL redirect** - POST → redirect → GET pattern prevents resubmission on refresh
+5. **Token regeneration** - CSRF token regenerated after successful exam access (replay prevention)
+6. **Dashboard converted** - All "Mulai Ujian" links replaced with POST forms
+7. **Join exam updated** - Uses JavaScript POST form submission instead of GET redirect
+8. **exam.html deprecated** - Now redirects to dashboard (handles legacy bookmarks)
+
+**Previous Changes (2026-04-16)**:
+
+1. Removed student blocking - No more 3-strike force submit
+2. Security only activates on exam start - Listeners attached only when student clicks final "Mulai Ujian"
+3. Reset result now clears violations - Transaction-safe deletion of both submission and violations
+4. Monitor modal improvements: search, auto-refresh, violation badges, reset button always visible
+5. Violation management: Teachers can view violation history, Admin can delete any violation
+6. Admin violations table - Clickable rows with delete functionality
 
 ### Critical Constraints (Updated)
 
@@ -317,6 +418,9 @@ Monitor modal auto-refreshes with updated count
 4. **Admin duplicates preserve original teacher_id**
 5. **Session timeout: 2 hours**
 6. **Security listeners attached ONLY after exam officially starts** (no violations during agreement)
+7. **exam.php requires POST then redirect** - Direct GET access without session → dashboard redirect
+8. **CSRF tokens required** for all exam access forms (dashboard, join exam)
+9. **Rate limiting active** - 3 failed attempts = 1 minute block
 
 ### Log Files
 
@@ -325,10 +429,21 @@ Monitor modal auto-refreshes with updated count
 
 ---
 
+## Security Headers Implemented
+
+**exam.php** includes:
+
+- `X-Frame-Options: DENY`
+- `Content-Security-Policy: frame-ancestors 'none'`
+- `X-Content-Type-Options: nosniff`
+- `Referrer-Policy: strict-origin-when-cross-origin`
+
+---
+
 ## Last Updated
 
-**Date**: 2026-04-16
-**Developer**: Full-stack implementation with violation management and delayed security activation
+**Date**: 2026-04-18
+**Developer**: Security hardening - POST-only exam access with CSRF + rate limiting
 **Status**: Active development
 
 ---
@@ -337,8 +452,19 @@ Monitor modal auto-refreshes with updated count
 
 When returning to this project, review:
 
-1. `js/security.js` - Security starts ONLY on exam begin (critical for fair exams)
-2. `js/exam-manager.js` - Monitor modal with search, auto-refresh, violation details
-3. `php/exam_api.php` - resetStudentResult now clears violations with transaction
-4. `student/exam.html` - Agreement modal before security activation
-5. This PROJECT_MAP.md - For latest workflow understanding
+1. **`includes/csrf.php`** - CSRF token generation and validation (critical for all forms)
+2. **`includes/auth.php`** - Rate limiting functions `checkExamRateLimit()` and `clearExamRateLimit()`
+3. **`student/exam.php`** - POST-only access pattern with session-based exam_id storage
+4. **`student/dashboard.php`** - POST forms for exam access, CSRF token integration
+5. **`js/security.js`** - Security starts ONLY on exam begin (critical for fair exams)
+6. **`js/exam-manager.js`** - Monitor modal with search, auto-refresh, violation details
+7. **`php/exam_api.php`** - resetStudentResult now clears violations with transaction
+8. This PROJECT_MAP.md - For latest workflow understanding
+
+## Breaking Changes for Future Development
+
+1. **Never use GET for exam.php** - Always POST with CSRF token
+2. **Always include CSRF token** in any form that accesses exam.php
+3. **Rate limit is per exam per student** - Different exams have separate counters
+4. **exam.html is deprecated** - Remove after confirming no external links remain
+5. **Session key `active_exam_id`** is single-use (cleared after reading)

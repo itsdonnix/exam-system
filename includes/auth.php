@@ -56,14 +56,13 @@ function clearSession()
 }
 
 function isSessionExpired($timeout = 3600)
-{ // 1 hour default
+{
     if (!isset($_SESSION['login_time'])) {
         return true;
     }
     return (time() - $_SESSION['login_time']) > $timeout;
 }
 
-// Session validation function
 function validateSession()
 {
     if (!isset($_SESSION['role']) && isset($_SESSION['user_id'])) {
@@ -72,4 +71,71 @@ function validateSession()
     }
 
     return isset($_SESSION['user_id']) && isset($_SESSION['role']);
+}
+
+// ============================================================
+// RATE LIMITING FOR EXAM ACCESS
+// ============================================================
+
+/**
+ * Check rate limit for exam access attempts
+ * Limits: 3 attempts per 1 minute per exam per student
+ * 
+ * @param int $examId The exam ID being accessed
+ * @return bool True if allowed, False if blocked
+ */
+function checkExamRateLimit($examId)
+{
+    $key = 'exam_access_' . $_SESSION['user_id'] . '_' . $examId;
+    $now = time();
+
+    if (!isset($_SESSION[$key])) {
+        $_SESSION[$key] = [
+            'attempts' => 1,
+            'first_attempt' => $now,
+            'blocked_until' => 0
+        ];
+        return true;
+    }
+
+    $data = $_SESSION[$key];
+
+    // Check if currently blocked
+    if ($data['blocked_until'] > $now) {
+        $remaining = $data['blocked_until'] - $now;
+        $_SESSION['rate_limit_error'] = "Terlalu banyak percobaan. Coba lagi setelah {$remaining} detik.";
+        return false;
+    }
+
+    // Reset if older than 1 minute
+    if ($now - $data['first_attempt'] > 60) {
+        $_SESSION[$key] = [
+            'attempts' => 1,
+            'first_attempt' => $now,
+            'blocked_until' => 0
+        ];
+        return true;
+    }
+
+    // Check attempt count
+    if ($data['attempts'] >= 3) {
+        // Block for 1 minute
+        $_SESSION[$key]['blocked_until'] = $now + 60;
+        $_SESSION['rate_limit_error'] = "Terlalu banyak percobaan. Silakan tunggu 1 menit.";
+        return false;
+    }
+
+    // Increment attempts
+    $data['attempts']++;
+    $_SESSION[$key] = $data;
+    return true;
+}
+
+/**
+ * Clear rate limit for an exam (called on successful access)
+ */
+function clearExamRateLimit($examId)
+{
+    $key = 'exam_access_' . $_SESSION['user_id'] . '_' . $examId;
+    unset($_SESSION[$key]);
 }
