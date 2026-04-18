@@ -45,11 +45,11 @@ $csrf_token = generateCSRFToken();
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
         .score-bar {
-            height: 8px;
+            height: 0.5rem;
             background: #e2e8f0;
             border-radius: 50px;
             overflow: hidden;
-            margin-top: 4px;
+            margin-top: 0.25rem;
         }
 
         .score-bar-fill {
@@ -78,14 +78,14 @@ $csrf_token = generateCSRFToken();
             display: inline-flex;
             align-items: center;
             justify-content: center;
-            gap: 4px;
-            padding: 4px 10px;
+            gap: 0.25rem;
+            padding: 0.25rem 0.625rem;
             border-radius: 50px;
             font-size: 0.75rem;
             font-weight: 600;
             cursor: pointer;
             transition: all 0.2s;
-            min-width: 40px;
+            min-width: 2.5rem;
         }
 
         .violation-badge.low {
@@ -112,16 +112,16 @@ $csrf_token = generateCSRFToken();
         .chart-bar-wrap {
             display: flex;
             align-items: flex-end;
-            gap: 8px;
-            height: 120px;
-            padding: 0 8px;
+            gap: 0.5rem;
+            height: 7.5rem;
+            padding: 0 0.5rem;
         }
 
         .chart-bar {
             flex: 1;
             background: linear-gradient(180deg, #2563eb, #0ea5e9);
             border-radius: 6px 6px 0 0;
-            min-width: 30px;
+            min-width: 1.875rem;
             position: relative;
             transition: opacity 0.2s;
             cursor: pointer;
@@ -135,12 +135,12 @@ $csrf_token = generateCSRFToken();
             text-align: center;
             font-size: 0.72rem;
             color: #64748b;
-            margin-top: 4px;
+            margin-top: 0.25rem;
         }
 
         .chart-bar-val {
             position: absolute;
-            top: -20px;
+            top: -1.25rem;
             left: 50%;
             transform: translateX(-50%);
             font-size: 0.72rem;
@@ -151,15 +151,15 @@ $csrf_token = generateCSRFToken();
 
         .filter-bar {
             display: flex;
-            gap: 12px;
+            gap: 0.75rem;
             align-items: center;
             flex-wrap: wrap;
-            margin-bottom: 20px;
+            margin-bottom: 1.25rem;
         }
 
         .filter-bar select,
         .filter-bar input {
-            padding: 8px 12px;
+            padding: 0.5rem 0.75rem;
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             font-family: "Poppins", sans-serif;
@@ -175,19 +175,19 @@ $csrf_token = generateCSRFToken();
         .filter-checkbox {
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 12px;
+            gap: 0.5rem;
+            padding: 0.5rem 0.75rem;
             background: #f8fafc;
             border-radius: 8px;
         }
 
         .exam-info-bar {
             background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            padding: 16px 20px;
+            padding: 1rem 1.25rem;
             border-radius: 12px;
-            margin-bottom: 24px;
+            margin-bottom: 1.25rem;
             display: flex;
-            gap: 32px;
+            gap: 2rem;
             flex-wrap: wrap;
             border: 1px solid var(--border);
             box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
@@ -196,7 +196,7 @@ $csrf_token = generateCSRFToken();
         .exam-info-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
             font-size: 0.9rem;
         }
 
@@ -236,11 +236,11 @@ $csrf_token = generateCSRFToken();
 
         .exam-selector-bar {
             background: linear-gradient(135deg, #f8fafc 0%, #ffffff 100%);
-            padding: 12px 20px;
+            padding: 0.75rem 1.25rem;
             border-radius: 12px;
-            margin-bottom: 20px;
+            margin-bottom: 1.25rem;
             display: flex;
-            gap: 16px;
+            gap: 1rem;
             align-items: center;
             flex-wrap: wrap;
             border: 1px solid var(--border);
@@ -250,7 +250,7 @@ $csrf_token = generateCSRFToken();
         .exam-selector-item {
             display: flex;
             align-items: center;
-            gap: 8px;
+            gap: 0.5rem;
             font-size: 0.9rem;
         }
 
@@ -260,7 +260,7 @@ $csrf_token = generateCSRFToken();
         }
 
         .exam-selector-item select {
-            padding: 6px 12px;
+            padding: 0.375rem 0.75rem;
             border: 2px solid #e2e8f0;
             border-radius: 8px;
             font-family: "Poppins", sans-serif;
@@ -268,7 +268,7 @@ $csrf_token = generateCSRFToken();
             outline: none;
             background: white;
             cursor: pointer;
-            min-width: 280px;
+            min-width: 17.5rem;
         }
 
         .exam-selector-item select:focus {
@@ -284,17 +284,17 @@ $csrf_token = generateCSRFToken();
         .analytics-grid {
             display: grid;
             grid-template-columns: 2fr 1fr;
-            gap: 20px;
-            margin-bottom: 24px;
+            gap: 1.25rem;
+            margin-bottom: 1.25rem;
         }
 
         .chart-container {
-            height: 250px;
+            height: 15.625rem;
         }
 
         .filter-section {
             display: flex;
-            gap: 15px;
+            gap: 0.9375rem;
             align-items: center;
             flex-wrap: wrap;
         }
@@ -333,7 +333,7 @@ $csrf_token = generateCSRFToken();
             /* Page header — stack actions below title */
             .page-header {
                 flex-wrap: wrap;
-                gap: 12px;
+                gap: 0.75rem;
             }
 
             .header-actions {
@@ -344,13 +344,13 @@ $csrf_token = generateCSRFToken();
 
             /* Exam info bar — 2 per row */
             .exam-info-bar {
-                gap: 12px;
-                padding: 12px 16px;
+                gap: 0.75rem;
+                padding: 0.75rem 1rem;
             }
 
             .exam-info-item {
                 flex: 1 1 45%;
-                min-width: 180px;
+                min-width: 11.25rem;
             }
 
             /* Stats grid — 2x2 */
@@ -364,14 +364,14 @@ $csrf_token = generateCSRFToken();
             }
 
             .chart-container {
-                height: 200px;
+                height: 12.5rem;
             }
 
             /* Filters — full width stacked */
             .filter-section {
                 flex-direction: column;
                 align-items: stretch !important;
-                gap: 12px !important;
+                gap: 0.75rem !important;
             }
 
             .filter-section>div {
@@ -397,7 +397,7 @@ $csrf_token = generateCSRFToken();
             .exam-selector-bar {
                 flex-direction: column;
                 align-items: stretch;
-                padding: 12px 14px;
+                padding: 0.75rem 0.875rem;
             }
 
             .exam-selector-item {
@@ -422,11 +422,11 @@ $csrf_token = generateCSRFToken();
 
             /* Stats — still 2x2 but tighter */
             .stats-grid {
-                gap: 10px !important;
+                gap: 0.625rem !important;
             }
 
             .stat-card {
-                padding: 12px !important;
+                padding: 0.75rem !important;
             }
 
             .stat-label {
@@ -436,19 +436,19 @@ $csrf_token = generateCSRFToken();
             /* Compact buttons */
             .btn-sm {
                 font-size: 0.75rem;
-                padding: 6px 10px;
+                padding: 0.375rem 0.625rem;
             }
 
             /* Modals — edge-to-edge safe */
             .modal {
-                width: calc(100% - 24px) !important;
+                width: calc(100% - 1.5rem) !important;
                 max-width: none !important;
-                margin: 12px !important;
+                margin: 0.75rem !important;
                 border-radius: 12px !important;
             }
 
             .modal-header {
-                padding: 14px 16px !important;
+                padding: 0.875rem 1rem !important;
             }
         }
 
@@ -523,7 +523,7 @@ $csrf_token = generateCSRFToken();
         <div class="page-header">
             <div>
                 <div class="page-title" id="exam-title">
-                    <span class="skeleton-loader" style="width: 300px"></span>
+                    <span class="skeleton-loader" style="width: 18.75rem"></span>
                 </div>
             </div>
             <div class="header-actions">
@@ -612,12 +612,12 @@ $csrf_token = generateCSRFToken();
         <!-- Filter Section -->
         <div class="card" style="margin-bottom: 20px">
             <div class="filter-section">
-                <div style="flex: 1; min-width: 250px">
-                    <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; display: block">Cari Siswa</label>
+                <div style="flex: 1; min-width: 15.625rem">
+                    <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.3125rem; display: block">Cari Siswa</label>
                     <input type="text" id="search-student" class="form-control" placeholder="Ketik nama atau NISN..." oninput="filterResults()" />
                 </div>
-                <div style="width: 180px">
-                    <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 5px; display: block">Filter Kelas</label>
+                <div style="width: 11.25rem">
+                    <label style="font-size: 0.8rem; color: #64748b; margin-bottom: 0.3125rem; display: block">Filter Kelas</label>
                     <select class="form-control" id="class-filter" onchange="filterResults()">
                         <option value="">Semua Kelas</option>
                     </select>
@@ -648,7 +648,7 @@ $csrf_token = generateCSRFToken();
                     </thead>
                     <tbody id="results-body">
                         <tr>
-                            <td colspan="9" style="text-align: center; padding: 40px">
+                            <td colspan="9" style="text-align: center; padding: 2.5rem">
                                 <?php echo empty($exams) ? 'Belum ada ujian. Silakan buat ujian terlebih dahulu.' : 'Pilih ujian untuk melihat hasil.'; ?>
                             </td>
                         </tr>
@@ -665,10 +665,10 @@ $csrf_token = generateCSRFToken();
                 <div class="modal-title">Penilaian Manual Esai</div>
                 <button class="modal-close" onclick="closeModal()">✕</button>
             </div>
-            <div id="grading-content" style="padding: 20px; max-height: 70vh; overflow-y: auto">
+            <div id="grading-content" style="padding: 1.25rem; max-height: 70vh; overflow-y: auto">
                 <!-- Dynamic content -->
             </div>
-            <div style="padding: 20px; border-top: 1px solid #eee; text-align: right">
+            <div style="padding: 1.25rem; border-top: 1px solid #eee; text-align: right">
                 <button class="btn btn-outline" onclick="closeModal()">Batal</button>
                 <button class="btn btn-primary" onclick="submitManualGrade()">Simpan Penilaian</button>
             </div>
@@ -682,8 +682,8 @@ $csrf_token = generateCSRFToken();
                 <div class="modal-title">📋 Detail Pelanggaran</div>
                 <button class="modal-close" onclick="closeViolationModal()">✕</button>
             </div>
-            <div id="violation-detail-content" style="padding: 20px">Memuat...</div>
-            <div style="padding: 20px; border-top: 1px solid #eee; text-align: right">
+            <div id="violation-detail-content" style="padding: 1.25rem">Memuat...</div>
+            <div style="padding: 1.25rem; border-top: 1px solid #eee; text-align: right">
                 <button class="btn btn-outline" onclick="closeViolationModal()">Tutup</button>
             </div>
         </div>
@@ -784,7 +784,7 @@ $csrf_token = generateCSRFToken();
 
         function showResultsError(message) {
             const tbody = document.getElementById("results-body");
-            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 40px; color: var(--danger)">❌ ${escapeHtml(message)}</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="9" style="text-align: center; padding: 2.5rem; color: var(--danger)">❌ ${escapeHtml(message)}</td></tr>`;
         }
 
         function updateStats(stats) {
@@ -811,7 +811,7 @@ $csrf_token = generateCSRFToken();
         function renderTable(results) {
             const tbody = document.getElementById("results-body");
             if (results.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:40px;color:#64748b">Tidak ada data yang cocok.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="9" style="text-align:center;padding:2.5rem;color:#64748b">Tidak ada data yang cocok.</td></tr>';
                 return;
             }
 
@@ -880,12 +880,12 @@ $csrf_token = generateCSRFToken();
                         return;
                     }
 
-                    let html = `<div style="margin-bottom: 16px"><strong>Siswa:</strong> ${escapeHtml(studentName)}<br><strong>Total:</strong> <span class="badge badge-danger">${data.total_count}</span></div>`;
-                    html += `<div style="max-height: 300px; overflow-y: auto;">`;
+                    let html = `<div style="margin-bottom: 1rem"><strong>Siswa:</strong> ${escapeHtml(studentName)}<br><strong>Total:</strong> <span class="badge badge-danger">${data.total_count}</span></div>`;
+                    html += `<div style="max-height: 18.75rem; overflow-y: auto;">`;
 
                     data.violations.forEach((v) => {
                         html += `
-                            <div style="padding: 12px; margin-bottom: 8px; background: #f8fafc; border-radius: 8px; border-left: 3px solid #f59e0b">
+                            <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: #f8fafc; border-radius: 8px; border-left: 3px solid #f59e0b">
                                 <div style="font-size: 0.8rem; color: #64748b">${new Date(v.created_at).toLocaleString("id-ID")}</div>
                                 <div style="font-size: 0.9rem">${escapeHtml(v.reason)}</div>
                             </div>
@@ -960,7 +960,7 @@ $csrf_token = generateCSRFToken();
         async function analyzeDifficultQuestions() {
             const diffContainer = document.getElementById("difficult-questions");
             diffContainer.innerHTML = `
-                <div style="padding: 12px; background: #fef3c7; border-radius: 8px; margin-bottom: 12px;">
+                <div style="padding: 0.75rem; background: #fef3c7; border-radius: 8px; margin-bottom: 0.75rem;">
                     <small>💡 Analisis butir soal memerlukan data jawaban detail per siswa.</small>
                 </div>
                 <p style="color:#64748b; font-size:0.8rem">Fitur ini akan tersedia pada update berikutnya.</p>
@@ -995,18 +995,18 @@ $csrf_token = generateCSRFToken();
                 if (data.success) {
                     const sub = data.submission;
                     const questions = data.questions.filter((q) => q.question_type === "essay");
-                    let html = `<div style="margin-bottom:15px"><strong>Siswa:</strong> ${escapeHtml(sub.full_name)}</div>`;
+                    let html = `<div style="margin-bottom:0.9375rem"><strong>Siswa:</strong> ${escapeHtml(sub.full_name)}</div>`;
                     if (questions.length === 0) {
                         html += "<p>Tidak ada soal esai.</p>";
                     } else {
                         questions.forEach((q, idx) => {
                             const ans = sub.answers.find((a) => a.question_id == q.id)?.student_answer || "Tidak menjawab";
                             html += `
-                                <div class="card" style="margin-bottom:10px">
+                                <div class="card" style="margin-bottom:0.625rem">
                                     <p><strong>Soal ${idx + 1}:</strong> ${escapeHtml(q.question_text)}</p>
-                                    <div style="background:#f1f5f9; padding:10px; border-radius:5px; margin:10px 0">${escapeHtml(ans)}</div>
+                                    <div style="background:#f1f5f9; padding:0.625rem; border-radius:5px; margin:0.625rem 0">${escapeHtml(ans)}</div>
                                     <label>Nilai (Maks ${q.points}):</label>
-                                    <input type="number" class="form-control essay-point" data-max="${q.points}" style="width:100px">
+                                    <input type="number" class="form-control essay-point" data-max="${q.points}" style="width:6.25rem">
                                 </div>
                             `;
                         });
