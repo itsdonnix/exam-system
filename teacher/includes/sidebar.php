@@ -25,9 +25,7 @@
         </a>
       </li>
       <li>
-        <a href="create-exam.html" class="<?= $activePage === 'create-exam' ? 'active' : '' ?>">
-          <span class="icon">➕</span> Buat Ujian Baru
-        </a>
+        <a href="create-exam.php" class="<?= $activePage === 'create-exam' ? 'active' : '' ?>"><span class="icon">➕</span> Buat Ujian Baru</a>
       </li>
       <li>
         <a href="question-bank.php" class="<?= $activePage === 'question-bank' ? 'active' : '' ?>"><span class="icon">📚</span> Bank Soal</a>
