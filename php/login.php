@@ -119,7 +119,7 @@ jsonResponse([
     ],
     'redirect'  => match ($role) {
         'siswa' => 'student/dashboard.html',
-        'guru'  => 'teacher/dashboard.html',
+        'guru'  => 'teacher/dashboard.php',
         'admin' => 'admin/dashboard.html',
     }
 ]);

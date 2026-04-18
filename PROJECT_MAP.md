@@ -28,7 +28,8 @@ ExamSafe/
 │   ├── settings.html     # System settings
 │   └── security-logs.html # Security violation logs
 ├── teacher/              # Teacher dashboard files
-│   ├── dashboard.html    # Main teacher dashboard
+│   ├── dashboard.php     # Main teacher dashboard (PHP with auth)
+│   ├── dashboard.html    # REDIRECTS to dashboard.php (deprecated)
 │   ├── create-exam.html  # Create/edit exams
 │   ├── question-bank.html # Manage question bank
 │   ├── results.html      # View exam results
@@ -42,11 +43,11 @@ ExamSafe/
 │   └── register.html     # Student registration (refactored)
 ├── css/
 │   ├── style.css         # Global styles
-│   └── register.css      # Shared registration styles (NEW)
+│   └── register.css      # Shared registration styles
 ├── js/
 │   ├── api-client.js     # SHARED - Base API client wrapper
 │   ├── student-api.js    # Student-specific API endpoints
-│   ├── register-common.js # SHARED - Registration utilities (NEW)
+│   ├── register-common.js # SHARED - Registration utilities
 │   ├── exam-manager.js   # SHARED - Exam management logic
 │   ├── exam.js           # Exam engine (timer, answers, submission)
 │   └── security.js       # Anti-cheat monitoring (attaches on exam start)
@@ -87,19 +88,15 @@ ExamSafe/
 
 ---
 
-### 2. **includes/auth.php** (Updated - Added Rate Limiting)
+### 2. **includes/auth.php** (Authentication & Rate Limiting)
 
 **Purpose**: Authentication handling + exam access rate limiting
 
-**Key Functions** (existing):
+**Key Functions**:
 
-- `isLoggedIn()`, `requireLogin()`, `setSession()`, `clearSession()`, `isSessionExpired()`
-
-**Rate Limiting Functions**:
-| Function | Purpose |
-|----------|---------|
-| `checkExamRateLimit($examId)` | Limits to 3 attempts per 1 minute per exam per student |
-| `clearExamRateLimit($examId)` | Resets rate limit on successful access |
+- `isLoggedIn()`, `requireLogin($role)`, `setSession()`, `clearSession()`, `isSessionExpired()`
+- `checkExamRateLimit($examId)` - Limits to 3 attempts per 1 minute per exam per student
+- `clearExamRateLimit($examId)` - Resets rate limit on successful access
 
 **Rate Limit Behavior**:
 
@@ -109,7 +106,54 @@ ExamSafe/
 
 ---
 
-### 3. **student/exam.php** (Updated - POST-Only Access)
+### 3. **teacher/dashboard.php** (NEW - PHP with Auth)
+
+**Purpose**: Main teacher dashboard with server-side authentication
+
+**Key Features**:
+
+- Session configuration matching `exam_api.php` (SameSite=Lax, path=/)
+- `requireLogin('guru')` authentication check
+- Session timer refresh on each load (prevents timeout during active use)
+- All dashboard data fetched via AJAX from `exam_api.php` (same as HTML version)
+- Sidebar menu updated to point to `dashboard.php` instead of `dashboard.html`
+
+**Authentication Flow**:
+
+```
+User accesses dashboard.php
+  ↓
+Session cookie configured (matching API)
+  ↓
+requireLogin('guru') validates session
+  ↓
+If invalid → redirect to ../index.php with error
+  ↓
+If valid → refresh login_time, render dashboard
+  ↓
+JavaScript loads data via exam_api.php (session already valid)
+```
+
+**Critical**: Relies on API for session recovery; no duplicate recovery logic in dashboard.php
+
+---
+
+### 4. **teacher/dashboard.html** (UPDATED - Redirector)
+
+**Purpose**: Legacy file that redirects to new PHP version
+
+**Behavior**:
+
+- JavaScript redirect (primary) to `dashboard.php`
+- Meta refresh fallback (0 seconds)
+- Visual feedback with spinner animation
+- Manual link if redirect fails
+
+**Deprecation Note**: Keep for backward compatibility; remove after confirming no bookmarks/external links remain.
+
+---
+
+### 5. **student/exam.php** (POST-Only Access)
 
 **Purpose**: Student exam taking interface with enhanced security
 
@@ -140,224 +184,137 @@ Normal exam flow (agreement → security → questions)
 - **NO LONGER accepts GET parameter** - exam_id must come from session
 - Direct access without POST → redirect to dashboard with error
 - Session-based exam_id prevents bookmarking/sharing
-- Rate limiting prevents brute force attempts
 
 ---
 
-### 4. **student/dashboard.php** (Updated - POST Forms)
+### 6. **student/dashboard.php** (POST Forms)
 
 **Purpose**: Student dashboard with POST-based exam access
 
-**Changes**:
+**Key Features**:
 
 - Includes `csrf.php` and generates token via `generateCSRFToken()`
 - All "Mulai Ujian" buttons converted to POST forms
 - Join exam flow uses JavaScript POST form submission
-- CSRF token passed as hidden field in all exam access forms
-
-**Exam Link Format** (replaces anchor tags):
-
-```html
-<form method="POST" action="exam.php" onsubmit="return confirm('...')">
-  <input type="hidden" name="exam_id" value="123" />
-  <input type="hidden" name="csrf_token" value="..." />
-  <button type="submit" class="btn btn-primary">Mulai Ujian →</button>
-</form>
-```
 
 ---
 
-### 5. **js/api-client.js** (Base API Client)
+### 7. **js/api-client.js** (Base API Client)
 
 **Purpose**: Shared API wrapper for all AJAX calls
 
 **Key Methods**:
-| Method | Purpose |
-|--------|---------|
-| `ApiClient.request({url, method, data, csrfToken})` | Generic request handler |
-| `ApiClient.get(url)` | GET request shortcut |
-| `ApiClient.post(url, data, csrfToken)` | POST request shortcut |
 
-**Features**:
+- `ApiClient.request({url, method, data, csrfToken})` - Generic request handler
+- `ApiClient.get(url)` - GET request shortcut
+- `ApiClient.post(url, data, csrfToken)` - POST request shortcut
 
-- Automatic JSON serialization/deserialization
-- Credentials included (session cookie handling)
-- Optional CSRF token support
-- Centralized error handling
+**Features**: Automatic JSON serialization, credentials included, optional CSRF token support
 
 ---
 
-### 6. **js/register-common.js** (NEW - Registration Module)
+### 8. **js/register-common.js** (Registration Module)
 
 **Purpose**: Shared utilities for student/teacher registration pages
 
 **Modules**:
 
-| Module               | Purpose         | Key Methods                                                                   |
-| -------------------- | --------------- | ----------------------------------------------------------------------------- |
-| `RegisterUI`         | UI helpers      | `showAlert()`, `clearAlert()`, `setLoading()`                                 |
-| `RegisterValidation` | Form validation | `validateEmail()`, `validatePasswordStrength()`, `validateConfirmPassword()`  |
-| `RegisterAPI`        | API calls       | `registerStudent()`, `registerTeacher()`, `fetchClasses()`, `fetchSubjects()` |
-| `RegisterWizard`     | Step wizard     | `init()`, `nextStep()`, `prevStep()`, `goToStep()`                            |
-
-**CSS Dependencies**: Uses `css/register.css` for styling
-
-**API Endpoints Used**:
-
-- `GET ../php/exam_api.php?action=get_classes` - Fetch class list
-- `GET ../php/exam_api.php?action=get_subjects` - Fetch subject list
-- `POST ../php/student_register.php` - Submit student registration
-- `POST ../php/register.php` - Submit teacher registration
-
-**Coding Conventions**:
-
-- Zero inline CSS (all styles extracted to `register.css`)
-- Follows existing `api-client.js` pattern
-- Modular design for reusability
-- No breaking changes to existing functionality
+- `RegisterUI` - Alert and loading state management
+- `RegisterValidation` - Email, password, required field validation
+- `RegisterAPI` - API calls for registration, fetching classes/subjects
+- `RegisterWizard` - Generic step wizard controller
 
 ---
 
-### 7. **css/register.css** (NEW - Registration Styles)
+### 9. **css/register.css** (Registration Styles)
 
-**Purpose**: Shared styles for registration pages
-
-**Key Classes**:
-
-| Class                                                                                                 | Purpose                     |
-| ----------------------------------------------------------------------------------------------------- | --------------------------- |
-| `.register-wrapper`, `.register-card`, `.register-logo`                                               | Container layouts           |
-| `.step-title`, `.step-subtitle`                                                                       | Step wizard typography      |
-| `.step-dots`, `.dot`, `.dot.active`, `.dot.done`                                                      | Step indicator              |
-| `.pw-strength`                                                                                        | Password strength indicator |
-| `.alert-info-sm`                                                                                      | Small info alert variant    |
-| `.input-readonly`                                                                                     | Readonly input styling      |
-| `.checkbox-label`, `.checkbox-input`                                                                  | Custom checkbox styling     |
-| `.login-link-section`, `.login-link-section-sm`                                                       | Login link containers       |
-| `.login-link`, `.login-link-primary`, `.login-link-primary-light`                                     | Login link variants         |
-| `.nav-buttons`, `.nav-btn-flex-1`, `.nav-btn-flex-2`                                                  | Navigation button layout    |
-| `.register-success`, `.register-success-icon`, `.register-success-title`, `.register-success-message` | Success message display     |
-
-**Design Principles**:
-
-- Utility-first approach
-- Responsive (mobile/tablet/desktop breakpoints)
-- CSS variables for theming (`var(--primary)`, `var(--success)`, etc.)
-- No inline styles required
+**Purpose**: Shared styles for registration pages (utility-first, responsive)
 
 ---
 
-### 8. **js/exam-manager.js** (SHARED MODULE)
+### 10. **js/exam-manager.js** (SHARED MODULE)
 
 **Purpose**: Centralized exam management for both admin and teacher dashboards
 
 **Key Methods**:
-| Method | Purpose | API Endpoint |
-|--------|---------|--------------|
-| `fetchExams()` | Load all exams | `get_exams` |
-| `activateExam(id)` | Activate exam | `activate_exam` |
-| `deactivateExam(id)` | Stop exam | `deactivate_exam` |
-| `deleteExam(id)` | Delete exam | `delete_exam` |
-| `duplicateExam(id)` | Copy exam | `duplicate_exam` |
-| `showMonitor(id, name)` | Open monitor modal with search & auto-refresh | `get_exam_monitor` |
-| `resetStudentResult(id, studentId, name, score)` | Reset student result + violations | `reset_student_result` |
-| `showViolationDetails()` | View violation history for a student | `get_student_violations` |
-| `deleteViolation()` | Remove a specific violation record | `delete_violation` |
 
-**Monitor Modal Features**:
+- `fetchExams()`, `activateExam()`, `deactivateExam()`, `deleteExam()`, `duplicateExam()`
+- `showMonitor()` - Opens monitor modal with search & auto-refresh
+- `resetStudentResult()` - Resets student result + violations (transaction-safe)
+- `showViolationDetails()` - View violation history
+- `deleteViolation()` - Remove a specific violation record
 
-- Search/filter students by name
-- Auto-refresh every 30 seconds (indicator in footer)
-- Violation badges (🟢 0, 🟡 1-2, 🔴 3+) clickable for details
-- Reset button (🔄) always visible, clears both answers AND violations
-- Status icons (✅ ⏳ 🟡 ❌) instead of text
+**Monitor Modal Features**: Search/filter, auto-refresh (30s), violation badges, reset button always visible
 
 ---
 
-### 9. **js/security.js** (Student Exam Security)
+### 11. **js/security.js** (Student Exam Security)
 
-**Purpose**: Anti-cheat monitoring that only activates when exam officially starts
+**Purpose**: Anti-cheat monitoring that ONLY activates when exam officially starts
 
 **Key Behavior**:
 
 - `init()` - Sets up debug mode, attaches NO listeners
-- `start()` - Called from `exam.php` when student clicks "Mulai Ujian" on fullscreen prompt
+- `start()` - Called from `exam.php` when student clicks "Mulai Ujian"
 - Attaches all security listeners ONLY after `start()` is called
-- Logs violations to database without blocking/forcing submit
-- Shows toast notifications for blocked actions
+- Logs violations without blocking/forcing submit
 
-**Security Features**:
-
-- Blocks keyboard shortcuts (Ctrl+C, Ctrl+V, F12, Alt+Tab, etc.)
-- Blocks copy/paste, right-click
-- Monitors tab switching, window blur, fullscreen exit
-- Detects Developer Tools
-- Prevents navigation (back button, refresh, close)
-
-**Important**: No violations are recorded before exam officially starts (agreement modal, countdown, FS prompt are violation-free).
+**Important**: No violations recorded before exam officially starts.
 
 ---
 
-### 10. **js/exam.js** (Exam Engine)
-
-**Purpose**: Manages exam taking experience for students
-
-**Key Methods**:
-| Method | Purpose |
-|--------|---------|
-| `init(examId)` | Load exam questions, start timer, notify security |
-| `submitExam()` | Submit answers to server |
-| `logAgreement(examId)` | Record student agreement to rules |
-| `renderQuestions()` | Display questions with media support |
-
-**Integration with Security**:
-
-- Calls `ExamSecurity.setExamId()` after loading exam data
-- Calls `ExamSecurity.stop()` after submission
-
----
-
-### 11. **php/exam_api.php** (SHARED API)
+### 12. **php/exam_api.php** (SHARED API)
 
 **Purpose**: Handles all exam-related operations for all roles
 
 **Key Endpoints**:
+| Action | Role Access | Description |
+|--------|-------------|-------------|
+| `get_exam_monitor` | Guru, Admin | Returns participants with violation counts |
+| `reset_student_result` | Guru, Admin | Deletes submission AND all violations |
+| `get_student_violations` | Guru, Admin | Fetch violation history |
+| `delete_violation` | Guru, Admin | Delete a single violation record |
+| `report_violation` | Siswa | Log violation to database |
+| `log_agreement` | Siswa | Record student agreement |
+| `join_exam` | Siswa | Validate exam code and authorize access |
+| `start_exam` | Siswa | Initialize exam session |
+| `get_teacher_stats` | Guru | Fetch teacher's total students and average score |
+| `get_profile` | Guru, Siswa | Fetch user profile data |
+| `get_recent_violations` | Guru | Fetch latest 10 violations for teacher's exams |
+| `get_classes` | Public | Fetch list of classes |
+| `get_subjects` | Public | Fetch list of subjects |
 
-| Action                   | Role Access | Description                                              |
-| ------------------------ | ----------- | -------------------------------------------------------- |
-| `get_exam_monitor`       | Guru, Admin | Returns participants with violation counts               |
-| `reset_student_result`   | Guru, Admin | Deletes submission AND all violations (transaction-safe) |
-| `get_student_violations` | Guru, Admin | Fetch violation history for a specific student+exam      |
-| `delete_violation`       | Guru, Admin | Delete a single violation record                         |
-| `report_violation`       | Siswa       | Log violation to database (no blocking)                  |
-| `log_agreement`          | Siswa       | Record student agreement to exam rules                   |
-| `join_exam`              | Siswa       | Validate exam code and authorize access                  |
-| `start_exam`             | Siswa       | Initialize exam session in database                      |
-| `get_classes`            | Public      | Fetch list of classes (for registration)                 |
-| `get_subjects`           | Public      | Fetch list of subjects (for registration)                |
+**Session Recovery**: API auto-recovers sessions when `$_SESSION['role']` missing but `user_id` exists (lines 22-44 in exam_api.php)
 
-**reset_student_result**:
-
-- Deletes both `exam_submissions` AND `violations` records
-- Wrapped in database transaction for atomicity
-- Logs number of violations cleared to `exam_actions.log`
-
-**Special Admin Permissions**:
-
-- Admin bypasses `teacher_id` checks
-- Admin can delete any violation, reset any student result
-
-**Logging**:
-
-- Function: `logExamAction($level, $message, $context)`
-- Log file: `logs/exam_actions.log`
-- Logs include: user_id, role, action, exam_id, student_id, scores, violation counts
+**Logging**: `logExamAction()` writes to `logs/exam_actions.log`
 
 ---
 
 ## Key Workflows
 
-### 1. Student Registration Flow (Refactored)
+### 1. Teacher Dashboard Load Flow (NEW)
+
+```
+Teacher accesses dashboard.php
+  ↓
+PHP: Session validation (requireLogin)
+  ↓
+PHP: Refresh session timer
+  ↓
+Render HTML with sidebar (active link points to dashboard.php)
+  ↓
+JavaScript: ExamManager.fetchExams() → GET exam_api.php?action=get_exams
+  ↓
+JavaScript: Fetch teacher stats → GET exam_api.php?action=get_teacher_stats
+  ↓
+JavaScript: Fetch profile → GET exam_api.php?action=get_profile
+  ↓
+JavaScript: Fetch violations → GET exam_api.php?action=get_recent_violations
+  ↓
+All data displayed; monitor modal, exam actions work via exam-manager.js
+```
+
+### 2. Student Registration Flow
 
 ```
 Student loads register.html
@@ -367,144 +324,61 @@ JS loaded: api-client.js + register-common.js
   ↓
 RegisterAPI.fetchClasses() populates class dropdown
   ↓
-Student fills form (fullname, NISN, class, username, password)
+Form validation via RegisterValidation
   ↓
-Password strength checker validates in real-time
+Submit → RegisterAPI.registerStudent()
   ↓
-Form submission → RegisterAPI.registerStudent()
-  ↓
-On success: Show success message with login link
-On error: Show alert via RegisterUI.showAlert()
+Success: Show success message with login link
 ```
 
-### 2. Teacher Registration Flow (Refactored - Step Wizard)
+### 3. Teacher Registration Flow (Step Wizard)
 
 ```
 Teacher loads register.html
   ↓
-CSS loaded: style.css + register.css
-JS loaded: api-client.js + register-common.js
-  ↓
 RegisterWizard.init(3) initializes 3-step wizard
 RegisterAPI.fetchSubjects() populates subject dropdown
   ↓
-Step 1: Personal data (name, gelar, email, phone)
-Step 2: Teaching data (subject, school)
-Step 3: Password creation + agreement
-  ↓
-Each step validated before proceeding
+Step 1: Personal data → Step 2: Teaching data → Step 3: Password + agreement
   ↓
 Final submission → RegisterAPI.registerTeacher()
-  ↓
-On success: Show success message with login link
-On error: Show alert via RegisterUI.showAlert()
 ```
 
-### 3. Student Exam Access Flow (POST-only with CSRF)
+### 4. Student Exam Access Flow (POST-only with CSRF)
 
 ```
 Student clicks "Mulai Ujian" on dashboard
   ↓
-POST form submitted to exam.php with:
-  - exam_id (hidden field)
-  - csrf_token (hidden field)
+POST form to exam.php with exam_id + csrf_token
   ↓
-exam.php validates CSRF token (verifyCSRFToken)
+CSRF validation + rate limiting (3 attempts/min)
   ↓
-checkExamRateLimit() → 3 attempts per minute max
-  ↓
-Store exam_id in $_SESSION['active_exam_id']
-  ↓
-Regenerate CSRF token (generateCSRFToken)
+Store exam_id in session, regenerate CSRF token
   ↓
 Redirect 302 to exam.php (clean URL)
   ↓
-GET request reads exam_id from session
-  ↓
-Clear $_SESSION['active_exam_id']
+GET request reads exam_id from session (single-use)
   ↓
 Load agreement modal → security starts → exam begins
 ```
 
-### 4. Reset Student Result Flow (With Violation Clearing)
+### 5. Reset Student Result Flow
 
 ```
-Teacher clicks "Reset Hasil" (🔄) in Monitor Modal
+Teacher clicks "Reset Hasil" in Monitor Modal
   ↓
 confirm() dialog warns: answers AND violations will be deleted
   ↓
-examManager.resetStudentResult()
-  ↓
 POST to exam_api.php?action=reset_student_result
   ↓
-resetStudentResult() function:
-  - Verify permissions (admin OR teacher owns exam)
-  - Get submission & violation details for logging
-  - BEGIN TRANSACTION
-  - DELETE FROM violations WHERE exam_id = ? AND student_id = ?
-  - DELETE FROM exam_submissions WHERE exam_id = ? AND student_id = ?
+BEGIN TRANSACTION
+  - DELETE FROM violations
+  - DELETE FROM exam_submissions
   - COMMIT
-  - Log to logs/exam_actions.log with violation count cleared
   ↓
-Return success to frontend
+Log violation count cleared to exam_actions.log
   ↓
-Monitor modal auto-refreshes (30s) → shows violation count as 0
-```
-
-### 5. Student Exam Start Flow (Security Activation)
-
-```
-Student loads exam.php (after POST redirect)
-  ↓
-ExamSecurity.init() runs → NO listeners attached
-  ↓
-Agreement modal shown → Student checks rules → 10s countdown
-  ↓
-Click "Mulai Ujian" on agreement → shows FS prompt
-  ↓
-Click "Mulai Ujian" on FS prompt → calls startExam()
-  ↓
-startExam() calls ExamSecurity.start() → ATTACHES ALL LISTENERS
-  ↓
-ExamEngine.init() loads questions, starts timer
-  ↓
-Security monitoring ACTIVE for entire exam
-  ↓
-Violations logged to database (no blocking/force submit)
-```
-
-### 6. Join Exam with Code Flow
-
-```
-Student enters 8-character code in dashboard
-  ↓
-JavaScript POST to exam_api.php?action=join_exam
-  ↓
-Server validates code & exam status
-  ↓
-On success: create POST form dynamically
-  ↓
-Submit POST to exam.php (same flow as regular exam access)
-```
-
-### 7. Violation Viewing Flow (Teacher/Admin)
-
-```
-Teacher clicks violation badge (⚠️ 2) in Monitor Modal or Results page
-  ↓
-showViolationDetails(studentId, studentName, examId)
-  ↓
-GET exam_api.php?action=get_student_violations
-  ↓
-Modal shows:
-  - Student name
-  - Total violation count
-  - List of violations with timestamps and reasons
-  - Delete button for each violation (admin/teacher)
-  ↓
-Teacher can delete individual violations
-  ↓
-Monitor modal auto-refreshes with updated count
+Monitor modal auto-refreshes (30s) → violation count = 0
 ```
 
 ---
@@ -513,61 +387,51 @@ Monitor modal auto-refreshes with updated count
 
 ### Recent Changes Summary
 
-**2026-04-19 - Registration Pages Refactoring**:
+**2026-04-19 (Evening) - Teacher Dashboard Migration to PHP**:
 
-1. **New shared CSS file** (`css/register.css`):
+1. **New file** (`teacher/dashboard.php`):
 
-   - Extracted all inline styles from registration pages
-   - Utility-first approach with meaningful class names
-   - Responsive design preserved
-   - CSS variables for theming
+   - PHP version with server-side authentication
+   - Session configuration matching `exam_api.php` (SameSite=Lax, path=/)
+   - `requireLogin('guru')` check before rendering
+   - Session timer refresh on each load
+   - Sidebar menu updated to reference `dashboard.php`
 
-2. **New shared JS module** (`js/register-common.js`):
+2. **Updated file** (`teacher/dashboard.html`):
 
-   - `RegisterUI` - Alert and loading state management
-   - `RegisterValidation` - Email, password, required field validation
-   - `RegisterAPI` - API calls for registration, fetching classes/subjects
-   - `RegisterWizard` - Generic step wizard controller
+   - Now redirects to `dashboard.php` via JavaScript + meta refresh
+   - Visual feedback with spinner animation
+   - Manual link fallback
 
-3. **Refactored student/register.html**:
+3. **Why changed**:
 
-   - Zero inline CSS
-   - Uses shared `register-common.js` and `register.css`
-   - Password strength checker uses shared validation
-   - Follows existing API client pattern
+   - Enable server-side authentication validation
+   - Prevent unauthorized access to teacher dashboard
+   - Consistent with student dashboard pattern (`student/dashboard.php`)
+   - Better session management and timeout handling
 
-4. **Refactored teacher/register.html**:
+4. **Breaking change**: None - backward compatible redirect preserves all bookmarks
 
-   - Zero inline CSS
-   - Uses shared wizard component
-   - Step validation using shared functions
-   - Consistent alert/loading patterns
+**2026-04-19 (Morning) - Registration Pages Refactoring**:
 
-5. **Coding conventions established**:
-   - No inline styles - all CSS must have meaningful class names
-   - Shared modules should follow `api-client.js` pattern
-   - UI helpers (alerts, loading) should use `RegisterUI` pattern
-   - Validation logic should use `RegisterValidation` pattern
+1. **New shared CSS** (`css/register.css`) - Extracted all inline styles
+2. **New shared JS** (`js/register-common.js`) - Registration utilities
+3. **Refactored** `student/register.html` and `teacher/register.html` - Zero inline CSS/JS
 
-**2026-04-18 - Security Hardening - POST-only Exam Access**:
+**2026-04-18 - Security Hardening**:
 
-1. **POST-only exam.php** - No longer accepts GET parameters, uses session-stored exam_id
-2. **CSRF protection** - All exam access forms include tokens validated via `includes/csrf.php`
-3. **Rate limiting** - 3 attempts per 1 minute per exam per student (prevents brute force)
-4. **Clean URL redirect** - POST → redirect → GET pattern prevents resubmission on refresh
-5. **Token regeneration** - CSRF token regenerated after successful exam access (replay prevention)
-6. **Dashboard converted** - All "Mulai Ujian" links replaced with POST forms
-7. **Join exam updated** - Uses JavaScript POST form submission instead of GET redirect
-8. **exam.html deprecated** - Now redirects to dashboard (handles legacy bookmarks)
+1. POST-only exam.php with CSRF protection
+2. Rate limiting (3 attempts per minute)
+3. Clean URL redirect pattern
+4. exam.html deprecated (redirects to dashboard)
 
 **2026-04-16 - Previous Changes**:
 
-1. Removed student blocking - No more 3-strike force submit
-2. Security only activates on exam start - Listeners attached only when student clicks final "Mulai Ujian"
-3. Reset result now clears violations - Transaction-safe deletion of both submission and violations
-4. Monitor modal improvements: search, auto-refresh, violation badges, reset button always visible
-5. Violation management: Teachers can view violation history, Admin can delete any violation
-6. Admin violations table - Clickable rows with delete functionality
+1. Removed student blocking (no 3-strike force submit)
+2. Security activates ONLY on exam start
+3. Reset result clears both submissions AND violations
+4. Monitor modal: search, auto-refresh, violation badges
+5. Violation management for teachers and admins
 
 ### Critical Constraints
 
@@ -575,31 +439,33 @@ Monitor modal auto-refreshes with updated count
 2. **Reset now deletes submissions AND violations** (changed from "keeps violations")
 3. **Toleransi function is OBSOLETE** (students are no longer blocked/forced)
 4. **Admin duplicates preserve original teacher_id**
-5. **Session timeout: 2 hours**
-6. **Security listeners attached ONLY after exam officially starts** (no violations during agreement)
-7. **exam.php requires POST then redirect** - Direct GET access without session → dashboard redirect
-8. **CSRF tokens required** for all exam access forms (dashboard, join exam)
+5. **Session timeout: 2 hours** (refreshed on dashboard.php load)
+6. **Security listeners attached ONLY after exam officially starts**
+7. **exam.php requires POST then redirect** - Direct GET access → dashboard redirect
+8. **CSRF tokens required** for all exam access forms
 9. **Rate limiting active** - 3 failed attempts = 1 minute block
-10. **Registration pages use shared CSS/JS** - No inline styles allowed in register forms
+10. **Registration pages use shared CSS/JS** - No inline styles allowed
+11. **Teacher dashboard now requires PHP** - dashboard.html redirects to dashboard.php
 
-### Coding Conventions (New)
+### Coding Conventions
 
 **For Registration Pages**:
 
 - Use `css/register.css` for all styles
-- Import `js/register-common.js` for all functionality
+- Use `js/register-common.js` for all functionality
 - Never use inline styles or inline scripts beyond initialization
-- Use `RegisterUI.showAlert()` for messages
-- Use `RegisterUI.setLoading()` for button states
-- Use `RegisterValidation` for form validation
-- Use `RegisterAPI` for all API calls
-- Use `RegisterWizard` for multi-step forms
+- Use `RegisterUI`, `RegisterValidation`, `RegisterAPI`, `RegisterWizard`
 
 **For API Client**:
 
 - All AJAX calls must use `ApiClient` (not raw fetch)
 - Include credentials for session-based auth
-- Handle errors at component level
+
+**For PHP Pages**:
+
+- Always call `session_set_cookie_params()` before `session_start()` with SameSite=Lax
+- Include `require_once '../includes/auth.php'` and call `requireLogin($role)`
+- Refresh `$_SESSION['login_time']` on authenticated page loads
 
 ### Log Files
 
@@ -621,8 +487,8 @@ Monitor modal auto-refreshes with updated count
 
 ## Last Updated
 
-**Date**: 2026-04-19
-**Developer**: Registration pages refactoring - extracted inline CSS/JS to shared modules
+**Date**: 2026-04-19 (Evening)
+**Developer**: Teacher dashboard migration to PHP with authentication
 **Status**: Active development
 
 ---
@@ -631,16 +497,18 @@ Monitor modal auto-refreshes with updated count
 
 When returning to this project, review:
 
-1. **`includes/csrf.php`** - CSRF token generation and validation (critical for all forms)
-2. **`includes/auth.php`** - Rate limiting functions `checkExamRateLimit()` and `clearExamRateLimit()`
-3. **`student/exam.php`** - POST-only access pattern with session-based exam_id storage
-4. **`student/dashboard.php`** - POST forms for exam access, CSRF token integration
-5. **`js/security.js`** - Security starts ONLY on exam begin (critical for fair exams)
-6. **`js/exam-manager.js`** - Monitor modal with search, auto-refresh, violation details
-7. **`php/exam_api.php`** - resetStudentResult now clears violations with transaction
-8. **`js/register-common.js`** - Registration utilities (alerts, validation, API, wizard)
-9. **`css/register.css`** - Registration page styles (utility-first, responsive)
-10. This PROJECT_MAP.md - For latest workflow understanding
+1. **`includes/csrf.php`** - CSRF token generation and validation
+2. **`includes/auth.php`** - Rate limiting and authentication helpers
+3. **`teacher/dashboard.php`** - NEW - Teacher dashboard with PHP auth
+4. **`teacher/dashboard.html`** - UPDATED - Redirects to PHP version
+5. **`student/exam.php`** - POST-only access pattern
+6. **`student/dashboard.php`** - POST forms for exam access
+7. **`js/security.js`** - Security starts ONLY on exam begin
+8. **`js/exam-manager.js`** - Monitor modal with violation management
+9. **`php/exam_api.php`** - API with session recovery and transaction-safe resets
+10. **`js/register-common.js`** - Registration utilities
+11. **`css/register.css`** - Registration styles
+12. This PROJECT_MAP.md - For latest workflow understanding
 
 ## Breaking Changes for Future Development
 
@@ -651,3 +519,5 @@ When returning to this project, review:
 5. **Session key `active_exam_id`** is single-use (cleared after reading)
 6. **Registration pages require shared CSS/JS** - No inline styles or scripts
 7. **New registration pages must follow pattern** - Use `register-common.js` and `register.css`
+8. **Teacher dashboard now served via PHP** - dashboard.html redirects; update any direct links to use dashboard.php
+9. **Session cookie configuration must be consistent** - Always use SameSite=Lax, path=/, before session_start()

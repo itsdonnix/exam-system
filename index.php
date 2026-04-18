@@ -33,7 +33,7 @@ function sendJsonResponse($success, $code, $message, $data = [])
 if (isLoggedIn() && !isSessionExpired(3600)) {
     $redirect = match ($_SESSION['role']) {
         'siswa' => 'student/dashboard.php',
-        'guru' => 'teacher/dashboard.html',
+        'guru' => 'teacher/dashboard.php',
         'admin' => 'admin/dashboard.html',
         default => 'index.php'
     };
@@ -172,7 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             // Determine redirect based on role
                             $redirect = match ($role) {
                                 'siswa' => 'student/dashboard.php',
-                                'guru' => 'teacher/dashboard.html',
+                                'guru' => 'teacher/dashboard.php',
                                 'admin' => 'admin/dashboard.html',
                             };
 
@@ -234,7 +234,7 @@ if (!isLoggedIn() && isset($_COOKIE['remember_token'])) {
 
                 $redirect = match ($tokenData['role']) {
                     'siswa' => 'student/dashboard.php',
-                    'guru' => 'teacher/dashboard.html',
+                    'guru' => 'teacher/dashboard.php',
                     'admin' => 'admin/dashboard.html',
                 };
                 header("Location: $redirect");
