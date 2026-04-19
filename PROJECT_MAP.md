@@ -26,6 +26,7 @@ ExamSafe is a secure online exam platform with three user roles: Admin, Teacher,
 | Debug session issues    | `teacher/includes/init.php`, `includes/auth.php`                              | Check `$_SESSION['role']`, `user_id`, `login_time`                                 |
 | Handle exam access      | `student/exam.php`, `student/dashboard.php`                                   | Always POST with CSRF, then redirect to GET                                        |
 | Fetch static data       | Server-side PHP in teacher page                                               | Use server-side DB query instead of API call when data doesn't change frequently   |
+| Show user notifications | Include `../js/toast.js`, call `showToast(message, type)`                     | Type: 'success' (default), 'error', 'info'                                         |
 
 ---
 
@@ -71,6 +72,7 @@ ExamSafe/
 │   ├── exam-manager.js   # Exam management logic (monitor modal, violations)
 │   ├── exam.js           # Exam engine (timer, answers, submission)
 │   ├── security.js       # Anti-cheat monitoring (attaches on exam start)
+│   ├── toast.js          # ★ Toast notification system (use for all user feedback)
 │   └── teacher-layout.js # Sidebar toggle (include on all teacher pages)
 ├── php/
 │   ├── db.php           # Database connection
@@ -93,6 +95,60 @@ ExamSafe/
 ```
 
 **★ = Critical files to understand first**
+
+---
+
+## Toast Notification System
+
+**Purpose**: Unified user feedback across all pages (success, error, info messages)
+
+**File**: `js/toast.js`
+
+**Usage**:
+```javascript
+// Include the script
+<script src="../js/toast.js"></script>
+
+// Call the function
+showToast("Pesan berhasil disimpan");           // success (green)
+showToast("Terjadi kesalahan", "error");        // error (red)
+showToast("Informasi untuk Anda", "info");      // info (blue)
+```
+
+**Features**:
+- Auto-dismiss after 3 seconds
+- Smooth fade-in/fade-out animations
+- Stackable (multiple toasts appear stacked)
+- Accessible (aria-live region)
+- Consistent styling across all pages
+
+**When to use**:
+- ✅ API success/error responses
+- ✅ Form validation feedback
+- ✅ CSRF validation failures
+- ✅ Rate limit exceeded messages
+- ✅ Copy/paste operations
+- ❌ NOT for critical errors that block page functionality (use inline error messages)
+
+**Example in teacher page**:
+```php
+// In settings.php - include toast.js
+<script src="../js/toast.js"></script>
+
+// In JavaScript
+fetch("../php/exam_api.php", {
+    method: "POST",
+    body: JSON.stringify(data)
+})
+.then(r => r.json())
+.then(d => {
+    if (d.success) {
+        showToast(d.message);
+    } else {
+        showToast("Error: " + d.message, "error");
+    }
+});
+```
 
 ---
 
@@ -288,6 +344,7 @@ $activePage = 'dashboard'; // or 'create-exam', 'results', 'settings', 'students
 - **Two separate CSRF tokens** (profile form + AI form)
 - JavaScript fetches profile and AI settings via API
 - Buttons trigger POST requests with CSRF tokens
+- Uses `showToast()` for all user feedback
 
 **CSRF Flow**:
 
@@ -297,6 +354,7 @@ Page loads → generateCSRFToken() creates token
             → JavaScript sends token in POST body
             → Server validates: verifyCSRFToken($token, $_SESSION['csrf_token'])
             → Token regenerated after successful save
+            → showToast() displays result to user
 ```
 
 ---
@@ -550,7 +608,7 @@ JavaScript (on page ready):
   ↓
 Forms populate with data
   ↓
-User saves → POST with CSRF token
+User saves → POST with CSRF token → showToast() on success/error
 ```
 
 ### Teacher Profile Update (CSRF Flow)
@@ -569,7 +627,7 @@ Server (exam_api.php):
   - If valid → Update database + return success
   ↓
 JavaScript:
-  - Shows success message
+  - Shows success message via showToast()
   - Optionally regenerates CSRF token for next form
 ```
 
@@ -683,9 +741,11 @@ $csrf_token = generateCSRFToken();
     </main>
     </div>
     <script src="../js/api-client.js"></script>
+    <script src="../js/toast.js"></script>
     <script src="../js/teacher-layout.js"></script>
     <script>
         // Fetch data via API, include CSRF token in POST requests
+        // Use showToast() for user feedback
     </script>
 </body>
 </html>
@@ -746,6 +806,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 8. ✅ Set session cookie params before `session_start()`
 9. ✅ Log errors but never expose to users
 10. ✅ **Use server-side data fetching for read-only pages** (like students.php)
+11. ✅ **Include `toast.js` and use `showToast()` for all user feedback**
 
 ### Session Configuration (Always This Way)
 
@@ -778,6 +839,12 @@ clearExamRateLimit($exam_id);
 ## Important Notes for Future Development
 
 ### Recent Changes Summary
+
+**2026-04-20 - Toast System Documentation**:
+- Added comprehensive toast notification system documentation
+- Updated all workflows to reference `showToast()` usage
+- Added toast.js to required includes in Pattern B
+- Added toast system to Quick Reference table
 
 **2026-04-19 (Latest) - Teacher Students Page Migration to PHP**:
 
@@ -832,15 +899,16 @@ When coming back to this project, verify these 6 files first:
 3. **`teacher/includes/init.php`** - Shared teacher initialization (CRITICAL)
 4. **`php/exam_api.php`** - Main API with CSRF on state-change endpoints
 5. **`php/save_ai_settings.php`** - AI settings with CSRF protection
+6. **`js/toast.js`** - Toast notification system (use for all user feedback)
 
 Then review these files for latest patterns:
 
-6. **`teacher/students.php`** - Server-side data pattern (NEW)
-7. **`teacher/settings.php`** - API-based pattern with CSRF
-8. **`teacher/dashboard.php`** - Uses shared components example
-9. **`student/exam.php`** - POST-only access pattern with CSRF
-10. **`student/dashboard.php`** - POST forms for exam access
-11. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
+7. **`teacher/students.php`** - Server-side data pattern (NEW)
+8. **`teacher/settings.php`** - API-based pattern with CSRF
+9. **`teacher/dashboard.php`** - Uses shared components example
+10. **`student/exam.php`** - POST-only access pattern with CSRF
+11. **`student/dashboard.php`** - POST forms for exam access
+12. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
 
 ---
 
@@ -858,6 +926,7 @@ Then review these files for latest patterns:
 10. **Active exams cannot be deleted** - Only draft exams can be removed
 11. **Toleransi is obsolete** - Function removed, do not use
 12. **Sidebar links must point to .php files** - Update when migrating pages
+13. **Always use toast system for user feedback** - Include `toast.js` and call `showToast()`
 
 ---
 
@@ -878,6 +947,7 @@ teacher/settings.php (API-based with CSRF)
   ├─ includes/header.php
   ├─ includes/sidebar.php
   ├─ js/api-client.js
+  ├─ js/toast.js
   ├─ js/teacher-layout.js
   └─ (API calls to exam_api.php, get_ai_settings.php, save_ai_settings.php)
 
@@ -886,6 +956,7 @@ teacher/dashboard.php (Mixed - server-side + API)
   ├─ includes/header.php
   ├─ includes/sidebar.php
   ├─ js/exam-manager.js
+  ├─ js/toast.js
   ├─ js/teacher-layout.js
   └─ (API calls for stats, violations)
 
@@ -904,13 +975,16 @@ php/save_ai_settings.php
   ├─ includes/db.php
   ├─ includes/csrf.php
   └─ logs/ (optional)
+
+js/toast.js
+  └─ Global showToast() function
 ```
 
 ---
 
 ## Last Updated
 
-**Date**: 2026-04-19  
-**Latest Change**: Teacher students page migration with server-side data injection  
+**Date**: 2026-04-20  
+**Latest Change**: Added Toast System documentation to PROJECT_MAP.md  
 **Status**: Active development  
-**Maintainer Notes**: Focus on using server-side data for read-only pages (performance), API calls only when real-time updates needed
+**Maintainer Notes**: Use toast system (showToast) for all user notifications instead of alert() or custom modals

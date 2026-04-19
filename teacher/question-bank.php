@@ -15,70 +15,6 @@ $csrf_token = generateCSRFToken();
     <title>Bank Soal — ExamSafe</title>
     <link rel="stylesheet" href="../css/style.css" />
     <style>
-        /* === TOAST NOTIFICATIONS === */
-        .toast-container {
-            position: fixed;
-            top: 5rem;
-            right: 1.25em;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5em;
-            pointer-events: none;
-        }
-
-        .toast {
-            padding: 0.75em 1.25em;
-            border-radius: 8px;
-            font-size: 0.88rem;
-            font-weight: 500;
-            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
-            pointer-events: auto;
-            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
-            max-width: 22rem;
-        }
-
-        .toast-success {
-            background: #d1fae5;
-            color: #065f46;
-            border-left: 4px solid var(--success);
-        }
-
-        .toast-error {
-            background: #fee2e2;
-            color: #991b1b;
-            border-left: 4px solid var(--danger);
-        }
-
-        .toast-info {
-            background: #dbeafe;
-            color: #1e40af;
-            border-left: 4px solid var(--secondary);
-        }
-
-        @keyframes toastIn {
-            from {
-                opacity: 0;
-                transform: translateX(2rem);
-            }
-
-            to {
-                opacity: 1;
-                transform: translateX(0);
-            }
-        }
-
-        @keyframes toastOut {
-            from {
-                opacity: 1;
-            }
-
-            to {
-                opacity: 0;
-                transform: translateY(-0.5rem);
-            }
-        }
-
         /* === FILTER BAR === */
         .bank-header {
             display: flex;
@@ -570,8 +506,6 @@ $csrf_token = generateCSRFToken();
     <?php include 'includes/header.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
 
-    <div class="toast-container" id="toastContainer"></div>
-
     <main class="main-content">
         <div class="page-header">
             <div>
@@ -781,6 +715,7 @@ $csrf_token = generateCSRFToken();
     </div>
 
     <script src="../js/teacher-layout.js"></script>
+    <script src="../js/toast.js"></script>
     <script>
         const csrfToken = document.getElementById('csrf-token')?.value || '<?php echo $csrf_token; ?>';
         let allQuestions = [];
@@ -792,25 +727,18 @@ $csrf_token = generateCSRFToken();
         let isSearchActive = false;
         let debounceTimer = null;
 
+        function debouncedFilter() {
+            if (debounceTimer) {
+                clearTimeout(debounceTimer);
+            }
+            debounceTimer = setTimeout(() => {
+                filterQuestions();
+            }, 300);
+        }
+
         document.addEventListener("DOMContentLoaded", function() {
             loadQuestions();
         });
-
-        /* === TOAST === */
-        function showToast(message, type = 'success') {
-            const container = document.getElementById('toastContainer');
-            const toast = document.createElement('div');
-            toast.className = `toast toast-${type}`;
-            toast.textContent = message;
-            container.appendChild(toast);
-            setTimeout(() => toast.remove(), 3000);
-        }
-
-        /* === DEBOUNCE === */
-        function debouncedFilter() {
-            clearTimeout(debounceTimer);
-            debounceTimer = setTimeout(() => filterQuestions(), 300);
-        }
 
         /* === LOADING === */
         function showLoading() {

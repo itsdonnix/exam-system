@@ -31,33 +31,6 @@ try {
     <title>Buat Ujian — ExamSafe</title>
     <link rel="stylesheet" href="../css/style.css" />
     <style>
-        /* === TOAST === */
-        .toast-container {
-            position: fixed;
-            top: 5rem;
-            right: 1.25em;
-            z-index: 2000;
-            display: flex;
-            flex-direction: column;
-            gap: 0.5em;
-            pointer-events: none;
-        }
-        .toast {
-            padding: 0.75em 1.25em;
-            border-radius: 8px;
-            font-size: 0.88rem;
-            font-weight: 500;
-            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
-            pointer-events: auto;
-            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
-            max-width: 22rem;
-        }
-        .toast-success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--success); }
-        .toast-error { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--danger); }
-        .toast-info { background: #dbeafe; color: #1e40af; border-left: 4px solid var(--secondary); }
-        @keyframes toastIn { from { opacity: 0; transform: translateX(2rem); } to { opacity: 1; transform: translateX(0); } }
-        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-0.5rem); } }
-
         /* === STEP INDICATOR === */
         .step-indicator {
             display: flex;
@@ -439,7 +412,7 @@ try {
 
         /* === PRINT === */
         @media print {
-            .toast-container, .step-indicator, .step-nav, .header-actions,
+            .step-indicator, .step-nav, .header-actions,
             .sticky-sidebar, .q-header-actions, .type-selector,
             .empty-state-builder, .add-option-btn, .upload-area,
             .form-group:has(.upload-area), #bankSoalModal { display: none !important; }
@@ -451,8 +424,6 @@ try {
 <body>
     <?php include 'includes/header.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
-
-    <div class="toast-container" id="toastContainer"></div>
 
     <main class="main-content">
         <div class="page-header">
@@ -715,6 +686,7 @@ try {
     </div>
 
     <script src="../js/teacher-layout.js"></script>
+    <script src="../js/toast.js"></script>
     <script defer src="js/ai-import.js"></script>
     <script>
         const csrfToken = document.getElementById('csrf-token').value;
@@ -727,16 +699,6 @@ try {
         let bankQuestions = [];
         let deleteTimers = {};
         let bankDebounceTimer = null;
-
-        // === TOAST ===
-        function showToast(message, type = 'success') {
-            const c = document.getElementById('toastContainer');
-            const t = document.createElement('div');
-            t.className = `toast toast-${type}`;
-            t.textContent = message;
-            c.appendChild(t);
-            setTimeout(() => t.remove(), 3000);
-        }
 
         // === GENERATE CODE ===
         function generateCode() {
