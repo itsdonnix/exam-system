@@ -214,6 +214,55 @@ textarea.form-control {
   color: #fff;
 }
 
+/* ===== NAVBAR - TEACHER (Light Card Style) ===== */
+.navbar-teacher {
+  background: var(--card);
+  color: var(--text);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  border-bottom: 1px solid var(--border);
+}
+.navbar-teacher .navbar-brand {
+  color: var(--primary);
+}
+.navbar-teacher .navbar-brand > span:last-child {
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  color: var(--primary-light);
+  background: rgba(37, 99, 235, 0.08);
+  padding: 0.2em 0.6em;
+  border-radius: 50px;
+  margin-left: 0.5em;
+}
+.navbar-teacher .nav-user {
+  background: rgba(37, 99, 235, 0.06);
+  color: var(--text);
+}
+.navbar-teacher .nav-avatar {
+  background: linear-gradient(135deg, var(--primary), var(--primary-light));
+}
+.navbar-teacher .btn-outline {
+  color: var(--text-muted);
+  border-color: var(--border);
+}
+.navbar-teacher .btn-outline:hover {
+  background: var(--danger);
+  color: #fff;
+  border-color: var(--danger);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+.navbar-teacher .hamburger-btn {
+  background: rgba(37, 99, 235, 0.08);
+}
+.navbar-teacher .hamburger-btn:hover {
+  background: rgba(37, 99, 235, 0.15);
+}
+.navbar-teacher .hamburger-btn span {
+  background: var(--text);
+}
+
 /* ===== SIDEBAR ===== */
 .layout {
   display: flex;
