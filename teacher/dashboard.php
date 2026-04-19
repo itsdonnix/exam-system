@@ -195,14 +195,14 @@ $activePage = 'dashboard';
       </div>
       <div
         class="quick-action-card"
-        onclick="window.location.href='question-bank.html'">
+        onclick="window.location.href='question-bank.php'">
         <div class="icon">📚</div>
         <h4>Bank Soal</h4>
         <p>Kelola soal untuk digunakan kembali</p>
       </div>
       <div
         class="quick-action-card"
-        onclick="window.location.href='results.html'">
+        onclick="window.location.href='results.php'">
         <div class="icon">📊</div>
         <h4>Lihat Hasil Ujian</h4>
         <p>Laporan nilai dan statistik siswa</p>
