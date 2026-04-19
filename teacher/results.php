@@ -275,7 +275,6 @@ $csrf_token = generateCSRFToken();
             border-color: var(--primary-light);
         }
 
-        /* === NEW: Extracted layout classes (replacing inline styles) === */
         .header-actions {
             display: flex;
             gap: 8px;
@@ -299,13 +298,11 @@ $csrf_token = generateCSRFToken();
             flex-wrap: wrap;
         }
 
-        /* Safety net — may already exist in style.css */
         .table-wrapper {
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
         }
 
-        /* === UX IMPROVEMENTS === */
         #results-table tbody tr {
             transition: background 0.15s ease;
         }
@@ -327,10 +324,7 @@ $csrf_token = generateCSRFToken();
             position: relative;
         }
 
-        /* === RESPONSIVE: Tablet (≤768px) === */
         @media (max-width: 768px) {
-
-            /* Page header — stack actions below title */
             .page-header {
                 flex-wrap: wrap;
                 gap: 0.75rem;
@@ -342,7 +336,6 @@ $csrf_token = generateCSRFToken();
                 flex-wrap: wrap;
             }
 
-            /* Exam info bar — 2 per row */
             .exam-info-bar {
                 gap: 0.75rem;
                 padding: 0.75rem 1rem;
@@ -353,12 +346,10 @@ $csrf_token = generateCSRFToken();
                 min-width: 11.25rem;
             }
 
-            /* Stats grid — 2x2 */
             .stats-grid {
                 grid-template-columns: 1fr 1fr !important;
             }
 
-            /* Analytics — stack vertically */
             .analytics-grid {
                 grid-template-columns: 1fr !important;
             }
@@ -367,7 +358,6 @@ $csrf_token = generateCSRFToken();
                 height: 12.5rem;
             }
 
-            /* Filters — full width stacked */
             .filter-section {
                 flex-direction: column;
                 align-items: stretch !important;
@@ -390,10 +380,7 @@ $csrf_token = generateCSRFToken();
             }
         }
 
-        /* === RESPONSIVE: Mobile (≤480px) === */
         @media (max-width: 480px) {
-
-            /* Exam selector — full width, stacked label+select */
             .exam-selector-bar {
                 flex-direction: column;
                 align-items: stretch;
@@ -410,7 +397,6 @@ $csrf_token = generateCSRFToken();
                 width: 100%;
             }
 
-            /* Exam info — fully stacked */
             .exam-info-item {
                 flex: 1 1 100%;
                 font-size: 0.85rem;
@@ -420,7 +406,6 @@ $csrf_token = generateCSRFToken();
                 font-size: 1rem;
             }
 
-            /* Stats — still 2x2 but tighter */
             .stats-grid {
                 gap: 0.625rem !important;
             }
@@ -433,13 +418,11 @@ $csrf_token = generateCSRFToken();
                 font-size: 0.75rem !important;
             }
 
-            /* Compact buttons */
             .btn-sm {
                 font-size: 0.75rem;
                 padding: 0.375rem 0.625rem;
             }
 
-            /* Modals — edge-to-edge safe */
             .modal {
                 width: calc(100% - 1.5rem) !important;
                 max-width: none !important;
@@ -452,7 +435,6 @@ $csrf_token = generateCSRFToken();
             }
         }
 
-        /* === PRINT === */
         @media print {
 
             .exam-selector-bar,
@@ -477,7 +459,6 @@ $csrf_token = generateCSRFToken();
                 break-inside: avoid;
             }
 
-            /* Hide action column */
             #results-table th:last-child,
             #results-table td:last-child {
                 display: none;
@@ -702,7 +683,6 @@ $csrf_token = generateCSRFToken();
         let currentSubmissionId = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            // Setup exam selector change handler
             const examSelector = document.getElementById("exam-selector");
             if (examSelector) {
                 examSelector.addEventListener("change", (e) => {
@@ -715,7 +695,6 @@ $csrf_token = generateCSRFToken();
                 });
             }
 
-            // Load data if exam is selected
             if (currentExamId) {
                 fetchAllData();
             }
