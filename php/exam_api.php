@@ -14,6 +14,7 @@ if (session_status() === PHP_SESSION_NONE) {
 }
 
 require_once 'db.php';
+require_once '../includes/csrf.php';
 
 // ============================================================
 // PUBLIC ENDPOINTS CONFIGURATION
@@ -1689,7 +1690,21 @@ function deleteBankQuestion()
     }
 
     try {
-        $questionId = (int)($_POST['id'] ?? $_GET['id'] ?? 0);
+        $input = getInput();
+
+        $questionId = (int)($input['id'] ?? 0);
+        if (!$questionId) {
+            jsonResponse(['success' => false, 'message' => 'ID soal tidak valid'], 400);
+        }
+
+        if (!isset($input['csrf_token']) || !verifyCSRFToken($input['csrf_token'], $_SESSION['csrf_token'])) {
+            logExamAction('WARNING', 'CSRF token validation failed for delete bank question', [
+                'question_id' => $questionId,
+                'ip' => $_SERVER['REMOTE_ADDR']
+            ]);
+            jsonResponse(['success' => false, 'message' => 'Token keamanan tidak valid. Silakan refresh halaman.'], 403);
+        }
+
         $db = getDB();
 
         $stmt = $db->prepare("SELECT teacher_id FROM question_bank WHERE id = ?");
@@ -1701,10 +1716,20 @@ function deleteBankQuestion()
 
         $question = $stmt->fetch();
 
-        if (!$question || $question['teacher_id'] != $_SESSION['user_id']) {
+        if (!$question) {
+            jsonResponse(['success' => false, 'message' => 'Soal tidak ditemukan'], 404);
+        }
+
+        if ($question['teacher_id'] != $_SESSION['user_id']) {
+            logExamAction('WARNING', 'Delete bank question failed - ownership mismatch', [
+                'question_id' => $questionId,
+                'teacher_id' => $_SESSION['user_id'],
+                'owner_id' => $question['teacher_id']
+            ]);
             jsonResponse(['success' => false, 'message' => 'Anda tidak memiliki akses ke soal ini'], 403);
         }
 
+        // Delete the question
         $delStmt = $db->prepare("DELETE FROM question_bank WHERE id = ?");
         if (!$delStmt) throw new Exception("Prepare delete failed");
 
@@ -1712,9 +1737,16 @@ function deleteBankQuestion()
             throw new Exception("Execute delete failed: " . implode(", ", $delStmt->errorInfo()));
         }
 
+        // Log successful deletion
+        logExamAction('INFO', 'Bank question deleted successfully', [
+            'question_id' => $questionId,
+            'teacher_id' => $_SESSION['user_id']
+        ]);
+
         jsonResponse(['success' => true, 'message' => 'Soal berhasil dihapus']);
     } catch (Exception $e) {
-        jsonResponse(['success' => false, 'message' => 'Error deleting question: ' . $e->getMessage()], 500);
+        error_log("[deleteBankQuestion] Error: " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
+        jsonResponse(['success' => false, 'message' => 'Terjadi kesalahan saat menghapus soal: ' . $e->getMessage()], 500);
     }
 }
 

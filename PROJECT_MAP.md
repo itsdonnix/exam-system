@@ -537,6 +537,7 @@ No loading spinner, no API call
 | `get_teacher_stats` | guru | No | Fetch total students + avg score | JSON stats |
 | `get_profile` | guru, siswa | No | Fetch user profile data | profile JSON |
 | `update_profile` | guru | **Yes** | Update teacher name/email/phone/password | success/error |
+| `delete_bank_question` | guru | **Yes** | Delete question from bank | success/error |
 | `get_students` | guru | No | Fetch students from teacher's classes | JSON array |
 | `get_recent_violations` | guru | No | Fetch 10 latest violations | JSON array |
 | `get_classes` | public | No | Fetch list of classes | JSON array |
@@ -557,11 +558,22 @@ No loading spinner, no API call
 **CSRF Protected Endpoints** (State-changing):
 
 ```php
-// Only update_profile requires CSRF
-if (!verifyCSRFToken($input['csrf_token'], $_SESSION['csrf_token'])) {
-    http_response_code(403);
-    die(json_encode(['error' => 'CSRF validation failed']));
-}
+// Current endpoints with CSRF protection
+// - update_profile
+// - delete_bank_question
+
+// TODO: Add CSRF protection to all state-changing endpoints:
+// - create_exam
+// - activate_exam
+// - deactivate_exam
+// - delete_exam
+// - duplicate_exam
+// - unlock_student
+// - reset_student_result
+// - save_question_to_bank
+// - update_bank_question
+// - copy_question_to_exam
+// - save_manual_grade
 ```
 
 ---
@@ -686,6 +698,33 @@ Server (exam_api.php):
 JavaScript:
   - Shows success message via showToast()
   - Optionally regenerates CSRF token for next form
+```
+
+### Delete Bank Question (Fixed with CSRF)
+
+```
+User clicks delete button on question
+  ↓
+JavaScript:
+  - Shows confirmation "Yakin?" for 3 seconds
+  - On second click, sends POST with JSON payload:
+    {
+      action: "delete_bank_question",
+      id: questionId,
+      csrf_token: csrfToken
+    }
+  ↓
+Server (exam_api.php):
+  - Validates authentication (role = guru)
+  - Parses JSON input via getInput()
+  - Validates CSRF token
+  - Checks ownership (teacher_id matches)
+  - Deletes question from question_bank
+  - Logs success/failure
+  ↓
+JavaScript:
+  - Shows success/error via showToast()
+  - Reloads question list on success
 ```
 
 ### Exam Access (POST → Redirect → GET Security Pattern)
@@ -865,6 +904,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 10. ✅ **Use server-side data fetching for read-only pages** (like students.php)
 11. ✅ **Include `toast.js` and use `showToast()` for all user feedback**
 12. ✅ **Include CSRF token in all upload requests to `upload_media.php`**
+13. ✅ **Add CSRF validation to all state-changing API endpoints**
 
 ### Session Configuration (Always This Way)
 
@@ -897,6 +937,14 @@ clearExamRateLimit($exam_id);
 ## Important Notes for Future Development
 
 ### Recent Changes Summary
+
+**2026-04-20 - Fixed deleteBankQuestion & Added CSRF**:
+
+- Fixed ID retrieval issue in `deleteBankQuestion` (was using `$_POST`/`$_GET` instead of `getInput()`)
+- Added CSRF validation to `deleteBankQuestion` endpoint
+- Added audit logging for ownership mismatches and successful deletions
+- Updated API endpoints table to mark `delete_bank_question` as CSRF-protected
+- Added TODO to add CSRF protection to all remaining state-changing endpoints
 
 **2026-04-20 - Media Upload Security Hardening**:
 
@@ -1012,6 +1060,7 @@ Then review these files for latest patterns:
 12. **Sidebar links must point to .php files** - Update when migrating pages
 13. **Always use toast system for user feedback** - Include `toast.js` and call `showToast()`
 14. **Always include CSRF token in upload requests** - Uploads to `upload_media.php` require `csrf_token` field
+15. **Always validate CSRF for state-changing API endpoints** - Create, update, delete operations must verify tokens
 
 ---
 
@@ -1105,6 +1154,6 @@ js/utils.js
 ## Last Updated
 
 **Date**: 2026-04-20
-**Latest Change**: Security hardening of media upload endpoint (CSRF, rate limiting, image validation, .htaccess)
+**Latest Change**: Fixed deleteBankQuestion ID retrieval and added CSRF validation; documented TODO for CSRF protection across remaining state-changing endpoints
 **Status**: Active development
-**Maintainer Notes**: Use toast system (showToast) for all user notifications instead of alert() or custom modals. Always include CSRF token in upload requests to `upload_media.php`.
+**Maintainer Notes**: Use toast system (showToast) for all user notifications instead of alert() or custom modals. Always include CSRF token in upload requests to `upload_media.php`. All state-changing API endpoints must implement CSRF validation.
