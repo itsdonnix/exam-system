@@ -1149,6 +1149,7 @@ try {
             for (const file of files) {
                 const formData = new FormData();
                 formData.append("file", file);
+                formData.append("csrf_token", csrfToken);
                 try {
                     const response = await fetch("../php/upload_media.php", {
                         method: "POST",
@@ -1163,6 +1164,7 @@ try {
                     }
                 } catch (error) {
                     console.error("Upload error:", error);
+                    showToast("Error koneksi saat upload", "error");
                 }
             }
             hiddenInput.value = JSON.stringify(currentMedia);
@@ -1247,6 +1249,7 @@ try {
             const file = input.files[0];
             const formData = new FormData();
             formData.append("file", file);
+            formData.append("csrf_token", csrfToken);
             try {
                 const response = await fetch("../php/upload_media.php", {
                     method: "POST",
@@ -1275,6 +1278,7 @@ try {
                 }
             } catch (error) {
                 console.error("Upload error:", error);
+                showToast("Error koneksi saat upload", "error");
             }
         }
 

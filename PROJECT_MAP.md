@@ -53,7 +53,7 @@ ExamSafe/
 │   ├── settings.html     # REDIRECTS to settings.php (deprecated)
 │   ├── students.php      # ★ Student list (server-side data, uses shared includes)
 │   ├── students.html     # REDIRECTS to students.php (deprecated)
-│   ├── create-exam.html  # Create/edit exams (to be migrated to PHP)
+│   ├── create-exam.php   # Create/edit exams (migrated to PHP with CSRF uploads)
 │   ├── question-bank.html # Manage question bank (to be migrated)
 │   ├── results.html      # View exam results (to be migrated)
 │   └── register.html     # Teacher registration (refactored)
@@ -86,6 +86,7 @@ ExamSafe/
 │   ├── ai_import.php    # AI question extraction (Gemini)
 │   ├── get_ai_settings.php # Fetch teacher AI settings
 │   ├── save_ai_settings.php # Save teacher AI settings (CSRF protected)
+│   ├── upload_media.php # ★ Media upload with CSRF, rate limiting, and image validation
 │   ├── student_register.php # Student registration API
 │   ├── register.php     # Teacher registration API
 │   └── logs/            # Log files directory
@@ -94,6 +95,8 @@ ExamSafe/
 ├── includes/            # Shared PHP utilities
 │   ├── auth.php         # Authentication helpers + rate limiting
 │   └── csrf.php         # ★ CSRF token generation & validation (2-arg verify)
+├── uploads/             # Uploaded media files
+│   └── .htaccess        # ★ Security: prevents PHP execution, sets headers
 └── vendor/              # Composer dependencies
 ```
 
@@ -212,6 +215,53 @@ $csrf_token = generateCSRFToken();
 - After 3 failures: 60-second block
 - Block message stored in `$_SESSION['rate_limit_error']`
 - Counter tracked per exam per student (different exams = separate counters)
+
+---
+
+#### **php/upload_media.php** (Secure Media Upload)
+
+**Purpose**: Handle image uploads for exam questions with comprehensive security
+
+**Security Features**:
+
+- CSRF token validation
+- Rate limiting (50 uploads per hour per user)
+- File extension whitelist (.jpg, .jpeg, .png, .gif, .webp)
+- MIME type validation using finfo_file() (not client-supplied)
+- Image integrity check via getimagesize()
+- Dimension limits (max 4096x4096 pixels)
+- Optional EXIF metadata stripping (if GD extension available)
+- Secure file permissions (0644)
+- Detailed error logging
+
+**Usage Example** (JavaScript):
+
+```javascript
+const formData = new FormData();
+formData.append("file", file);
+formData.append("csrf_token", csrfToken);
+fetch("../php/upload_media.php", {
+  method: "POST",
+  body: formData,
+  credentials: "include",
+});
+```
+
+**Rate Limiting**: 50 uploads per hour per user (stored in session)
+
+---
+
+#### **uploads/.htaccess** (Upload Directory Security)
+
+**Purpose**: Prevent script execution and add security headers to uploads directory
+
+**Security Controls**:
+
+- Blocks PHP, CGI, and other script execution
+- Sets X-Content-Type-Options: nosniff
+- Sets Content-Security-Policy for images only
+- Disables directory browsing
+- Only allows access to image files
 
 ---
 
@@ -814,6 +864,7 @@ header('Referrer-Policy: strict-origin-when-cross-origin');
 9. ✅ Log errors but never expose to users
 10. ✅ **Use server-side data fetching for read-only pages** (like students.php)
 11. ✅ **Include `toast.js` and use `showToast()` for all user feedback**
+12. ✅ **Include CSRF token in all upload requests to `upload_media.php`**
 
 ### Session Configuration (Always This Way)
 
@@ -846,6 +897,18 @@ clearExamRateLimit($exam_id);
 ## Important Notes for Future Development
 
 ### Recent Changes Summary
+
+**2026-04-20 - Media Upload Security Hardening**:
+
+- Refactored `php/upload_media.php` with comprehensive security measures
+- Added CSRF token validation for all upload requests
+- Implemented rate limiting (50 uploads per hour per user)
+- Added strict file validation (extension, MIME type, image integrity)
+- Added dimension limits (max 4096x4096 pixels)
+- Added optional EXIF metadata stripping via GD
+- Created `uploads/.htaccess` to prevent script execution
+- Updated `teacher/create-exam.php` to include CSRF tokens in uploads
+- Updated `.gitignore` to track `.htaccess` while ignoring uploaded files
 
 **2026-04-20 - Dashboard API Extraction**:
 
@@ -908,26 +971,28 @@ clearExamRateLimit($exam_id);
 
 ## Session Recovery Checklist (When Resuming Project)
 
-When coming back to this project, verify these 6 files first:
+When coming back to this project, verify these 7 files first:
 
 1. **`includes/csrf.php`** - CSRF generation/validation (2-arg verify required)
 2. **`includes/auth.php`** - Rate limiting + authentication helpers
 3. **`teacher/includes/init.php`** - Shared teacher initialization (CRITICAL)
 4. **`php/exam_api.php`** - Main API with CSRF on state-change endpoints
 5. **`php/save_ai_settings.php`** - AI settings with CSRF protection
-6. **`js/toast.js`** - Toast notification system (use for all user feedback)
+6. **`php/upload_media.php`** - Secure media upload with CSRF and rate limiting
+7. **`js/toast.js`** - Toast notification system (use for all user feedback)
 
 Then review these files for latest patterns:
 
-7. **`teacher/students.php`** - Server-side data pattern
-8. **`teacher/settings.php`** - API-based pattern with CSRF
-9. **`teacher/dashboard.php`** - Uses shared components with extracted JS modules
-10. **`js/teacher-api.js`** - Teacher API layer
-11. **`js/teacher-dashboard.js`** - Dashboard controller
-12. **`js/utils.js`** - Shared utilities
-13. **`student/exam.php`** - POST-only access pattern with CSRF
-14. **`student/dashboard.php`** - POST forms for exam access
-15. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
+8. **`teacher/students.php`** - Server-side data pattern
+9. **`teacher/settings.php`** - API-based pattern with CSRF
+10. **`teacher/dashboard.php`** - Uses shared components with extracted JS modules
+11. **`teacher/create-exam.php`** - Exam creation with CSRF-protected uploads
+12. **`js/teacher-api.js`** - Teacher API layer
+13. **`js/teacher-dashboard.js`** - Dashboard controller
+14. **`js/utils.js`** - Shared utilities
+15. **`student/exam.php`** - POST-only access pattern with CSRF
+16. **`student/dashboard.php`** - POST forms for exam access
+17. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
 
 ---
 
@@ -946,6 +1011,7 @@ Then review these files for latest patterns:
 11. **Toleransi is obsolete** - Function removed, do not use
 12. **Sidebar links must point to .php files** - Update when migrating pages
 13. **Always use toast system for user feedback** - Include `toast.js` and call `showToast()`
+14. **Always include CSRF token in upload requests** - Uploads to `upload_media.php` require `csrf_token` field
 
 ---
 
@@ -983,6 +1049,16 @@ teacher/dashboard.php (Mixed - server-side + API)
   ├─ js/teacher-layout.js
   └─ (API calls via TeacherAPI, examManager.fetchExams)
 
+teacher/create-exam.php (Exam creation with uploads)
+  ├─ includes/init.php
+  ├─ includes/header.php
+  ├─ includes/sidebar.php
+  ├─ ../includes/csrf.php (for $csrf_token)
+  ├─ js/toast.js
+  ├─ js/teacher-layout.js
+  ├─ js/ai-import.js
+  └─ (Uploads to php/upload_media.php with CSRF token)
+
 student/exam.php
   ├─ includes/csrf.php
   ├─ includes/auth.php
@@ -994,10 +1070,18 @@ php/exam_api.php
   ├─ includes/csrf.php
   └─ logs/exam_actions.log (write)
 
+php/upload_media.php (Secure upload endpoint)
+  ├─ includes/db.php
+  ├─ ../includes/csrf.php
+  └─ (Rate limiting via session, image validation)
+
 php/save_ai_settings.php
   ├─ includes/db.php
   ├─ includes/csrf.php
   └─ logs/ (optional)
+
+uploads/.htaccess (Security configuration)
+  └─ (Blocks PHP execution, sets security headers)
 
 js/toast.js
   └─ Global showToast() function
@@ -1021,6 +1105,6 @@ js/utils.js
 ## Last Updated
 
 **Date**: 2026-04-20
-**Latest Change**: Extracted API calls from dashboard.php to dedicated JS modules (teacher-api.js, teacher-dashboard.js, utils.js)
+**Latest Change**: Security hardening of media upload endpoint (CSRF, rate limiting, image validation, .htaccess)
 **Status**: Active development
-**Maintainer Notes**: Use toast system (showToast) for all user notifications instead of alert() or custom modals
+**Maintainer Notes**: Use toast system (showToast) for all user notifications instead of alert() or custom modals. Always include CSRF token in upload requests to `upload_media.php`.

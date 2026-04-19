@@ -1,0 +1,19 @@
+# Prevent PHP and other script execution in uploads directory
+<FilesMatch "\.(php|phtml|php3|php4|php5|phar|shtml|cgi|pl|py|js|html|htm)$">
+    Require all denied
+</FilesMatch>
+
+# Security headers
+<IfModule mod_headers.c>
+    Header set X-Content-Type-Options "nosniff"
+    Header set Content-Security-Policy "default-src 'none'; img-src 'self' data:; style-src 'unsafe-inline'"
+    Header set X-Frame-Options "DENY"
+</IfModule>
+
+# Only allow access to image files
+<FilesMatch "\.(jpg|jpeg|png|gif|webp)$">
+    Require all granted
+</FilesMatch>
+
+# Disable directory browsing
+Options -Indexes
