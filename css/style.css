@@ -250,6 +250,13 @@ textarea.form-control {
   width: 1.375rem;
   text-align: center;
 }
+
+.sidebar-menu li a.logout:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+  border-left-color: #ef4444;
+}
+
 .main-content {
   flex: 1;
   padding: 2em;

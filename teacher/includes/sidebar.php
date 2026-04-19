@@ -43,5 +43,10 @@
           <span class="icon">⚙️</span> Pengaturan
         </a>
       </li>
+      <li style="margin-top: auto; border-top: 1px solid rgba(255, 255, 255, 0.1); margin-top: 1rem; padding-top: 0.5rem;">
+        <a href="../php/logout.php" class="logout">
+          <span class="icon">🚪</span> Keluar
+        </a>
+      </li>
     </ul>
   </aside>
