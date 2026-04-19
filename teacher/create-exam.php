@@ -31,233 +31,265 @@ try {
     <title>Buat Ujian — ExamSafe</title>
     <link rel="stylesheet" href="../css/style.css" />
     <style>
+        /* === TOAST === */
+        .toast-container {
+            position: fixed;
+            top: 5rem;
+            right: 1.25em;
+            z-index: 2000;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+            pointer-events: none;
+        }
+        .toast {
+            padding: 0.75em 1.25em;
+            border-radius: 8px;
+            font-size: 0.88rem;
+            font-weight: 500;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.12);
+            pointer-events: auto;
+            animation: toastIn 0.3s ease, toastOut 0.3s ease 2.7s forwards;
+            max-width: 22rem;
+        }
+        .toast-success { background: #d1fae5; color: #065f46; border-left: 4px solid var(--success); }
+        .toast-error { background: #fee2e2; color: #991b1b; border-left: 4px solid var(--danger); }
+        .toast-info { background: #dbeafe; color: #1e40af; border-left: 4px solid var(--secondary); }
+        @keyframes toastIn { from { opacity: 0; transform: translateX(2rem); } to { opacity: 1; transform: translateX(0); } }
+        @keyframes toastOut { from { opacity: 1; } to { opacity: 0; transform: translateY(-0.5rem); } }
+
+        /* === STEP INDICATOR === */
+        .step-indicator {
+            display: flex;
+            gap: 0;
+            margin-bottom: 1.5em;
+            overflow-x: auto;
+        }
+        .step {
+            flex: 1;
+            text-align: center;
+            padding: 0.75em 0.5em;
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: #94a3b8;
+            border-bottom: 3px solid #e2e8f0;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+        .step:hover { color: #64748b; }
+        .step.active { color: var(--primary); border-bottom-color: var(--primary); }
+        .step.done { color: var(--success); border-bottom-color: var(--success); }
+        .step.error { color: var(--danger); border-bottom-color: var(--danger); }
+        .step-content { display: none; }
+        .step-content.active { display: block; }
+
+        /* === QUESTION BUILDER === */
         .question-builder {
-            background: #fff;
-            border-radius: 14px;
-            padding: 24px;
-            margin-bottom: 16px;
-            box-shadow: 0 4px 16px rgba(26, 60, 110, 0.07);
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1.5em;
+            margin-bottom: 1em;
+            box-shadow: var(--shadow);
             border-left: 4px solid var(--primary-light);
             position: relative;
         }
-        .question-builder .q-header {
+        .question-builder:hover { box-shadow: 0 4px 16px rgba(26, 60, 110, 0.12); }
+        .q-header {
             display: flex;
             align-items: center;
             justify-content: space-between;
-            margin-bottom: 16px;
+            margin-bottom: 1em;
+            gap: 0.75em;
+            flex-wrap: wrap;
         }
+        .q-header-left { display: flex; align-items: center; gap: 0.75em; flex-wrap: wrap; }
+        .q-header-actions { display: flex; gap: 0.5em; flex-shrink: 0; }
         .q-number {
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 700;
             color: var(--primary-light);
             text-transform: uppercase;
             letter-spacing: 1px;
         }
-        .option-row {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            margin-bottom: 10px;
-        }
-        .option-row input[type="text"] {
-            flex: 1;
-        }
-        .option-row input[type="radio"] {
-            width: 18px;
-            height: 18px;
-            accent-color: var(--success);
-        }
-        .option-label {
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #64748b;
-            width: 20px;
-        }
-        .correct-label {
-            font-size: 0.78rem;
-            color: var(--success);
-            font-weight: 600;
-        }
-        .add-option-btn {
-            background: none;
-            border: 2px dashed #cbd5e1;
-            color: #94a3b8;
-            padding: 8px;
-            border-radius: 8px;
-            cursor: pointer;
-            font-size: 0.85rem;
-            width: 100%;
-            margin-top: 4px;
-            transition: all 0.2s;
-            font-family: "Poppins", sans-serif;
-        }
-        .add-option-btn:hover {
-            border-color: var(--primary-light);
-            color: var(--primary-light);
-        }
-        .drag-handle {
-            cursor: grab;
-            color: #94a3b8;
-            font-size: 1.2rem;
-            padding: 4px;
-        }
-        .type-selector {
-            display: flex;
-            gap: 8px;
-        }
+        .drag-handle { cursor: grab; color: #94a3b8; font-size: 1.2rem; padding: 0.25em; }
+        .type-selector { display: flex; gap: 0.5em; flex-wrap: wrap; }
         .type-btn {
-            padding: 6px 14px;
+            padding: 0.375em 0.875em;
             border-radius: 8px;
             border: 2px solid #e2e8f0;
             background: #f8fafc;
             cursor: pointer;
-            font-size: 0.82rem;
+            font-size: 0.78rem;
             font-weight: 600;
             color: #64748b;
             font-family: "Poppins", sans-serif;
             transition: all 0.2s;
         }
-        .type-btn.active {
-            border-color: var(--primary-light);
-            background: #eff6ff;
-            color: var(--primary);
+        .type-btn:hover { border-color: #cbd5e1; }
+        .type-btn.active { border-color: var(--primary-light); background: #eff6ff; color: var(--primary); }
+
+        /* === OPTION ROWS === */
+        .option-row {
+            display: flex;
+            align-items: center;
+            gap: 0.625em;
+            margin-bottom: 0.625em;
         }
+        .option-row input[type="text"] { flex: 1; }
+        .option-row input[type="radio"],
+        .option-row input[type="checkbox"] { width: 1.125rem; height: 1.125rem; accent-color: var(--success); flex-shrink: 0; }
+        .option-label { font-size: 0.85rem; font-weight: 600; color: #64748b; width: 1.5rem; flex-shrink: 0; }
+        .correct-label { font-size: 0.75rem; color: var(--success); font-weight: 600; }
+        .add-option-btn {
+            background: none;
+            border: 2px dashed #cbd5e1;
+            color: #94a3b8;
+            padding: 0.5em;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 0.82rem;
+            width: 100%;
+            margin-top: 0.25em;
+            transition: all 0.2s;
+            font-family: "Poppins", sans-serif;
+        }
+        .add-option-btn:hover { border-color: var(--primary-light); color: var(--primary-light); }
+        .opt-image-preview-wrap { display: flex; align-items: center; gap: 0.3125em; flex-shrink: 0; }
+        .opt-image-preview { max-height: 3.125rem; max-width: 3.125rem; object-fit: cover; border-radius: 4px; border: 1px solid var(--border); }
+        .opt-remove-btn { background: #fee2e2; color: #991b1b; padding: 0.375em 0.625em; flex-shrink: 0; }
+        .opt-upload-label { padding: 0.375em; margin-bottom: 0; cursor: pointer; flex-shrink: 0; }
+
+        /* === INLINE DELETE CONFIRM === */
+        .btn-delete-confirm {
+            background: #dc2626 !important;
+            color: #fff !important;
+            animation: pulse 0.8s infinite;
+        }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.7; } }
+
+        /* === LAYOUT === */
+        .page-row { display: flex; gap: 1.5em; align-items: flex-start; }
+        .questions-container { flex: 1; min-width: 0; }
+        .empty-state-builder {
+            text-align: center;
+            padding: 3em 2em;
+            background: #f8fafc;
+            border-radius: var(--radius);
+            border: 2px dashed #cbd5e1;
+        }
+        .empty-state-builder-icon { font-size: 3.5rem; margin-bottom: 1em; }
+        .step-nav { display: flex; justify-content: space-between; margin-top: 1.25em; }
+        .header-actions { display: flex; gap: 0.5em; }
+        .exam-code-row { display: flex; gap: 0.5em; }
+
+        /* === STICKY SIDEBAR === */
+        .sticky-sidebar {
+            position: sticky;
+            top: 5rem;
+            width: 17.5rem;
+            background: var(--card);
+            border-radius: var(--radius);
+            padding: 1.25em;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border);
+            flex-shrink: 0;
+        }
+        .sidebar-section-title {
+            font-weight: 700;
+            color: #1e293b;
+            margin-bottom: 0.75em;
+            font-size: 0.9rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5em;
+        }
+        .sticky-add-btns { display: flex; flex-direction: column; gap: 0.625em; }
+        .sticky-add-btns button { text-align: left; justify-content: flex-start; padding: 0.75em 1em; font-weight: 600; }
+        .sidebar-tips-box {
+            background: #f1f5f9;
+            padding: 0.9375em;
+            border-radius: 10px;
+        }
+        .sidebar-tips-box ul {
+            padding: 0 0 0 1em;
+            margin: 0;
+            font-size: 0.78rem;
+            color: #475569;
+            display: flex;
+            flex-direction: column;
+            gap: 0.5em;
+        }
+        .sidebar-divider { margin: 1.25em 0; }
+
+        /* === SETTINGS CHECKBOXES === */
+        .setting-checkbox {
+            display: flex;
+            align-items: center;
+            gap: 0.625em;
+            cursor: pointer;
+            text-transform: none;
+            font-size: 0.9rem;
+            font-weight: 400;
+            color: var(--text);
+            margin-bottom: 0.625em;
+        }
+        .setting-checkbox input[type="checkbox"] { width: 1.125rem; height: 1.125rem; accent-color: var(--primary); }
+
+        /* === STEP 1 FIELD ERROR === */
+        .form-control.field-error { border-color: var(--danger); }
+        .field-error-msg { color: var(--danger); font-size: 0.75rem; margin-top: 0.25em; display: none; }
+        .field-error-msg.visible { display: block; }
+
+        /* === UPLOAD AREA === */
         .upload-area {
             border: 2px dashed #cbd5e1;
             border-radius: 10px;
-            padding: 24px;
+            padding: 1.5em;
             text-align: center;
             cursor: pointer;
             transition: all 0.2s;
         }
-        .upload-area:hover {
-            border-color: var(--primary-light);
-            background: #eff6ff;
-        }
-        .upload-area input {
-            display: none;
-        }
-        .step-indicator {
-            display: flex;
-            gap: 0;
-            margin-bottom: 32px;
-        }
-        .step {
-            flex: 1;
-            text-align: center;
-            padding: 12px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            color: #94a3b8;
-            border-bottom: 3px solid #e2e8f0;
-            cursor: pointer;
-        }
-        .step.active {
-            color: var(--primary);
-            border-bottom-color: var(--primary);
-        }
-        .step.done {
-            color: var(--success);
-            border-bottom-color: var(--success);
-        }
-        .step-content {
-            display: none;
-        }
-        .step-content.active {
-            display: block;
-        }
-        .page-row {
-            display: flex;
-            gap: 24px;
-            align-items: flex-start;
-        }
-        .questions-container {
-            flex: 1;
-        }
-        .sticky-sidebar {
-            position: sticky;
-            top: 80px;
-            width: 280px;
+        .upload-area:hover { border-color: var(--primary-light); background: #eff6ff; }
+        .upload-area input { display: none; }
+
+        /* === PREVIEW === */
+        .preview-q-card {
             background: #fff;
-            border-radius: 14px;
-            padding: 20px;
-            box-shadow: 0 4px 16px rgba(26, 60, 110, 0.07);
-            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: 1.25em;
+            margin-bottom: 1.25em;
+            border: 1px solid var(--border);
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
         }
-        .sticky-add-btns {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-        }
-        .sticky-add-btns button {
-            text-align: left;
-            justify-content: flex-start;
-            padding: 12px 16px;
-            font-weight: 600;
-        }
-
-        /* Floating Action Button for Mobile */
-        .fab-container {
-            display: none;
-            position: fixed;
-            bottom: 24px;
-            right: 24px;
-            z-index: 100;
-        }
-
-        @media (max-width: 992px) {
-            .page-row {
-                flex-direction: column;
-            }
-            .sticky-sidebar {
-                position: static;
-                width: 100%;
-                margin-bottom: 20px;
-            }
-            .sticky-add-btns {
-                flex-direction: row;
-                flex-wrap: wrap;
-            }
-            .sticky-add-btns button {
-                flex: 1;
-                min-width: 140px;
-            }
-        }
-
-        .opt-image-preview {
-            max-height: 50px;
-            max-width: 50px;
-            object-fit: cover;
-            border-radius: 4px;
-            border: 1px solid #e2e8f0;
-        }
-        .opt-image-preview-wrap {
-            display: flex;
-            align-items: center;
-            gap: 5px;
+        .preview-q-number {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--primary-light);
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 0.625em;
         }
         .preview-q-text {
             font-size: 1.05rem;
             font-weight: 500;
-            margin-bottom: 15px;
+            margin-bottom: 0.9375em;
             color: #1e293b;
-        }
-        .preview-opt-list {
-            list-style: none;
-            padding: 0;
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .preview-opt-item {
-            padding: 10px 15px;
+            padding: 0.625em 0.9375em;
             background: #fff;
-            border: 1px solid #e2e8f0;
+            border: 1px solid var(--border);
             border-radius: 8px;
-            font-size: 0.9rem;
+            margin-bottom: 0.5em;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 0.625em;
+            font-size: 0.88rem;
+            white-space: pre-wrap;
+            word-break: break-word;
         }
         .preview-opt-item.correct {
             background: #d1fae5;
@@ -265,21 +297,154 @@ try {
             color: #065f46;
             font-weight: 600;
         }
+        .preview-essay-box {
+            padding: 0.9375em;
+            background: #f8fafc;
+            border: 1px dashed #cbd5e1;
+            border-radius: 8px;
+            margin-top: 0.9375em;
+        }
+        .preview-essay-box p { white-space: pre-wrap; word-break: break-word; }
+        .preview-nav { display: flex; gap: 0.5em; }
 
-        /* Whitespace preservation for previews */
-        .preview-q-card .question-text,
-        .preview-q-card .options-list .option-item,
-        .preview-q-card .options-list .option-item span,
-        .preview-q-card .form-group p {
-            white-space: pre-wrap;
-            word-break: break-word;
+        /* === BANK SOAL ITEMS (in modal) === */
+        .bank-item {
+            padding: 1em;
+            background: #f8fafc;
+            border-radius: 10px;
+            border-left: 3px solid var(--primary-light);
+            margin-bottom: 0.75em;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 0.75em;
+        }
+        .bank-item-badges { display: flex; gap: 0.5em; margin-bottom: 0.5em; flex-wrap: wrap; }
+        .bank-item-badge {
+            font-size: 0.72rem;
+            padding: 0.1875em 0.625em;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+        .bank-item-badge.type { background: rgba(59, 130, 246, 0.1); color: #1e40af; }
+        .bank-item-badge.cat { background: rgba(107, 114, 128, 0.1); color: #374151; }
+        .bank-item-text { margin: 0 0 0.5em 0; color: #1e293b; font-weight: 500; line-height: 1.4; }
+        .bank-item-meta { margin: 0; font-size: 0.78rem; color: #64748b; }
+        .bank-item-use {
+            background: rgba(34, 197, 94, 0.1);
+            color: #15803d;
+            border: none;
+            cursor: pointer;
+            padding: 0.5em 0.875em;
+            border-radius: 6px;
+            font-weight: 600;
+            white-space: nowrap;
+            flex-shrink: 0;
+            font-family: "Poppins", sans-serif;
+            font-size: 0.82rem;
+        }
+        .bank-item-use:hover { background: rgba(34, 197, 94, 0.2); }
+
+        /* === MEDIA PREVIEW === */
+        .media-preview-grid {
+            margin-top: 0.625em;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(6.25rem, 1fr));
+            gap: 0.625em;
+        }
+        .media-preview-item { position: relative; }
+        .media-preview-item img {
+            width: 100%;
+            height: 5rem;
+            object-fit: cover;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+        .media-preview-remove {
+            position: absolute;
+            top: -0.3125em;
+            right: -0.3125em;
+            border-radius: 50%;
+            width: 1.25rem;
+            height: 1.25rem;
+            padding: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.625rem;
+        }
+        .q-upload-status { display: none; color: var(--primary-light); font-size: 0.78rem; }
+
+        /* === PUBLISH LOADING === */
+        .btn-loading { opacity: 0.7; pointer-events: none; }
+        .btn-loading::after {
+            content: "";
+            display: inline-block;
+            width: 1em;
+            height: 1em;
+            border: 2px solid rgba(255,255,255,0.3);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            margin-left: 0.5em;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* === MODAL OVERLAY === */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-overlay.active { display: flex; }
+        .modal {
+            background: #fff;
+            border-radius: 14px;
+            width: 90%;
+            max-width: 800px;
+            max-height: 85vh;
+            overflow-y: auto;
         }
 
-        /* Ensure AI preview modal also preserves whitespace */
-        #ai-preview-modal .preview-question-text,
-        #ai-preview-modal .preview-options div span {
-            white-space: pre-wrap;
-            word-break: break-word;
+        /* === RESPONSIVE === */
+        @media (max-width: 992px) {
+            .page-row { flex-direction: column; }
+            .sticky-sidebar { position: static; width: 100%; margin-bottom: 1.25em; }
+            .sticky-add-btns { flex-direction: row; flex-wrap: wrap; }
+            .sticky-add-btns button { flex: 1; min-width: 8.75rem; }
+        }
+        @media (max-width: 768px) {
+            .type-selector { gap: 0.375em; }
+            .type-btn { font-size: 0.72rem; padding: 0.3125em 0.625em; }
+            .q-header { flex-direction: column; align-items: flex-start; }
+            .q-header-actions { width: 100%; }
+            .q-header-actions .btn { flex: 1; justify-content: center; }
+            .form-row { grid-template-columns: 1fr !important; }
+        }
+        @media (max-width: 480px) {
+            .step { font-size: 0.72rem; padding: 0.625em 0.25em; }
+            .question-builder { padding: 1em; }
+            .option-row { flex-wrap: wrap; }
+            .option-row input[type="text"] { min-width: 0; }
+            .opt-image-preview-wrap,
+            .opt-upload-label { display: none !important; }
+        }
+
+        /* === PRINT === */
+        @media print {
+            .toast-container, .step-indicator, .step-nav, .header-actions,
+            .sticky-sidebar, .q-header-actions, .type-selector,
+            .empty-state-builder, .add-option-btn, .upload-area,
+            .form-group:has(.upload-area), #bankSoalModal { display: none !important; }
+            .question-builder { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
+            .main-content { padding: 0 !important; }
         }
     </style>
 </head>
@@ -287,54 +452,39 @@ try {
     <?php include 'includes/header.php'; ?>
     <?php include 'includes/sidebar.php'; ?>
 
+    <div class="toast-container" id="toastContainer"></div>
+
     <main class="main-content">
         <div class="page-header">
             <div>
                 <div class="page-title">➕ Buat Ujian Baru</div>
-                <div class="page-subtitle">
-                    Isi informasi ujian dan tambahkan soal
-                </div>
+                <div class="page-subtitle">Isi informasi ujian dan tambahkan soal</div>
             </div>
-            <div style="display: flex; gap: 8px">
-                <button class="btn btn-outline" onclick="saveDraft()">
-                    💾 Simpan Draft
-                </button>
-                <button class="btn btn-success" onclick="publishExam()">
-                    🚀 Publikasikan
-                </button>
+            <div class="header-actions">
+                <button class="btn btn-outline" onclick="saveDraft()">💾 Simpan Draft</button>
+                <button class="btn btn-success" id="publishBtn" onclick="publishExam()">🚀 Publikasikan</button>
             </div>
         </div>
 
-        <!-- Hidden inputs for CSRF and server-side data -->
         <input type="hidden" id="csrf-token" value="<?php echo htmlspecialchars($csrf_token); ?>">
         <input type="hidden" id="subjects-data" value='<?php echo htmlspecialchars(json_encode($subjects)); ?>'>
         <input type="hidden" id="classes-data" value='<?php echo htmlspecialchars(json_encode($classes)); ?>'>
 
-        <!-- Step Indicator -->
         <div class="step-indicator">
-            <div class="step active" id="step-1-tab" data-step="1">
-                1. Info Ujian
-            </div>
-            <div class="step" id="step-2-tab" data-step="2">2. Soal Ujian</div>
-            <div class="step" id="step-3-tab" data-step="3">3. Pengaturan</div>
-            <div class="step" id="step-4-tab" data-step="4">4. Preview</div>
+            <div class="step active" id="step-1-tab" onclick="goStep(1)">1. Info Ujian</div>
+            <div class="step" id="step-2-tab" onclick="goStep(2)">2. Soal Ujian</div>
+            <div class="step" id="step-3-tab" onclick="goStep(3)">3. Pengaturan</div>
+            <div class="step" id="step-4-tab" onclick="goStep(4)">4. Preview</div>
         </div>
 
-        <!-- STEP 1: Info Ujian -->
+        <!-- STEP 1 -->
         <div class="step-content active" id="step-1">
             <div class="card">
-                <div class="page-title" style="font-size: 1.1rem; margin-bottom: 20px">
-                    📋 Informasi Ujian
-                </div>
+                <div class="page-title" style="font-size: 1.1rem; margin-bottom: 1.25em">📋 Informasi Ujian</div>
                 <div class="form-group">
                     <label>Nama Ujian *</label>
-                    <input
-                        type="text"
-                        class="form-control"
-                        id="exam-name"
-                        placeholder="Contoh: Matematika — Bab 5: Integral"
-                        value="Matematika — Bab 5: Integral"
-                    />
+                    <input type="text" class="form-control" id="exam-name" placeholder="Contoh: Matematika — Bab 5: Integral" />
+                    <div class="field-error-msg" id="err-exam-name">Nama ujian wajib diisi</div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
@@ -362,10 +512,12 @@ try {
                         <select class="form-control" id="exam-subject">
                             <option value="">-- Pilih Mata Pelajaran --</option>
                         </select>
+                        <div class="field-error-msg" id="err-exam-subject">Pilih mata pelajaran</div>
                     </div>
                     <div class="form-group">
                         <label>Tanggal Ujian *</label>
                         <input type="date" class="form-control" id="exam-date" />
+                        <div class="field-error-msg" id="err-exam-date">Tanggal ujian wajib diisi</div>
                     </div>
                 </div>
                 <div class="form-row">
@@ -383,58 +535,50 @@ try {
                         <label>Jumlah Soal Ditampilkan</label>
                         <input type="number" class="form-control" id="exam-qcount" value="40" min="1" max="100" />
                     </div>
-                    <div class="form-group">
-                        <!-- placeholder for grid alignment if needed -->
-                    </div>
+                    <div class="form-group"></div>
                 </div>
                 <div class="form-group">
                     <label>Deskripsi / Petunjuk Ujian</label>
-                    <textarea class="form-control" id="exam-desc" rows="3" placeholder="Petunjuk pengerjaan ujian untuk siswa...">
-Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</textarea>
+                    <textarea class="form-control" id="exam-desc" rows="3" placeholder="Petunjuk pengerjaan ujian untuk siswa...">Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</textarea>
                 </div>
                 <div class="form-group">
                     <label>Kode Ujian (otomatis)</label>
-                    <div style="display: flex; gap: 8px">
-                        <input type="text" class="form-control" id="exam-code" value="UJIAN2024" readonly style="background: #f1f5f9; font-weight: 700; letter-spacing: 2px;" />
+                    <div class="exam-code-row">
+                        <input type="text" class="form-control" id="exam-code" readonly style="background: #f1f5f9; font-weight: 700; letter-spacing: 2px;" />
                         <button class="btn btn-outline" id="generate-code-btn">🔄 Generate</button>
                     </div>
                 </div>
-                <div style="text-align: right; margin-top: 8px">
-                    <button class="btn btn-primary" id="go-step-2" onclick="goStep(2)">Lanjut: Tambah Soal →</button>
+                <div class="step-nav">
+                    <span></span>
+                    <button class="btn btn-primary" onclick="goStep(2)">Lanjut: Tambah Soal →</button>
                 </div>
             </div>
         </div>
 
-        <!-- STEP 2: Soal -->
+        <!-- STEP 2 -->
         <div class="step-content" id="step-2">
             <div class="page-row">
-                <!-- Main Area -->
                 <div class="questions-container">
-                    <div style="margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center;">
+                    <div style="margin-bottom: 1.25em; display: flex; justify-content: space-between; align-items: center;">
                         <div>
                             <div class="page-title" style="font-size: 1.1rem">📝 Soal Ujian</div>
                             <div class="page-subtitle" id="q-count-label">0 soal ditambahkan</div>
                         </div>
                         <p style="font-size: 0.8rem; color: #94a3b8; font-weight: 500">Soal terbaru akan muncul di paling atas</p>
                     </div>
-
                     <div id="questions-builder"></div>
-
-                    <div style="text-align: center; padding: 48px 32px; background: #f8fafc; border-radius: 14px; border: 2px dashed #cbd5e1;" id="empty-state">
-                        <div style="font-size: 3.5rem; margin-bottom: 16px">✍️</div>
-                        <h3 style="margin-bottom: 8px; color: #1e293b">Mulai membuat soal!</h3>
-                        <p style="color: #64748b; font-weight: 400; max-width: 300px; margin: 0 auto;">Pilih tipe soal di panel kanan untuk menambahkan soal baru ke ujian ini.</p>
+                    <div class="empty-state-builder" id="empty-state">
+                        <div class="empty-state-builder-icon">✍️</div>
+                        <h3 style="margin-bottom: 0.5em; color: #1e293b">Mulai membuat soal!</h3>
+                        <p style="color: #64748b; font-weight: 400; max-width: 18.75rem; margin: 0 auto;">Pilih tipe soal di panel kanan untuk menambahkan soal baru ke ujian ini.</p>
                     </div>
-
-                    <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                    <div class="step-nav">
                         <button class="btn btn-outline" onclick="goStep(1)">← Kembali</button>
                         <button class="btn btn-primary" onclick="goStep(3)">Lanjut: Pengaturan →</button>
                     </div>
                 </div>
-
-                <!-- Sticky Panel -->
                 <aside class="sticky-sidebar">
-                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 16px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <div class="sidebar-section-title">
                         <span>➕ Tambah Soal Baru</span>
                     </div>
                     <div class="sticky-add-btns">
@@ -445,97 +589,68 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                             <span style="margin-right: 8px">✔️</span> Benar/Salah
                         </button>
                     </div>
-
-                    <hr class="divider" style="margin: 20px 0" />
-
-                    <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                    <hr class="sidebar-divider" />
+                    <div class="sidebar-section-title">
                         <span>📚 Bank Soal</span>
                     </div>
                     <button class="btn btn-outline btn-sm" onclick="openBankSoalModal()" style="width: 100%; text-align: left; justify-content: flex-start; border-color: var(--primary-light); color: var(--primary-light); background: #eff6ff;">
                         <span style="margin-right: 8px">📋</span> Ambil dari Bank Soal
                     </button>
-
-                    <hr class="divider" style="margin: 20px 0" />
-
-                    <div style="background: #f1f5f9; padding: 15px; border-radius: 10px">
+                    <hr class="sidebar-divider" />
+                    <div class="sidebar-tips-box">
                         <div style="font-size: 0.75rem; color: #64748b; font-weight: 700; text-transform: uppercase; margin-bottom: 10px;">Tips Penggunaan:</div>
-                        <ul style="padding: 0 0 0 15px; margin: 0; font-size: 0.8rem; color: #475569; display: flex; flex-direction: column; gap: 8px;">
+                        <ul>
                             <li>Gunakan <b>Duplikat</b> untuk membuat soal serupa.</li>
                             <li>Soal baru selalu muncul di <b>paling atas</b> untuk mempermudah fokus.</li>
                             <li>Gambar soal bisa lebih dari satu (multiple upload).</li>
                         </ul>
-                        <hr class="divider" style="margin: 20px 0" />
-
-                        <div style="font-weight: 700; color: #1e293b; margin-bottom: 12px; font-size: 0.95rem; display: flex; align-items: center; gap: 8px;">
+                        <hr class="sidebar-divider" />
+                        <div class="sidebar-section-title">
                             <span>🤖 AI Import</span>
                         </div>
-                        <button class="btn btn-primary btn-sm" onclick="openAIImportModal()" style="width: 100%; text-align: left; justify-content: flex-start; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
+                        <button class="btn btn-primary btn-sm" onclick="handleAIImportClick()" style="width: 100%; text-align: left; justify-content: flex-start; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border: none;">
                             <span style="margin-right: 8px">✨</span> Impor Soal dengan AI
                         </button>
                         <p style="font-size: 0.7rem; color: #94a3b8; margin-top: 8px">Ekstrak otomatis soal dari PDF, DOCX, atau teks</p>
-
-                        <hr class="divider" style="margin: 20px 0" />
                     </div>
                 </aside>
             </div>
         </div>
 
-        <!-- STEP 3: Pengaturan -->
+        <!-- STEP 3 -->
         <div class="step-content" id="step-3">
             <div class="card">
-                <div class="page-title" style="font-size: 1.1rem; margin-bottom: 20px">⚙️ Pengaturan Keamanan & Ujian</div>
-
+                <div class="page-title" style="font-size: 1.1rem; margin-bottom: 1.25em">⚙️ Pengaturan Keamanan & Ujian</div>
                 <div class="form-group">
                     <label>Pengacakan Soal</label>
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Acak urutan soal untuk setiap siswa
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Acak urutan pilihan jawaban
-                        </label>
+                    <div style="margin-top: 0.5em;">
+                        <label class="setting-checkbox"><input type="checkbox" id="shuffle-questions" checked /> Acak urutan soal untuk setiap siswa</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="shuffle-options" checked /> Acak urutan pilihan jawaban</label>
                     </div>
                 </div>
-
                 <hr class="divider" />
-
                 <div class="form-group">
                     <label>Fitur Keamanan Anti-Menyontek</label>
-                    <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 8px;">
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Wajib mode layar penuh (fullscreen)
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Blokir keyboard shortcut (Ctrl+T, Ctrl+N, dll.)
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Blokir copy-paste
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Deteksi perpindahan tab/jendela
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Notifikasi pengawas jika ada pelanggaran
-                        </label>
-                        <label style="display: flex; align-items: center; gap: 10px; cursor: pointer; text-transform: none; font-size: 0.92rem; font-weight: 400; color: var(--text);">
-                            <input type="checkbox" checked style="width: 18px; height: 18px; accent-color: var(--primary);" /> Hentikan ujian otomatis setelah 3 pelanggaran
-                        </label>
+                    <div style="margin-top: 0.5em;">
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-fullscreen" checked /> Wajib mode layar penuh (fullscreen)</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-shortcuts" checked /> Blokir keyboard shortcut (Ctrl+T, Ctrl+N, dll.)</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-copy" checked /> Blokir copy-paste</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-tab" checked /> Deteksi perpindahan tab/jendela</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-notify" checked /> Notifikasi pengawas jika ada pelanggaran</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-autostop" checked /> Hentikan ujian otomatis setelah 3 pelanggaran</label>
                     </div>
                 </div>
-
                 <hr class="divider" />
-
                 <div class="form-row">
                     <div class="form-group">
                         <label>Nilai Kelulusan (KKM)</label>
-                        <input type="number" class="form-control" value="75" min="0" max="100" />
+                        <input type="number" class="form-control" id="passing-grade" value="75" min="0" max="100" />
                     </div>
                     <div class="form-group">
                         <label>Maks. Pelanggaran</label>
-                        <input type="number" class="form-control" value="3" min="1" max="10" />
+                        <input type="number" class="form-control" id="max-violations" value="3" min="1" max="10" />
                     </div>
                 </div>
-
                 <div class="form-group">
                     <label>Tampilkan Hasil Setelah Ujian</label>
                     <select class="form-control" id="show-results-setting">
@@ -545,59 +660,56 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                         <option value="never">Jangan tampilkan</option>
                     </select>
                 </div>
-
-                <div style="display: flex; justify-content: space-between; margin-top: 8px;">
+                <div class="step-nav">
                     <button class="btn btn-outline" onclick="goStep(2)">← Kembali</button>
                     <button class="btn btn-primary" onclick="goStep(4)">Lanjut: Preview →</button>
                 </div>
             </div>
         </div>
 
-        <!-- STEP 4: Preview -->
+        <!-- STEP 4 -->
         <div class="step-content" id="step-4">
             <div class="card">
-                <div class="page-title" style="font-size: 1.1rem; margin-bottom: 20px">👁️ Preview Ujian</div>
+                <div class="page-title" style="font-size: 1.1rem; margin-bottom: 1.25em">👁️ Preview Ujian</div>
                 <div id="preview-content"></div>
-                <div style="display: flex; justify-content: space-between; margin-top: 20px;">
+                <div class="step-nav">
                     <button class="btn btn-outline" onclick="goStep(3)">← Kembali</button>
-                    <div style="display: flex; gap: 8px">
+                    <div class="preview-nav">
                         <button class="btn btn-outline" onclick="saveDraft()">💾 Simpan Draft</button>
-                        <button class="btn btn-success" onclick="publishExam()">🚀 Publikasikan Ujian</button>
+                        <button class="btn btn-success" id="publishBtn2" onclick="publishExam()">🚀 Publikasikan Ujian</button>
                     </div>
                 </div>
             </div>
         </div>
     </main>
-    </div>
 
     <!-- Modal: Bank Soal -->
-    <div id="bankSoalModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); z-index: 1000; align-items: center; justify-content: center;">
-        <div style="background: #fff; border-radius: 14px; width: 90%; max-width: 800px; padding: 24px; max-height: 85vh; overflow-y: auto;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h2 style="color: var(--primary); font-size: 1.3rem;">📚 Ambil dari Bank Soal</h2>
-                <button style="background: none; border: none; font-size: 1.5rem; cursor: pointer; color: #64748b;" onclick="closeBankSoalModal()">×</button>
+    <div id="bankSoalModal" class="modal-overlay">
+        <div class="modal" style="max-width: 50rem; padding: 0;">
+            <div class="modal-header" style="padding: 1.25em 1.5em; display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border);">
+                <div class="modal-title" style="font-size: 1.3rem; font-weight: 700; color: var(--primary);">📚 Ambil dari Bank Soal</div>
+                <button class="modal-close" onclick="closeBankSoalModal()" style="background: none; border: none; font-size: 1.8rem; cursor: pointer; color: #64748b;">×</button>
             </div>
-
-            <div style="margin-bottom: 16px; display: flex; gap: 12px">
-                <input type="text" id="bankSearchInput" class="form-control" placeholder="Cari soal..." onkeyup="searchBankQuestions()" style="flex: 1" />
-                <select id="bankCategoryFilter" class="form-control" onchange="searchBankQuestions()" style="min-width: 200px">
-                    <option value="">Semua Kategori</option>
-                    <option value="Matematika">Matematika</option>
-                    <option value="Bahasa Indonesia">Bahasa Indonesia</option>
-                    <option value="Bahasa Inggris">Bahasa Inggris</option>
-                    <option value="Fisika">Fisika</option>
-                    <option value="IPA">IPA</option>
-                    <option value="IPS">IPS</option>
-                    <option value="Lainnya">Lainnya</option>
-                </select>
+            <div style="padding: 0 1.5em; margin-top: 1em;">
+                <div style="margin-bottom: 1em; display: flex; gap: 0.75em; flex-wrap: wrap;">
+                    <input type="text" id="bankSearchInput" class="form-control" placeholder="Cari soal..." oninput="debouncedBankSearch()" style="flex: 1; min-width: 12.5rem;" />
+                    <select id="bankCategoryFilter" class="form-control" onchange="loadBankQuestions()" style="max-width: 12.5rem;">
+                        <option value="">Semua Kategori</option>
+                        <option value="Matematika">Matematika</option>
+                        <option value="Bahasa Indonesia">Bahasa Indonesia</option>
+                        <option value="Bahasa Inggris">Bahasa Inggris</option>
+                        <option value="Fisika">Fisika</option>
+                        <option value="IPA">IPA</option>
+                        <option value="IPS">IPS</option>
+                        <option value="Lainnya">Lainnya</option>
+                    </select>
+                </div>
             </div>
-
-            <div id="bankQuestionsList" style="max-height: 500px; overflow-y: auto">
-                <div style="text-align: center; color: #94a3b8; padding: 32px;"><p>Memuat soal...</p></div>
+            <div id="bankQuestionsList" style="padding: 0 1.5em; max-height: 31.25rem; overflow-y: auto;">
+                <div style="text-align: center; color: #94a3b8; padding: 2em;"><p>Memuat soal...</p></div>
             </div>
-
-            <div style="display: flex; gap: 12px; justify-content: flex-end; margin-top: 20px;">
-                <button class="btn btn-outline" onclick="closeBankSoalModal()">Batal</button>
+            <div style="padding: 1.25em 1.5em; border-top: 1px solid var(--border); display: flex; justify-content: flex-end;">
+                <button class="btn btn-outline" onclick="closeBankSoalModal()">Tutup</button>
             </div>
         </div>
     </div>
@@ -608,38 +720,29 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
         const csrfToken = document.getElementById('csrf-token').value;
         const subjectsData = JSON.parse(document.getElementById('subjects-data').value);
         const classesData = JSON.parse(document.getElementById('classes-data').value);
-        
         let allSubjects = subjectsData;
         let allClasses = classesData;
-        
-        // Sidebar toggle functionality
-        const hamburgerBtn = document.getElementById("hamburgerBtn");
-        const sidebar = document.getElementById("sidebar");
-        const sidebarOverlay = document.getElementById("sidebarOverlay");
-
-        if (hamburgerBtn) {
-            hamburgerBtn.addEventListener("click", () => {
-                sidebar.classList.toggle("sidebar-open");
-                sidebarOverlay.classList.toggle("sidebar-overlay-visible");
-            });
-        }
-
-        if (sidebarOverlay) {
-            sidebarOverlay.addEventListener("click", () => {
-                sidebar.classList.remove("sidebar-open");
-                sidebarOverlay.classList.remove("sidebar-overlay-visible");
-            });
-        }
-
         let questionCount = 0;
         let questions = [];
         let bankQuestions = [];
+        let deleteTimers = {};
+        let bankDebounceTimer = null;
 
+        // === TOAST ===
+        function showToast(message, type = 'success') {
+            const c = document.getElementById('toastContainer');
+            const t = document.createElement('div');
+            t.className = `toast toast-${type}`;
+            t.textContent = message;
+            c.appendChild(t);
+            setTimeout(() => t.remove(), 3000);
+        }
+
+        // === GENERATE CODE ===
         function generateCode() {
             const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             let code = "";
-            for (let i = 0; i < 8; i++)
-                code += chars[Math.floor(Math.random() * chars.length)];
+            for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
             document.getElementById("exam-code").value = code;
         }
 
@@ -656,37 +759,51 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
             }
         }
 
-        // Initialize when DOM is ready
         document.addEventListener("DOMContentLoaded", () => {
-            // Set today's date
             const dateEl = document.getElementById("exam-date");
-            if (dateEl) {
-                dateEl.valueAsDate = new Date();
-            }
-
-            // Attach event listener for generate code button
-            const codeBtn = document.getElementById("generate-code-btn");
-            if (codeBtn) {
-                codeBtn.addEventListener("click", generateCode);
-            }
-
-            // Filter subjects dropdown by category change
-            const catSelect = document.getElementById("exam-category");
-            if (catSelect) {
-                catSelect.addEventListener("change", filterSubjects);
-            }
-
-            // Initialize subjects dropdown
+            if (dateEl) dateEl.valueAsDate = new Date();
+            document.getElementById("generate-code-btn").addEventListener("click", generateCode);
+            generateCode();
             filterSubjects();
-            
-            // Load user profile from server-side data (already in header/sidebar)
-            // No API call needed for profile - using $teacherData from init.php
         });
 
+        // === STEP NAVIGATION WITH VALIDATION ===
+        function validateStep(n) {
+            if (n <= 1) return true;
+            const fields = [
+                { id: 'exam-name', errId: 'err-exam-name' },
+                { id: 'exam-subject', errId: 'err-exam-subject' },
+                { id: 'exam-date', errId: 'err-exam-date' },
+            ];
+            let valid = true;
+            fields.forEach(f => {
+                const el = document.getElementById(f.id);
+                const err = document.getElementById(f.errId);
+                if (!el || !err) return;
+                if (!el.value.trim()) {
+                    el.classList.add('field-error');
+                    err.classList.add('visible');
+                    valid = false;
+                } else {
+                    el.classList.remove('field-error');
+                    err.classList.remove('visible');
+                }
+            });
+            if (!valid) {
+                showToast("Lengkapi semua field wajib terlebih dahulu", "error");
+                return false;
+            }
+            return true;
+        }
+
         function goStep(n) {
+            const currentStep = [...document.querySelectorAll('.step-content.active')][0];
+            const currentIdx = currentStep ? parseInt(currentStep.id.split('-')[1]) : 1;
+            if (n > currentIdx && !validateStep(n)) return;
+
             for (let i = 1; i <= 4; i++) {
                 document.getElementById(`step-${i}`).classList.remove("active");
-                document.getElementById(`step-${i}-tab`).classList.remove("active", "done");
+                document.getElementById(`step-${i}-tab`).classList.remove("active", "done", "error");
             }
             document.getElementById(`step-${n}`).classList.add("active");
             document.getElementById(`step-${n}-tab`).classList.add("active");
@@ -694,6 +811,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 document.getElementById(`step-${i}-tab`).classList.add("done");
             }
             if (n === 4) renderPreview();
+            window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
         function reindexQuestions() {
@@ -733,7 +851,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
             div.id = qId;
             div.innerHTML = `
                 <div class="q-header">
-                    <div style="display:flex;align-items:center;gap:12px">
+                    <div class="q-header-left">
                         <span class="drag-handle">⠿</span>
                         <span class="q-number">Soal</span>
                         <div class="type-selector">
@@ -743,9 +861,9 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                             <button class="type-btn ${newQuestion.type === "truefalse" ? "active" : ""}" onclick="changeType('${qId}','truefalse')" data-type="truefalse">Benar/Salah</button>
                         </div>
                     </div>
-                    <div style="display:flex;gap:8px">
+                    <div class="q-header-actions">
                         <button class="btn btn-outline btn-sm" onclick="duplicateQuestion('${qId}')" title="Duplikat Soal">👯 Duplikat</button>
-                        <button class="btn btn-danger btn-sm" onclick="removeQuestion('${qId}')">🗑️ Hapus</button>
+                        <button class="btn btn-danger btn-sm" id="del-btn-${qId}" onclick="removeQuestion('${qId}')">🗑️ Hapus</button>
                     </div>
                 </div>
 
@@ -756,12 +874,12 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
 
                 <div class="form-group">
                     <label>Gambar Soal (Opsional)</label>
-                    <div style="display:flex; gap:10px; align-items:center">
+                    <div style="display:flex; gap:0.625em; align-items:center">
                         <input type="file" class="form-control" accept="image/*" onchange="uploadQuestionMedia(this, 0)" style="flex:1" multiple>
                         <input type="hidden" class="q-media" value='${JSON.stringify(newQuestion.media_url)}'>
                     </div>
-                    <div class="q-media-preview" style="margin-top:10px; display:grid; grid-template-columns: repeat(auto-fill, minmax(100px, 1fr)); gap:10px;"></div>
-                    <small class="text-muted q-upload-status" style="display:none; color:var(--primary-light)">⌛ Sedang mengunggah...</small>
+                    <div class="media-preview-grid q-media-preview"></div>
+                    <small class="q-upload-status">⌛ Sedang mengunggah...</small>
                 </div>
 
                 <div id="${qId}-options">
@@ -770,7 +888,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                     ${newQuestion.type === "truefalse" ? renderTrueFalseOptions(qId, newQuestion.correct) : ''}
                 </div>
 
-                <div class="form-row" style="margin-top:12px">
+                <div class="form-row" style="margin-top:0.75em">
                     <div class="form-group">
                         <label>Bobot Nilai</label>
                         <input type="number" class="form-control q-points" value="${parseInt(newQuestion.points) || 1}" min="1" max="100" oninput="updateQuestionData('${qId}', 'points', parseInt(this.value) || 1)">
@@ -812,14 +930,14 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                             <input type="text" class="form-control option-text" placeholder="Pilihan" value="${optText.replace(/"/g, '&quot;')}" oninput="updateOptionText('${qId}', ${i}, this.value)">
                             <div class="opt-image-preview-wrap" style="${imgStyle}">
                                 <img src="${optImg ? "../" + optImg : ""}" class="opt-image-preview" alt="">
-                                <button type="button" class="opt-image-remove" onclick="removeOptionMedia(this)">✕</button>
+                                <button type="button" class="opt-remove-btn" onclick="removeOptionMedia(this)">✕</button>
                             </div>
                             <input type="hidden" class="opt-image-url" value="${optImg || ""}">
-                            <label class="btn btn-sm btn-outline" style="padding:6px; margin-bottom:0; cursor:pointer">
+                            <label class="opt-upload-label btn-sm btn-outline">
                                 🖼️
                                 <input type="file" accept="image/*" style="display:none" onchange="uploadOptionMedia(this, '${qId}', ${i})">
                             </label>
-                            <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;padding:6px 10px" onclick="this.closest('.option-row').remove()">✕</button>
+                            <button class="opt-remove-btn" onclick="this.closest('.option-row').remove()">✕</button>
                         `;
                         optContainer.appendChild(row);
                     });
@@ -858,14 +976,14 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                                     <input type="text" class="form-control option-text" placeholder="Pilihan ${letters[i] || "?"}" value="${optText.replace(/"/g, '&quot;')}" oninput="updateOptionText('${qId}', ${i}, this.value)">
                                     <div class="opt-image-preview-wrap" style="display:${imgDisplay}">
                                         <img src="${imgSrc}" class="opt-image-preview" alt="">
-                                        <button type="button" class="opt-image-remove" onclick="removeOptionMedia(this)">✕</button>
+                                        <button type="button" class="opt-remove-btn" onclick="removeOptionMedia(this)">✕</button>
                                     </div>
                                     <input type="hidden" class="opt-image-url" value="${optImage || ""}">
-                                    <label class="btn btn-sm btn-outline" style="padding:6px; margin-bottom:0; cursor:pointer" title="Upload Gambar Pilihan">
+                                    <label class="opt-upload-label btn-sm btn-outline" title="Upload Gambar Pilihan">
                                         🖼️
                                         <input type="file" accept="image/*" style="display:none" onchange="uploadOptionMedia(this, '${qId}', ${i})">
                                     </label>
-                                    <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;padding:6px 10px" onclick="this.closest('.option-row').remove()">✕</button>
+                                    <button class="opt-remove-btn" onclick="this.closest('.option-row').remove()">✕</button>
                                 </div>
                             `;
                         }).join("")}
@@ -915,11 +1033,24 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
         }
 
         function removeQuestion(qId) {
-            if (confirm("Hapus soal ini?")) {
+            const btn = document.getElementById(`del-btn-${qId}`);
+            if (!btn) return;
+            if (btn.classList.contains('btn-delete-confirm')) {
+                clearTimeout(deleteTimers[qId]);
+                delete deleteTimers[qId];
                 const index = questions.findIndex((q) => q.id === qId);
                 if (index > -1) questions.splice(index, 1);
                 document.getElementById(qId).remove();
                 reindexQuestions();
+                showToast("Soal dihapus");
+            } else {
+                btn.classList.add('btn-delete-confirm');
+                btn.innerHTML = 'Yakin?';
+                deleteTimers[qId] = setTimeout(() => {
+                    btn.classList.remove('btn-delete-confirm');
+                    btn.innerHTML = '🗑️ Hapus';
+                    delete deleteTimers[qId];
+                }, 3000);
             }
         }
 
@@ -938,14 +1069,14 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 <input type="text" class="form-control option-text" placeholder="Pilihan ${letter}" oninput="updateOptionText('${qId}', ${rows}, this.value)">
                 <div class="opt-image-preview-wrap" style="display:none">
                     <img src="" class="opt-image-preview">
-                    <button type="button" class="opt-image-remove" onclick="removeOptionMedia(this)">✕</button>
+                    <button type="button" class="opt-remove-btn" onclick="removeOptionMedia(this)">✕</button>
                 </div>
                 <input type="hidden" class="opt-image-url" value="">
-                <label class="btn btn-sm btn-outline" style="padding:6px; margin-bottom:0; cursor:pointer" title="Upload Gambar Pilihan">
+                <label class="opt-upload-label btn-sm btn-outline" title="Upload Gambar Pilihan">
                     🖼️
                     <input type="file" accept="image/*" style="display:none" onchange="uploadOptionMedia(this, '${qId}', ${rows})">
                 </label>
-                <button class="btn btn-sm" style="background:#fee2e2;color:#991b1b;padding:6px 10px" onclick="this.closest('.option-row').remove()">✕</button>
+                <button class="opt-remove-btn" onclick="this.closest('.option-row').remove()">✕</button>
             `;
             container.appendChild(row);
         }
@@ -1066,7 +1197,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                     if (result.success) {
                         currentMedia.push(result.url);
                     } else {
-                        alert("Gagal mengunggah " + file.name + ": " + result.message);
+                        showToast("Gagal mengunggah " + file.name + ": " + result.message, "error");
                     }
                 } catch (error) {
                     console.error("Upload error:", error);
@@ -1083,7 +1214,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
 
         function renderMediaPreviews(questionCard) {
             const hiddenInput = questionCard.querySelector(".q-media");
-            const previewEl = questionCard.querySelector(".q-media-preview");
+            const previewEl = questionCard.querySelector(".media-preview-grid");
             let media = [];
             try {
                 media = JSON.parse(hiddenInput.value);
@@ -1093,10 +1224,10 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
             previewEl.innerHTML = "";
             media.forEach((url, index) => {
                 const div = document.createElement("div");
-                div.style.position = "relative";
+                div.className = "media-preview-item";
                 div.innerHTML = `
-                    <img src="../${url}" style="width:100%; height:80px; object-fit:cover; border-radius:8px; border:1px solid #e2e8f0">
-                    <button type="button" class="btn btn-sm btn-danger" onclick="removeMedia(this, ${index})" style="position:absolute; top:-5px; right:-5px; border-radius:50%; width:20px; height:20px; padding:0; display:flex; align-items:center; justify-content:center; font-size:10px">✕</button>
+                    <img src="../${url}" style="width:100%; height:5rem; object-fit:cover; border-radius:8px; border:1px solid var(--border)">
+                    <button type="button" class="btn btn-danger media-preview-remove" onclick="removeMedia(this, ${index})">✕</button>
                 `;
                 previewEl.appendChild(div);
             });
@@ -1178,7 +1309,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                         }
                     }
                 } else {
-                    alert("Gagal mengunggah gambar: " + result.message);
+                    showToast("Gagal mengunggah gambar: " + result.message, "error");
                 }
             } catch (error) {
                 console.error("Upload error:", error);
@@ -1198,12 +1329,10 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 return;
             }
             questions.forEach((q) => { collectOptionsFromDOM(q.id); });
-            const escapeHtml = (str) => { const div = document.createElement("div"); div.appendChild(document.createTextNode(str)); return div.innerHTML; };
-            const escapeUrl = (url) => encodeURI(url);
+            const letters = ["A", "B", "C", "D", "E", "F"];
             preview.innerHTML = questions.map((q, idx) => {
                 const qText = q.text || "(Teks soal tidak tersedia)";
                 const qType = q.type || "multiple";
-                const letters = ["A", "B", "C", "D", "E", "F"];
                 let mediaHtml = "";
                 if (q.media_url && q.media_url.length > 0) {
                     const finalMedia = q.media_url.filter((url) => typeof url === "string" && url.length > 5 && (url.includes("uploads/") || url.startsWith("http")));
@@ -1214,7 +1343,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                         const maxWidth = imgCount === 1 ? "320px" : "100%";
                         mediaHtml = `<div class="question-media-container" style="display: grid; grid-template-columns: ${gridCols}; gap: 10px; margin-bottom: 20px; justify-items: center; width: 100%; max-width: ${maxWidth}; margin-left: auto; margin-right: auto;">
                             ${finalMedia.map((url) => {
-                                const finalUrl = escapeUrl(url.startsWith("http") ? url : "../" + url);
+                                const finalUrl = url.startsWith("http") ? url : "../" + url;
                                 return `<div class="media-item" style="width: 100%; text-align: center;"><img src="${finalUrl}" alt="Gambar Soal" style="max-width: 100%; max-height: ${maxHeight}; object-fit: contain; border-radius: 8px; border: 1px solid #e2e8f0; box-shadow: 0 4px 6px rgba(0,0,0,0.05);"></div>`;
                             }).join("")}
                         </div>`;
@@ -1237,37 +1366,58 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                             } else if (qType === "checkbox") {
                                 isCorrect = Array.isArray(q.correct_answers_checkbox) && q.correct_answers_checkbox.includes(optIdx.toString());
                             }
-                            return `<li class="option-item" style="padding:10px 15px; background:${isCorrect ? "#d1fae5" : "#fff"}; border:1px solid ${isCorrect ? "#10b981" : "#e2e8f0"}; border-radius:8px; margin-bottom:8px; display:flex; align-items:center; gap:10px; font-size:0.9rem; color:${isCorrect ? "#065f46" : "#1e293b"}; font-weight:${isCorrect ? "600" : "normal"}; white-space: pre-wrap; word-break: break-word;">
+                            return `<li class="preview-opt-item ${isCorrect ? 'correct' : ''}">
                                 <strong>${letters[optIdx]}.</strong> <span style="flex:1;">${escapeHtml(optText)}</span>
-                                ${optImg ? `<div style="margin-left:auto; text-align:right;"><img src="../${escapeUrl(optImg)}" style="max-height:60px; border-radius:4px; border:1px solid #e2e8f0;"></div>` : ""}
+                                ${optImg ? `<div style="margin-left:auto; text-align:right;"><img src="../${escapeHtml(optImg)}" style="max-height:60px; border-radius:4px; border:1px solid #e2e8f0;"></div>` : ""}
                                 ${isCorrect ? `<span style="margin-left:10px; color:#10b981; font-weight:700">✓ BENAR</span>` : ""}
                             </li>`;
                         }).filter(html => html !== "").join("")}
                     </ul>`;
                 } else if (qType === "essay") {
-                    optionsHtml = `<div style="padding:15px; background:#f8fafc; border:1px dashed #cbd5e1; border-radius:8px; margin-top:15px">
+                    optionsHtml = `<div class="preview-essay-box">
                         <p style="font-size:0.9rem; color:#64748b; margin-bottom:8px"><em>Ini adalah soal esai. Siswa akan mengetik jawaban di sini.</em></p>
                         <p style="font-size:0.85rem; color:#475569; font-weight:600; white-space: pre-wrap; word-break: break-word;">Kunci Jawaban/Rubrik: ${q.correct || "(Belum ada kunci jawaban)"}</p>
                     </div>`;
                 }
-                return `<div class="preview-q-card" style="background:#fff; border-radius:12px; padding:20px; margin-bottom:20px; border:1px solid #e2e8f0; box-shadow: 0 2px 8px rgba(0,0,0,0.05);">
-                    <div class="question-number" style="font-size:0.85rem; font-weight:700; color:var(--primary-light); text-transform:uppercase; letter-spacing:0.5px; margin-bottom:10px;">Soal ${idx + 1} ${qType === "checkbox" ? "(PG Kompleks)" : ""}</div>
+                return `<div class="preview-q-card">
+                    <div class="preview-q-number">Soal ${idx + 1}${qType === "checkbox" ? " (PG Kompleks)" : ""}</div>
                     ${mediaHtml}
-                    <div class="question-text" style="font-size:1.05rem; font-weight:500; margin-bottom:15px; color:#1e293b; white-space: pre-wrap; word-break: break-word;">${escapeHtml(qText)}</div>
+                    <div class="preview-q-text">${escapeHtml(qText)}</div>
                     ${optionsHtml}
                 </div>`;
             }).join("");
         }
 
         function saveDraft() {
-            alert("Draft berhasil disimpan secara lokal!");
+            questions.forEach((q) => collectOptionsFromDOM(q.id));
+            const draft = {
+                name: document.getElementById("exam-name").value,
+                subject: document.getElementById("exam-subject").value,
+                class: document.getElementById("exam-class").value,
+                date: document.getElementById("exam-date").value,
+                start: document.getElementById("exam-start").value,
+                duration: document.getElementById("exam-duration").value,
+                desc: document.getElementById("exam-desc").value,
+                code: document.getElementById("exam-code").value,
+                questions: questions,
+                savedAt: new Date().toISOString(),
+            };
+            try {
+                localStorage.setItem('exam_draft', JSON.stringify(draft));
+                showToast("Draft disimpan secara lokal");
+            } catch (e) {
+                showToast("Gagal menyimpan draft", "error");
+            }
         }
 
         async function publishExam() {
             if (questions.length === 0) {
-                alert("Tambahkan minimal 1 soal sebelum mempublikasikan!");
+                showToast("Tambahkan minimal 1 soal sebelum mempublikasikan", "error");
                 return;
             }
+            if (!validateStep(2)) { goStep(1); return; }
+
+            questions.forEach((q) => collectOptionsFromDOM(q.id));
             const processedQuestions = questions.map((q) => {
                 let correctAnswerValue = "";
                 if (q.type === "multiple" || q.type === "truefalse" || q.type === "essay") {
@@ -1275,12 +1425,14 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 } else if (q.type === "checkbox") {
                     correctAnswerValue = JSON.stringify(q.correct_answers_checkbox || []);
                 }
-                return {
-                    ...q,
-                    correct_answer: correctAnswerValue,
-                    media_url: JSON.stringify(q.media_url || []),
-                };
+                return { ...q, correct_answer: correctAnswerValue, media_url: JSON.stringify(q.media_url || []) };
             });
+
+            const btn1 = document.getElementById("publishBtn");
+            const btn2 = document.getElementById("publishBtn2");
+            if (btn1) btn1.classList.add("btn-loading");
+            if (btn2) btn2.classList.add("btn-loading");
+
             const examData = {
                 action: "create_exam",
                 csrf_token: csrfToken,
@@ -1290,9 +1442,22 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 duration: parseInt(document.getElementById("exam-duration").value),
                 question_count: questions.length,
                 description: document.getElementById("exam-desc").value,
+                exam_code: document.getElementById("exam-code").value,
                 start_time: document.getElementById("exam-date").value + " " + document.getElementById("exam-start").value + ":00",
                 end_time: document.getElementById("exam-date").value + " 23:59:59",
                 show_results_setting: document.getElementById("show-results-setting").value,
+                passing_grade: parseInt(document.getElementById("passing-grade").value) || 75,
+                max_violations: parseInt(document.getElementById("max-violations").value) || 3,
+                shuffle_questions: document.getElementById("shuffle-questions").checked,
+                shuffle_options: document.getElementById("shuffle-options").checked,
+                security: {
+                    fullscreen: document.getElementById("sec-fullscreen").checked,
+                    block_shortcuts: document.getElementById("sec-shortcuts").checked,
+                    block_copy: document.getElementById("sec-copy").checked,
+                    tab_detection: document.getElementById("sec-tab").checked,
+                    notify_proctor: document.getElementById("sec-notify").checked,
+                    auto_stop: document.getElementById("sec-autostop").checked,
+                },
                 questions: processedQuestions,
             };
             try {
@@ -1304,25 +1469,34 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 });
                 const result = await response.json();
                 if (result.success) {
-                    alert("🚀 Ujian berhasil dipublikasikan!");
-                    window.location.href = "dashboard.php";
+                    localStorage.removeItem('exam_draft');
+                    showToast("Ujian berhasil dipublikasikan!");
+                    setTimeout(() => { window.location.href = "dashboard.php"; }, 1000);
                 } else {
-                    alert("❌ Gagal: " + result.message);
+                    showToast("Gagal: " + result.message, "error");
                 }
             } catch (error) {
                 console.error("Publish error:", error);
-                alert("Terjadi kesalahan koneksi.");
+                showToast("Terjadi kesalahan koneksi", "error");
+            } finally {
+                if (btn1) btn1.classList.remove("btn-loading");
+                if (btn2) btn2.classList.remove("btn-loading");
             }
         }
 
-        // ===== BANK SOAL FUNCTIONS =====
+        // === BANK SOAL ===
         function openBankSoalModal() {
-            document.getElementById("bankSoalModal").style.display = "flex";
+            document.getElementById("bankSoalModal").classList.add("active");
             loadBankQuestions();
         }
 
         function closeBankSoalModal() {
-            document.getElementById("bankSoalModal").style.display = "none";
+            document.getElementById("bankSoalModal").classList.remove("active");
+        }
+
+        function debouncedBankSearch() {
+            clearTimeout(bankDebounceTimer);
+            bankDebounceTimer = setTimeout(() => loadBankQuestions(), 300);
         }
 
         function loadBankQuestions() {
@@ -1336,35 +1510,31 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                     bankQuestions = d.questions || [];
                     renderBankQuestions();
                 } else {
-                    console.error("❌ API error:", d.message);
+                    showToast("Gagal memuat bank soal", "error");
                 }
             }).catch(e => console.error("Error loading bank questions:", e));
-        }
-
-        function searchBankQuestions() {
-            loadBankQuestions();
         }
 
         function renderBankQuestions() {
             const container = document.getElementById("bankQuestionsList");
             if (bankQuestions.length === 0) {
-                container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:32px;">Tidak ada soal di bank.</div>';
+                container.innerHTML = '<div style="text-align:center; color:#94a3b8; padding:2em;">Tidak ada soal di bank.</div>';
                 return;
             }
             container.innerHTML = bankQuestions.map((q) => {
                 const typeLabel = { multiple: "🔘 PG", checkbox: "☑️ Multi-jawab", essay: "📝 Essay", truefalse: "✔️ B/S" }[q.question_type] || q.question_type;
                 const diffLabel = { easy: "📗 Mudah", medium: "📙 Sedang", hard: "📕 Sulit" }[q.difficulty] || q.difficulty;
-                return `<div style="padding:16px; background:#f8fafc; border-radius:10px; border-left:3px solid var(--primary-light); margin-bottom:12px; display:flex; justify-content:space-between; align-items:flex-start; gap:12px;">
+                return `<div class="bank-item">
                     <div style="flex:1;">
-                        <div style="margin-bottom:8px; display:flex; gap:8px; flex-wrap:wrap;">
-                            <span style="font-size:0.75rem; background:rgba(59, 130, 246, 0.1); color:#1e40af; padding:3px 10px; border-radius:12px; font-weight:600;">${typeLabel}</span>
-                            <span style="font-size:0.75rem; background:rgba(107, 114, 128, 0.1); color:#374151; padding:3px 10px; border-radius:12px;">${q.category}</span>
-                            <span style="font-size:0.75rem; color:#64748b;">${diffLabel}</span>
+                        <div class="bank-item-badges">
+                            <span class="bank-item-badge type">${typeLabel}</span>
+                            <span class="bank-item-badge cat">${escapeHtml(q.category || "Umum")}</span>
+                            <span class="bank-item-badge" style="background:rgba(107,114,128,0.1);">${diffLabel}</span>
                         </div>
-                        <p style="margin:0 0 8px 0; color:#1e293b; font-weight:500; line-height:1.4;">${escapeHtml(q.question_text)}</p>
-                        <p style="margin:0; font-size:0.8rem; color:#64748b;">Poin: <strong>${q.points}</strong> | ${new Date(q.created_at).toLocaleDateString("id-ID")}</p>
+                        <p class="bank-item-text">${escapeHtml(q.question_text)}</p>
+                        <p class="bank-item-meta">Poin: <strong>${q.points}</strong> | ${new Date(q.created_at).toLocaleDateString("id-ID")}</p>
                     </div>
-                    <button class="btn btn-sm" style="background:rgba(34, 197, 94, 0.1); color:#15803d; border:none; cursor:pointer; padding:8px 14px; border-radius:6px; font-weight:600; white-space:nowrap;" onclick="addQuestionFromBank(${q.id})">✓ Pakai</button>
+                    <button class="bank-item-use" onclick="addQuestionFromBank(${q.id})">✓ Pakai</button>
                 </div>`;
             }).join("");
         }
@@ -1372,7 +1542,7 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
         function addQuestionFromBank(bankQuestionId) {
             const bankQuestion = bankQuestions.find((q) => q.id === bankQuestionId);
             if (!bankQuestion) {
-                alert("Error: Soal tidak ditemukan");
+                showToast("Error: Soal tidak ditemukan", "error");
                 return;
             }
             const type = bankQuestion.question_type;
@@ -1420,7 +1590,16 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 const firstQuestion = document.querySelector(".question-builder");
                 if (firstQuestion) firstQuestion.scrollIntoView({ behavior: "smooth", block: "start" });
             }, 100);
-            alert("✓ Soal berhasil ditambahkan ke ujian!");
+            showToast("Soal berhasil ditambahkan ke ujian!");
+        }
+
+        // === AI IMPORT ===
+        function handleAIImportClick() {
+            if (typeof window.openAIImportModal === 'function' && window.openAIImportModal !== handleAIImportClick) {
+                window.openAIImportModal();
+            } else {
+                showToast("Fitur AI Import akan segera hadir", "info");
+            }
         }
 
         function escapeHtml(str) {
@@ -1431,15 +1610,6 @@ Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang m
                 if (m === ">") return "&gt;";
                 return m;
             });
-        }
-
-        // Placeholder for AI import modal (external script)
-        function openAIImportModal() {
-            if (typeof window.openAIImportModal === 'function') {
-                window.openAIImportModal();
-            } else {
-                alert("Fitur AI Import akan segera hadir. Pastikan file js/ai-import.js sudah dimuat.");
-            }
         }
     </script>
 </body>
