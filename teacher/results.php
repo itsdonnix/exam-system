@@ -690,6 +690,7 @@ $csrf_token = generateCSRFToken();
     </div>
 
     <script src="../js/teacher-layout.js"></script>
+    <script src="../js/toast.js"></script>
     <script>
         const csrfToken = document.getElementById('csrf-token').value;
         let currentExamId = <?php echo $examId; ?>;
@@ -968,7 +969,10 @@ $csrf_token = generateCSRFToken();
         }
 
         function exportToExcel() {
-            if (allResults.length === 0) return alert("Tidak ada data untuk diekspor!");
+            if (allResults.length === 0) {
+                showToast("Tidak ada data untuk diekspor!", "error");
+                return;
+            }
             let html = `<table border="1"><thead><tr style="background-color: #1a3c6e; color: #ffffff;"><th>No</th><th>Nama Siswa</th><th>NISN</th><th>Kelas</th><th>Nilai Auto</th><th>Nilai Esai</th><th>Total</th><th>Pelanggaran</th></tr></thead><tbody>`;
             allResults.forEach((r, i) => {
                 html += `<tr><td>${i + 1}</td><td>${escapeHtml(r.full_name)}</td><td>${escapeHtml(r.nisn)}</td><td>${escapeHtml(r.class)}</td><td>${r.auto_score}</td><td>${r.manual_score}</td><td>${r.total_score}</td><td>${r.violation_count}</td></tr>`;
@@ -1026,7 +1030,7 @@ $csrf_token = generateCSRFToken();
             for (let input of inputs) {
                 const val = parseFloat(input.value || 0);
                 if (val > parseFloat(input.dataset.max)) {
-                    alert("Nilai melebihi batas!");
+                    showToast("Nilai melebihi batas!", "error");
                     return;
                 }
                 total += val;
@@ -1046,14 +1050,14 @@ $csrf_token = generateCSRFToken();
                 });
                 const data = await res.json();
                 if (data.success) {
-                    alert("Nilai disimpan!");
+                    showToast("Nilai disimpan!", "success");
                     closeModal();
                     fetchAllData();
                 } else {
-                    alert("Gagal menyimpan: " + (data.message || "Terjadi kesalahan"));
+                    showToast("Gagal menyimpan: " + (data.message || "Terjadi kesalahan"), "error");
                 }
             } catch (e) {
-                alert("Terjadi kesalahan koneksi.");
+                showToast("Terjadi kesalahan koneksi.", "error");
             }
         }
 
