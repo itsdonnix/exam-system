@@ -73,6 +73,9 @@ ExamSafe/
 │   ├── exam.js           # Exam engine (timer, answers, submission)
 │   ├── security.js       # Anti-cheat monitoring (attaches on exam start)
 │   ├── toast.js          # ★ Toast notification system (use for all user feedback)
+│   ├── utils.js          # ★ Shared utilities (escapeHtml, formatDate, formatTime)
+│   ├── teacher-api.js    # ★ Teacher API layer (stats, violations)
+│   ├── teacher-dashboard.js # ★ Dashboard controller (stats, violations, monitor)
 │   └── teacher-layout.js # Sidebar toggle (include on all teacher pages)
 ├── php/
 │   ├── db.php           # Database connection
@@ -105,17 +108,19 @@ ExamSafe/
 **File**: `js/toast.js`
 
 **Usage**:
+
 ```javascript
 // Include the script
-<script src="../js/toast.js"></script>
+<script src="../js/toast.js"></script>;
 
 // Call the function
-showToast("Pesan berhasil disimpan");           // success (green)
-showToast("Terjadi kesalahan", "error");        // error (red)
-showToast("Informasi untuk Anda", "info");      // info (blue)
+showToast("Pesan berhasil disimpan"); // success (green)
+showToast("Terjadi kesalahan", "error"); // error (red)
+showToast("Informasi untuk Anda", "info"); // info (blue)
 ```
 
 **Features**:
+
 - Auto-dismiss after 3 seconds
 - Smooth fade-in/fade-out animations
 - Stackable (multiple toasts appear stacked)
@@ -123,6 +128,7 @@ showToast("Informasi untuk Anda", "info");      // info (blue)
 - Consistent styling across all pages
 
 **When to use**:
+
 - ✅ API success/error responses
 - ✅ Form validation feedback
 - ✅ CSRF validation failures
@@ -131,6 +137,7 @@ showToast("Informasi untuk Anda", "info");      // info (blue)
 - ❌ NOT for critical errors that block page functionality (use inline error messages)
 
 **Example in teacher page**:
+
 ```php
 // In settings.php - include toast.js
 <script src="../js/toast.js"></script>
@@ -840,13 +847,22 @@ clearExamRateLimit($exam_id);
 
 ### Recent Changes Summary
 
+**2026-04-20 - Dashboard API Extraction**:
+
+- Created `js/utils.js` with shared utilities (escapeHtml, formatDate, formatTime)
+- Created `js/teacher-api.js` with TeacherAPI class for stats and violations
+- Created `js/teacher-dashboard.js` with TeacherDashboard controller
+- Updated `teacher/dashboard.php` to use extracted modules
+- Added proper initialization flow with `examManager.fetchExams()`
+
 **2026-04-20 - Toast System Documentation**:
+
 - Added comprehensive toast notification system documentation
 - Updated all workflows to reference `showToast()` usage
 - Added toast.js to required includes in Pattern B
 - Added toast system to Quick Reference table
 
-**2026-04-19 (Latest) - Teacher Students Page Migration to PHP**:
+**2026-04-19 - Teacher Students Page Migration to PHP**:
 
 - New file: `teacher/students.php` (migrated from HTML)
 - **Server-side data injection** (no API call, no loading spinner)
@@ -903,12 +919,15 @@ When coming back to this project, verify these 6 files first:
 
 Then review these files for latest patterns:
 
-7. **`teacher/students.php`** - Server-side data pattern (NEW)
+7. **`teacher/students.php`** - Server-side data pattern
 8. **`teacher/settings.php`** - API-based pattern with CSRF
-9. **`teacher/dashboard.php`** - Uses shared components example
-10. **`student/exam.php`** - POST-only access pattern with CSRF
-11. **`student/dashboard.php`** - POST forms for exam access
-12. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
+9. **`teacher/dashboard.php`** - Uses shared components with extracted JS modules
+10. **`js/teacher-api.js`** - Teacher API layer
+11. **`js/teacher-dashboard.js`** - Dashboard controller
+12. **`js/utils.js`** - Shared utilities
+13. **`student/exam.php`** - POST-only access pattern with CSRF
+14. **`student/dashboard.php`** - POST forms for exam access
+15. **`js/teacher-layout.js`** - Sidebar toggle (include on all teacher pages)
 
 ---
 
@@ -933,7 +952,7 @@ Then review these files for latest patterns:
 ## File Dependencies at a Glance
 
 ```
-teacher/students.php (NEW - Server-side data)
+teacher/students.php (Server-side data)
   ├─ includes/init.php
   │   ├─ includes/auth.php
   │   ├─ ../includes/db.php
@@ -955,10 +974,14 @@ teacher/dashboard.php (Mixed - server-side + API)
   ├─ includes/init.php
   ├─ includes/header.php
   ├─ includes/sidebar.php
-  ├─ js/exam-manager.js
+  ├─ js/utils.js
+  ├─ js/api-client.js
   ├─ js/toast.js
+  ├─ js/teacher-api.js
+  ├─ js/exam-manager.js
+  ├─ js/teacher-dashboard.js
   ├─ js/teacher-layout.js
-  └─ (API calls for stats, violations)
+  └─ (API calls via TeacherAPI, examManager.fetchExams)
 
 student/exam.php
   ├─ includes/csrf.php
@@ -978,13 +1001,26 @@ php/save_ai_settings.php
 
 js/toast.js
   └─ Global showToast() function
+
+js/teacher-api.js
+  ├─ depends on api-client.js
+  └─ depends on toast.js
+
+js/teacher-dashboard.js
+  ├─ depends on utils.js
+  ├─ depends on teacher-api.js
+  ├─ depends on toast.js
+  └─ depends on exam-manager.js
+
+js/utils.js
+  └─ Independent shared utilities
 ```
 
 ---
 
 ## Last Updated
 
-**Date**: 2026-04-20  
-**Latest Change**: Added Toast System documentation to PROJECT_MAP.md  
-**Status**: Active development  
+**Date**: 2026-04-20
+**Latest Change**: Extracted API calls from dashboard.php to dedicated JS modules (teacher-api.js, teacher-dashboard.js, utils.js)
+**Status**: Active development
 **Maintainer Notes**: Use toast system (showToast) for all user notifications instead of alert() or custom modals

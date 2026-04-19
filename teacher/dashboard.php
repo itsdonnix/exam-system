@@ -1,5 +1,4 @@
 <?php
-// Initialize shared teacher data and authentication
 require_once 'includes/init.php';
 $activePage = 'dashboard';
 ?>
@@ -207,7 +206,7 @@ $activePage = 'dashboard';
         <h4>Lihat Hasil Ujian</h4>
         <p>Laporan nilai dan statistik siswa</p>
       </div>
-      <div class="quick-action-card" onclick="showMonitorForFirstExam()">
+      <div class="quick-action-card" onclick="window.TeacherDashboard.showMonitorForFirstExam()">
         <div class="icon">👁️</div>
         <h4>Monitor Ujian</h4>
         <p>Pantau aktivitas siswa real-time</p>
@@ -367,154 +366,47 @@ $activePage = 'dashboard';
   </div>
   </main>
 
+  <!-- Scripts - ORDER MATTERS -->
+  <script src="../js/utils.js"></script>
+  <script src="../js/api-client.js"></script>
+  <script src="../js/toast.js"></script>
+  <script src="../js/teacher-api.js"></script>
   <script src="../js/exam-manager.js"></script>
+  <script src="../js/teacher-dashboard.js"></script>
   <script src="../js/teacher-layout.js"></script>
+
   <script>
-    // Initialize ExamManager for teacher
+    // Minimal inline initialization
     let examManager = null;
 
-    document.addEventListener("DOMContentLoaded", () => {
-      // Initialize shared exam manager
+    document.addEventListener("DOMContentLoaded", async () => {
+      // Initialize exam manager
       examManager = new ExamManager({
         containerId: "exam-list",
         searchInputId: "examSearch",
         role: "teacher",
         onExamAction: () => {
-          // Refresh teacher stats when exam actions occur
+          // Refresh dashboard stats when exam actions occur
           if (examManager.allExams) {
-            updateStats(examManager.allExams);
+            TeacherDashboard.updateStatsFromExams(examManager.allExams);
           }
+          TeacherDashboard.loadDashboardData();
         },
       });
 
       // Make examManager globally available for modal buttons
       window.examManager = examManager;
 
-      // Load all dashboard data (excluding profile - now server-side)
-      fetchDashboardData();
+      // Initialize dashboard controller
+      TeacherDashboard.init(examManager);
+
+      await examManager.fetchExams();
+
+      // Update stats with fetched exams
+      if (examManager.allExams) {
+        TeacherDashboard.updateStatsFromExams(examManager.allExams);
+      }
     });
-
-    async function fetchDashboardData() {
-      try {
-        // Fetch exams using shared manager
-        await examManager.fetchExams();
-
-        // Update stats with fetched exams
-        if (examManager.allExams) {
-          updateStats(examManager.allExams);
-        }
-
-        // Fetch Teacher Stats (Total Siswa & Rata-rata Nilai)
-        const statsRes = await fetch(
-          "../php/exam_api.php?action=get_teacher_stats", {
-            credentials: "include",
-          }
-        );
-        const statsData = await statsRes.json();
-        if (statsData.success) {
-          const statValues = document.querySelectorAll(".stat-value");
-          if (statValues[2])
-            statValues[2].textContent = statsData.total_students || 0;
-          if (statValues[3])
-            statValues[3].textContent = statsData.average_score || 0;
-        }
-
-        // Fetch violations
-        await fetchViolations();
-      } catch (error) {
-        console.error("Error fetching dashboard data:", error);
-      }
-    }
-
-    async function fetchViolations() {
-      try {
-        const response = await fetch(
-          "../php/exam_api.php?action=get_recent_violations", {
-            credentials: "include",
-          }
-        );
-        const data = await response.json();
-
-        const tbody = document.getElementById("violations-tbody");
-        if (!tbody) return;
-
-        if (data.success) {
-          if (data.violations.length === 0) {
-            tbody.innerHTML =
-              '<tr><td colspan="5" style="text-align:center;padding:20px">Tidak ada pelanggaran terdeteksi.</td></tr>';
-            return;
-          }
-
-          tbody.innerHTML = data.violations
-            .map(
-              (v) => `
-              <tr>
-                <td><b>${escapeHtml(v.student_name)}</b></td>
-                <td>${escapeHtml(v.exam_name)}</td>
-                <td>${escapeHtml(v.reason)}</td>
-                <td>${new Date(v.created_at).toLocaleTimeString("id-ID")}</td>
-                <td><span class="badge badge-${
-                  v.violation_count >= 3 ? "danger" : "warning"
-                }">${
-                  v.violation_count >= 3 ? "Dihentikan" : "Peringatan"
-                }</span></td>
-              </tr>
-            `
-            )
-            .join("");
-        } else {
-          tbody.innerHTML =
-            '<tr><td colspan="5" style="text-align:center;padding:20px;color:#64748b">Gagal memuat data pelanggaran.</td></tr>';
-        }
-      } catch (error) {
-        console.error("Error fetching violations:", error);
-        const tbody = document.getElementById("violations-tbody");
-        if (tbody) {
-          tbody.innerHTML =
-            '<tr><td colspan="5" style="text-align:center;padding:40px;color:#64748b">Terjadi kesalahan saat memuat data pelanggaran.</td></tr>';
-        }
-      }
-    }
-
-    // Helper function to prevent XSS
-    function escapeHtml(str) {
-      if (!str) return '';
-      return str
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#39;');
-    }
-
-    function updateStats(exams) {
-      const total = exams.length;
-      const active = exams.filter((e) => e.status === "active").length;
-
-      const statValues = document.querySelectorAll(".stat-value");
-      if (statValues[0]) statValues[0].textContent = total;
-      if (statValues[1]) statValues[1].textContent = active;
-    }
-
-    function showMonitorForFirstExam() {
-      if (examManager.allExams && examManager.allExams.length > 0) {
-        const activeExam = examManager.allExams.find(
-          (e) => e.status === "active"
-        );
-        if (activeExam) {
-          examManager.showMonitor(activeExam.id, activeExam.name);
-        } else if (examManager.allExams[0]) {
-          examManager.showMonitor(
-            examManager.allExams[0].id,
-            examManager.allExams[0].name
-          );
-        } else {
-          alert("Belum ada ujian yang tersedia.");
-        }
-      } else {
-        alert("Belum ada ujian yang tersedia.");
-      }
-    }
   </script>
 </body>
 
