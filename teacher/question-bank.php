@@ -913,12 +913,10 @@ $csrf_token = generateCSRFToken();
 
         function closeViewModal() {
             document.getElementById("viewQuestionModal").classList.remove("active");
-            currentViewQuestion = null;
         }
 
         function closeCopyModal() {
             document.getElementById("copyToExamModal").classList.remove("active");
-            currentViewQuestion = null;
         }
 
         function updateQuestionType() {
@@ -1121,6 +1119,13 @@ $csrf_token = generateCSRFToken();
         }
 
         function editQuestion() {
+            if (!currentViewQuestion || !currentViewQuestion.id) {
+                console.error('No question selected for editing');
+                showToast('Tidak ada soal yang dipilih untuk diedit', 'error');
+                closeViewModal();
+                return;
+            }
+            
             const q = currentViewQuestion;
             closeViewModal();
 
@@ -1182,6 +1187,8 @@ $csrf_token = generateCSRFToken();
             if (q) {
                 currentViewQuestion = q;
                 editQuestion();
+            } else {
+                showToast('Soal tidak ditemukan', 'error');
             }
         }
 
