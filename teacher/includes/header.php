@@ -11,7 +11,9 @@
       <span></span><span></span><span></span>
     </button>
     <div class="navbar-brand">
-      🎓 Exam<span>Safe</span>
+      <div>
+        🎓 Exam<span>Safe</span>
+      </div>
       <span>GURU</span>
     </div>
   </div>
