@@ -672,6 +672,8 @@ $csrf_token = generateCSRFToken();
 
     <script src="../js/teacher-layout.js"></script>
     <script src="../js/toast.js"></script>
+    <script src="../js/api-client.js"></script>
+    <script src="../js/teacher-api.js"></script>
     <script>
         const csrfToken = document.getElementById('csrf-token').value;
         let currentExamId = <?php echo $examId; ?>;
@@ -702,30 +704,25 @@ $csrf_token = generateCSRFToken();
 
         async function fetchAllData() {
             try {
-                const [examRes, resultsRes] = await Promise.all([
-                    fetch(`../php/exam_api.php?action=get_exam_info&exam_id=${currentExamId}`),
-                    fetch(`../php/exam_api.php?action=get_results&exam_id=${currentExamId}`),
+                const [examData, resultsData] = await Promise.all([
+                    TeacherAPI.getExamInfo(currentExamId),
+                    TeacherAPI.getResults(currentExamId)
                 ]);
 
-                const examData = await examRes.json();
-                const resultsData = await resultsRes.json();
-
-                if (examData.success && examData.exam) {
+                if (examData.exam) {
                     updateExamInfo(examData.exam);
                 }
 
-                if (resultsData.success) {
+                if (resultsData.results) {
                     allResults = resultsData.results;
                     updateStats(resultsData.stats);
                     populateClassFilter(allResults);
                     renderTable(allResults);
                     renderAnalytics(allResults);
-                } else {
-                    showResultsError(resultsData.message || "Gagal memuat hasil ujian");
                 }
             } catch (error) {
                 console.error("Error fetching data:", error);
-                showResultsError("Terjadi kesalahan saat memuat data.");
+                showResultsError(error);
             }
         }
 
@@ -851,33 +848,28 @@ $csrf_token = generateCSRFToken();
             content.innerHTML = '<div style="text-align: center; color: #64748b">Memuat...</div>';
 
             try {
-                const response = await fetch(`../php/exam_api.php?action=get_student_violations&student_id=${studentId}&exam_id=${examId}`);
-                const data = await response.json();
+                const data = await TeacherAPI.getStudentViolations(studentId, examId);
 
-                if (data.success && data.violations) {
-                    if (data.violations.length === 0) {
-                        content.innerHTML = '<div style="text-align: center; color: #64748b">Tidak ada catatan pelanggaran.</div>';
-                        return;
-                    }
-
-                    let html = `<div style="margin-bottom: 1rem"><strong>Siswa:</strong> ${escapeHtml(studentName)}<br><strong>Total:</strong> <span class="badge badge-danger">${data.total_count}</span></div>`;
-                    html += `<div style="max-height: 18.75rem; overflow-y: auto;">`;
-
-                    data.violations.forEach((v) => {
-                        html += `
-                            <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: #f8fafc; border-radius: 8px; border-left: 3px solid #f59e0b">
-                                <div style="font-size: 0.8rem; color: #64748b">${new Date(v.created_at).toLocaleString("id-ID")}</div>
-                                <div style="font-size: 0.9rem">${escapeHtml(v.reason)}</div>
-                            </div>
-                        `;
-                    });
-                    html += `</div>`;
-                    content.innerHTML = html;
-                } else {
-                    content.innerHTML = '<div style="text-align: center; color: #ef4444">Gagal memuat data.</div>';
+                if (data.violations.length === 0) {
+                    content.innerHTML = '<div style="text-align: center; color: #64748b">Tidak ada catatan pelanggaran.</div>';
+                    return;
                 }
+
+                let html = `<div style="margin-bottom: 1rem"><strong>Siswa:</strong> ${escapeHtml(studentName)}<br><strong>Total:</strong> <span class="badge badge-danger">${data.total_count}</span></div>`;
+                html += `<div style="max-height: 18.75rem; overflow-y: auto;">`;
+
+                data.violations.forEach((v) => {
+                    html += `
+                        <div style="padding: 0.75rem; margin-bottom: 0.5rem; background: #f8fafc; border-radius: 8px; border-left: 3px solid #f59e0b">
+                            <div style="font-size: 0.8rem; color: #64748b">${new Date(v.created_at).toLocaleString("id-ID")}</div>
+                            <div style="font-size: 0.9rem">${escapeHtml(v.reason)}</div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                content.innerHTML = html;
             } catch (error) {
-                content.innerHTML = '<div style="text-align: center; color: #ef4444">Terjadi kesalahan.</div>';
+                content.innerHTML = '<div style="text-align: center; color: #ef4444">' + escapeHtml(error) + '</div>';
             }
         }
 
@@ -973,33 +965,28 @@ $csrf_token = generateCSRFToken();
             content.innerHTML = "Memuat jawaban...";
 
             try {
-                const res = await fetch(`../php/exam_api.php?action=get_submission_detail&id=${id}`);
-                const data = await res.json();
-                if (data.success) {
-                    const sub = data.submission;
-                    const questions = data.questions.filter((q) => q.question_type === "essay");
-                    let html = `<div style="margin-bottom:0.9375rem"><strong>Siswa:</strong> ${escapeHtml(sub.full_name)}</div>`;
-                    if (questions.length === 0) {
-                        html += "<p>Tidak ada soal esai.</p>";
-                    } else {
-                        questions.forEach((q, idx) => {
-                            const ans = sub.answers.find((a) => a.question_id == q.id)?.student_answer || "Tidak menjawab";
-                            html += `
-                                <div class="card" style="margin-bottom:0.625rem">
-                                    <p><strong>Soal ${idx + 1}:</strong> ${escapeHtml(q.question_text)}</p>
-                                    <div style="background:#f1f5f9; padding:0.625rem; border-radius:5px; margin:0.625rem 0">${escapeHtml(ans)}</div>
-                                    <label>Nilai (Maks ${q.points}):</label>
-                                    <input type="number" class="form-control essay-point" data-max="${q.points}" style="width:6.25rem">
-                                </div>
-                            `;
-                        });
-                    }
-                    content.innerHTML = html;
+                const data = await TeacherAPI.getSubmissionDetail(id);
+                const sub = data.submission;
+                const questions = data.questions.filter((q) => q.question_type === "essay");
+                let html = `<div style="margin-bottom:0.9375rem"><strong>Siswa:</strong> ${escapeHtml(sub.full_name)}</div>`;
+                if (questions.length === 0) {
+                    html += "<p>Tidak ada soal esai.</p>";
                 } else {
-                    content.innerHTML = '<p style="color: red">Gagal memuat data.</p>';
+                    questions.forEach((q, idx) => {
+                        const ans = sub.answers.find((a) => a.question_id == q.id)?.student_answer || "Tidak menjawab";
+                        html += `
+                            <div class="card" style="margin-bottom:0.625rem">
+                                <p><strong>Soal ${idx + 1}:</strong> ${escapeHtml(q.question_text)}</p>
+                                <div style="background:#f1f5f9; padding:0.625rem; border-radius:5px; margin:0.625rem 0">${escapeHtml(ans)}</div>
+                                <label>Nilai (Maks ${q.points}):</label>
+                                <input type="number" class="form-control essay-point" data-max="${q.points}" style="width:6.25rem">
+                            </div>
+                        `;
+                    });
                 }
-            } catch (e) {
-                content.innerHTML = '<p style="color: red">Terjadi kesalahan.</p>';
+                content.innerHTML = html;
+            } catch (error) {
+                content.innerHTML = '<p style="color: red">' + escapeHtml(error) + '</p>';
             }
         }
 
@@ -1015,28 +1002,12 @@ $csrf_token = generateCSRFToken();
                 total += val;
             }
             try {
-                const res = await fetch("../php/exam_api.php", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json"
-                    },
-                    body: JSON.stringify({
-                        action: "save_manual_grade",
-                        submission_id: currentSubmissionId,
-                        manual_score: total,
-                        csrf_token: csrfToken
-                    }),
-                });
-                const data = await res.json();
-                if (data.success) {
-                    showToast("Nilai disimpan!", "success");
-                    closeModal();
-                    fetchAllData();
-                } else {
-                    showToast("Gagal menyimpan: " + (data.message || "Terjadi kesalahan"), "error");
-                }
-            } catch (e) {
-                showToast("Terjadi kesalahan koneksi.", "error");
+                const result = await TeacherAPI.saveManualGrade(currentSubmissionId, total, csrfToken);
+                showToast(result.message || "Nilai disimpan!", "success");
+                closeModal();
+                fetchAllData();
+            } catch (error) {
+                showToast(error, "error");
             }
         }
 
