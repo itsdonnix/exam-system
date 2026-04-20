@@ -279,12 +279,15 @@ textarea.form-control {
   border-radius: var(--radius);
   box-shadow: var(--shadow);
   border: 1px solid var(--border);
+  height: calc(100vh - 6.5rem);
 }
 .sidebar-menu {
   list-style: none;
   display: flex;
   flex-direction: column;
   height: 100%;
+  max-height: calc(100% - 10rem);
+  overflow-y: auto;
 }
 .sidebar-menu li a {
   display: flex;
@@ -323,6 +326,10 @@ textarea.form-control {
   flex: 1;
   padding: 0;
   overflow-y: auto;
+  max-height: calc(100vh - 6.5rem);
+  border-radius: 14px;
+  padding-right: 1rem;
+  padding-top: 0.5rem;
 }
 
 /* ===== PAGE HEADER ===== */
