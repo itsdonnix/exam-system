@@ -43,7 +43,7 @@
           <span class="icon">⚙️</span> Pengaturan
         </a>
       </li>
-      <li style="margin-top: auto;border-top: 1px solid rgb(222 229 238);margin-top: 1rem;padding-top: 0.5rem;">
+      <li style="margin-top: auto;border-top: 1px solid rgb(222 229 238);margin-top: 0.25rem;padding-top: 0.25rem;">
         <a href="../php/logout.php" class="logout">
           <span class="icon">🚪</span> Keluar
         </a>
