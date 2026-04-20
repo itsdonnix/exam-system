@@ -13,6 +13,7 @@ $csrf_token = generateCSRFToken();
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Bank Soal — ExamSafe</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss-utilities@1.0.10/dist/tailwind-utilities.min.css">
     <link rel="stylesheet" href="../css/style.css" />
     <style>
         /* === FILTER BAR === */
@@ -516,7 +517,7 @@ $csrf_token = generateCSRFToken();
         </div>
 
         <!-- Search & Filter -->
-        <div class="card" style="margin-bottom: 1.25em;">
+        <div class="card mb-5">
             <div class="bank-header">
                 <div class="search-filter">
                     <input type="text" id="searchInput" class="form-control" placeholder="Cari soal..." oninput="debouncedFilter()" />
@@ -531,7 +532,7 @@ $csrf_token = generateCSRFToken();
                         <option value="IPS">IPS</option>
                         <option value="Lainnya">Lainnya</option>
                     </select>
-                    <select id="sortFilter" class="form-control" onchange="sortQuestions()" style="max-width: 12.5rem;">
+                    <select id="sortFilter" class="form-control max-w-[200px]" onchange="sortQuestions()">
                         <option value="newest">Terbaru</option>
                         <option value="oldest">Terlama</option>
                         <option value="points-high">Poin Tertinggi</option>
@@ -589,7 +590,7 @@ $csrf_token = generateCSRFToken();
 
     <!-- Modal: Add/Edit Question -->
     <div id="questionModal" class="modal-overlay">
-        <div class="modal" style="max-width: 37.5em;">
+        <div class="modal max-w-[600px]">
             <div class="modal-header">
                 <div class="modal-title" id="modalTitle">Tambah Soal Baru</div>
                 <button class="modal-close" onclick="closeQuestionModal()">×</button>
@@ -648,7 +649,7 @@ $csrf_token = generateCSRFToken();
                     <div class="form-group">
                         <label>Opsi Jawaban</label>
                         <div id="optionsList"></div>
-                        <button type="button" class="btn btn-sm btn-outline" style="margin-top: 0.5em;" onclick="addOption()">+ Tambah Opsi</button>
+                        <button type="button" class="btn btn-sm btn-outline mt-2" onclick="addOption()">+ Tambah Opsi</button>
                     </div>
                     <div class="form-group">
                         <label>Jawaban Benar (Pilih dari opsi di atas)</label>
@@ -683,13 +684,13 @@ $csrf_token = generateCSRFToken();
 
     <!-- Modal: View Question -->
     <div id="viewQuestionModal" class="modal-overlay">
-        <div class="modal" style="max-width: 37.5em;">
+        <div class="modal max-w-[600px]">
             <div class="modal-header">
                 <div class="modal-title">Detail Soal</div>
                 <button class="modal-close" onclick="closeViewModal()">×</button>
             </div>
-            <div id="viewQuestionContent" style="padding: 0 2em;"></div>
-            <div class="modal-footer" style="padding: 1.25em 2em;">
+            <div id="viewQuestionContent" class="px-8"></div>
+            <div class="modal-footer p-5 px-8">
                 <button type="button" class="action-btn btn-view" onclick="editQuestion()">✏️ Edit</button>
                 <button type="button" class="action-btn btn-add-to-exam" onclick="copyToExam()">📋 Pakai di Ujian</button>
                 <button type="button" class="btn btn-outline" onclick="closeViewModal()">Tutup</button>
@@ -699,16 +700,16 @@ $csrf_token = generateCSRFToken();
 
     <!-- Modal: Copy to Exam -->
     <div id="copyToExamModal" class="modal-overlay">
-        <div class="modal" style="max-width: 31.25em;">
+        <div class="modal max-w-[500px]">
             <div class="modal-header">
                 <div class="modal-title">Pilih Ujian</div>
                 <button class="modal-close" onclick="closeCopyModal()">×</button>
             </div>
-            <div style="padding: 0 2em;">
+            <div class="px-8">
                 <p style="margin-bottom: 1em; color: #64748b;">Pilih ujian yang ingin ditambahi dengan soal ini:</p>
                 <div id="examsList"></div>
             </div>
-            <div class="modal-footer" style="padding: 1.25em 2em;">
+            <div class="modal-footer p-5 px-8">
                 <button type="button" class="btn btn-outline" onclick="closeCopyModal()">Batal</button>
             </div>
         </div>
@@ -857,7 +858,7 @@ $csrf_token = generateCSRFToken();
                                     <span class="category-label">${escapeHtml(q.category)}</span>
                                 </div>
                             </div>
-                            <div class="question-meta" style="margin:0;">
+                            <div class="question-meta">
                                 <span>Poin: <strong>${q.points}</strong></span>
                                 <span>${new Date(q.created_at).toLocaleDateString("id-ID")}</span>
                             </div>
