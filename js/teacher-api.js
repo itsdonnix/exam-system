@@ -19,7 +19,7 @@ const TeacherAPI = {
         "../php/exam_api.php?action=get_teacher_stats"
       );
       if (!result.success)
-        throw result.message || "Failed to load teacher statistics";
+        throw result.message || "Gagal memuat statistik guru";
       return result;
     } catch (error) {
       throw error.message || error;
@@ -37,7 +37,7 @@ const TeacherAPI = {
         "../php/exam_api.php?action=get_recent_violations"
       );
       if (!result.success)
-        throw result.message || "Failed to load recent violations";
+        throw result.message || "Gagal memuat pelanggaran terbaru";
       return result;
     } catch (error) {
       throw error.message || error;
@@ -76,7 +76,7 @@ const TeacherAPI = {
         `../php/exam_api.php?action=get_exam_info&exam_id=${examId}`
       );
       if (!result.success)
-        throw result.message || "Failed to load exam information";
+        throw result.message || "Gagal memuat informasi ujian";
       return result;
     } catch (error) {
       throw error.message || error;
@@ -97,7 +97,7 @@ const TeacherAPI = {
         url += `&class=${encodeURIComponent(classFilter)}`;
       }
       const result = await ApiClient.get(url);
-      if (!result.success) throw result.message || "Failed to load results";
+      if (!result.success) throw result.message || "Gagal memuat hasil ujian";
       return result;
     } catch (error) {
       throw error.message || error;
@@ -117,7 +117,7 @@ const TeacherAPI = {
         `../php/exam_api.php?action=get_student_violations&student_id=${studentId}&exam_id=${examId}`
       );
       if (!result.success)
-        throw result.message || "Failed to load violation details";
+        throw result.message || "Gagal memuat detail pelanggaran";
       return result;
     } catch (error) {
       throw error.message || error;
@@ -136,7 +136,7 @@ const TeacherAPI = {
         `../php/exam_api.php?action=get_submission_detail&id=${submissionId}`
       );
       if (!result.success)
-        throw result.message || "Failed to load submission details";
+        throw result.message || "Gagal memuat detail jawaban";
       return result;
     } catch (error) {
       throw error.message || error;
@@ -160,7 +160,7 @@ const TeacherAPI = {
         csrf_token: csrfToken,
       });
       if (!result.success)
-        throw result.message || "Failed to save manual grade";
+        throw result.message || "Gagal menyimpan nilai manual";
       return result;
     } catch (error) {
       throw error.message || error;

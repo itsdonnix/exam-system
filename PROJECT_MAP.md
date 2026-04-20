@@ -20,6 +20,7 @@ ExamSafe/
 │   ├── dashboard.php          # ★ Main dashboard (pattern example)
 │   ├── settings.php           # Settings with API calls (pattern example)
 │   ├── students.php           # Student list, server-side data (pattern example)
+│   ├── results.php            # Results with API calls + chart.js (pattern example)
 │   ├── create-exam.php        # Exam creation with uploads
 │   └── *.html                 # DEPRECATED - Redirect to .php versions
 ├── student/
@@ -33,7 +34,7 @@ ExamSafe/
 │   ├── api-client.js          # ★ API wrapper (use for all AJAX)
 │   ├── toast.js               # ★ Notifications (use showToast())
 │   ├── utils.js               # Shared utilities
-│   ├── teacher-api.js         # Teacher API layer
+│   ├── teacher-api.js         # ★ Teacher API layer (all teacher endpoints)
 │   ├── teacher-dashboard.js   # Dashboard controller
 │   ├── teacher-layout.js      # Sidebar toggle (include on all teacher pages)
 │   ├── exam-manager.js        # Exam management
@@ -166,10 +167,16 @@ $csrf_token = generateCSRFToken();
 
 <script src="../js/api-client.js"></script>
 <script src="../js/toast.js"></script>
+<script src="../js/teacher-api.js"></script>
 <script src="../js/teacher-layout.js"></script>
 <script>
-    // Fetch data via API with CSRF tokens in POST requests
-    // Use showToast(message, type) for user feedback (success/error/info)
+    // Use TeacherAPI methods (they throw errors, catch with try/catch + showToast)
+    try {
+        const data = await TeacherAPI.getExamInfo(examId);
+        // handle data
+    } catch (error) {
+        showToast(error, 'error');
+    }
 </script>
 ```
 
@@ -234,21 +241,26 @@ Select file on exam creation form
 
 ## API Endpoints (exam_api.php)
 
-| Action | Roles | CSRF | Purpose |
-|--------|-------|------|---------|
-| `get_profile` | guru, siswa | No | Fetch user profile |
-| `update_profile` | guru | **Yes** | Save profile changes |
-| `delete_bank_question` | guru | **Yes** | Delete question from bank |
-| `get_students` | guru | No | Fetch teacher's students |
-| `get_exam_monitor` | guru, admin | No | Get exam participants + violation counts |
-| `reset_student_result` | guru, admin | No | Delete submission + violations |
-| `report_violation` | siswa | No | Log security violation |
-| `join_exam` | siswa | No | Validate exam code |
-| `start_exam` | siswa | No | Initialize exam session |
-| `get_teacher_stats` | guru | No | Fetch total students + avg score |
-| `get_recent_violations` | guru | No | Fetch latest violations |
+| Action                   | Roles              | CSRF    | Purpose                                  |
+| ------------------------ | ------------------ | ------- | ---------------------------------------- |
+| `get_profile`            | guru, siswa        | No      | Fetch user profile                       |
+| `update_profile`         | guru               | **Yes** | Save profile changes                     |
+| `delete_bank_question`   | guru               | **Yes** | Delete question from bank                |
+| `get_students`           | guru               | No      | Fetch teacher's students                 |
+| `get_exam_monitor`       | guru, admin        | No      | Get exam participants + violation counts |
+| `reset_student_result`   | guru, admin        | No      | Delete submission + violations           |
+| `report_violation`       | siswa              | No      | Log security violation                   |
+| `join_exam`              | siswa              | No      | Validate exam code                       |
+| `start_exam`             | siswa              | No      | Initialize exam session                  |
+| `get_teacher_stats`      | guru               | No      | Fetch total students + avg score         |
+| `get_recent_violations`  | guru               | No      | Fetch latest violations                  |
+| `get_exam_info`          | guru               | No      | Fetch exam details by ID                 |
+| `get_results`            | guru, admin        | No      | Fetch exam results + statistics          |
+| `get_student_violations` | guru, admin, siswa | No      | Fetch violations per student             |
+| `get_submission_detail`  | guru               | No      | Fetch submission with answers            |
+| `save_manual_grade`      | guru               | **Yes** | Save essay manual grading                |
 
-**Note**: All state-changing endpoints should require CSRF (create, update, delete). Currently only `update_profile` and `delete_bank_question` have it. TODO: Add CSRF to remaining endpoints.
+**Note**: All state-changing endpoints should require CSRF (create, update, delete). Currently `update_profile`, `delete_bank_question`, and `save_manual_grade` have it. TODO: Add CSRF to remaining endpoints.
 
 ---
 
@@ -258,12 +270,12 @@ Select file on exam creation form
 
 ```javascript
 // Include script
-<script src="../js/toast.js"></script>
+<script src="../js/toast.js"></script>;
 
 // Call function
-showToast("Success message");                    // Green (default)
-showToast("Error occurred", "error");            // Red
-showToast("FYI", "info");                        // Blue
+showToast("Success message"); // Green (default)
+showToast("Error occurred", "error"); // Red
+showToast("FYI", "info"); // Blue
 ```
 
 **Auto-dismisses after 3 seconds, supports stacking.**
@@ -273,6 +285,7 @@ showToast("FYI", "info");                        // Blue
 ## Key Constraints
 
 **Cannot Do**:
+
 - ❌ Delete active exams (only drafts)
 - ❌ Use GET directly on exam.php (must POST first)
 - ❌ Hardcode navbar/sidebar HTML (use includes)
@@ -280,6 +293,7 @@ showToast("FYI", "info");                        // Blue
 - ❌ Use toleransi function (removed, obsolete)
 
 **Must Always Do**:
+
 - ✅ Set `$activePage` before including header/sidebar
 - ✅ Use `verifyCSRFToken($posted, $_SESSION['csrf_token'])` (2 args)
 - ✅ Include CSRF token in all state-changing forms/API calls
@@ -287,6 +301,8 @@ showToast("FYI", "info");                        // Blue
 - ✅ Use `mb_*` functions for UTF-8 text
 - ✅ Include `teacher-layout.js` on all teacher pages
 - ✅ Use `showToast()` for all user feedback
+- ✅ Use `TeacherAPI` methods instead of direct `fetch()` calls
+- ✅ Handle API errors with try/catch and `showToast(error, 'error')`
 - ✅ Set session cookie params before `session_start()`:
 
 ```php
@@ -326,6 +342,11 @@ Student exam depends on:
   student/exam.php
     → includes/csrf.php
     → includes/auth.php
+
+Teacher JS modules:
+  teacher-api.js → api-client.js
+  teacher-results.js (if exists) → teacher-api.js
+  teacher-dashboard.js → teacher-api.js
 ```
 
 ---
@@ -340,14 +361,19 @@ When resuming work, review in this order:
 4. **`php/exam_api.php`** - Main API endpoints
 5. **`php/upload_media.php`** - Media upload with CSRF
 6. **`js/toast.js`** - User notification system
-7. **`teacher/students.php`** - Server-side data pattern
-8. **`teacher/settings.php`** - API-based pattern with CSRF
-9. **`student/exam.php`** - POST-only access pattern
-10. **`student/dashboard.php`** - POST form pattern for exam access
+7. **`js/api-client.js`** - Base API wrapper
+8. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
+9. **`teacher/students.php`** - Server-side data pattern
+10. **`teacher/settings.php`** - API-based pattern with CSRF
+11. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
+12. **`student/exam.php`** - POST-only access pattern
+13. **`student/dashboard.php`** - POST form pattern for exam access
 
 ---
 
 ## Recent Changes
+
+**2026-04-21**: Refactored results.php to use TeacherAPI modular methods. Added getExamInfo, getResults, getStudentViolations, getSubmissionDetail, saveManualGrade to teacher-api.js. All TeacherAPI methods now throw errors for caller to handle with toast notifications.
 
 **2026-04-20**: Fixed deleteBankQuestion ID retrieval + CSRF validation. Added media upload security. Extracted dashboard JS modules (toast, teacher-api, teacher-dashboard).
 
@@ -359,6 +385,6 @@ When resuming work, review in this order:
 
 ## Last Updated
 
-**Date**: 2026-04-20  
-**Focus**: Cleaner documentation, essential information only, straightforward patterns  
+**Date**: 2026-04-21  
+**Focus**: Modular API client integration for results page, consistent error handling  
 **Status**: Active development
