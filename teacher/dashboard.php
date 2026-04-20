@@ -9,6 +9,7 @@ $activePage = 'dashboard';
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dashboard Guru — ExamSafe</title>
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss-utilities@1.0.10/dist/tailwind-utilities.min.css">
   <link rel="stylesheet" href="../css/style.css" />
   <style>
     /* Page-specific styles only */
@@ -220,28 +221,18 @@ $activePage = 'dashboard';
 
     <!-- Exam List -->
     <div class="card">
-      <div
-        class="page-header"
-        style="margin-bottom: 20px; flex-wrap: wrap; gap: 12px">
-        <div style="flex: 1">
+      <div class="page-header mb-5 flex-wrap gap-3">
+        <div class="flex-1">
           <div class="page-title" style="font-size: 1.1rem">
             📋 Daftar Ujian Saya
           </div>
         </div>
-        <div
-          style="
-                display: flex;
-                gap: 10px;
-                flex: 2;
-                justify-content: flex-end;
-                flex-wrap: wrap;
-              ">
+        <div class="flex gap-2.5 flex-[2] justify-end flex-wrap">
           <input
             type="text"
             id="examSearch"
-            class="form-control"
-            placeholder="Cari nama ujian atau kelas..."
-            style="max-width: 300px; padding: 8px 14px" />
+            class="form-control max-w-[300px] py-2 px-3.5"
+            placeholder="Cari nama ujian atau kelas..." />
           <a href="create-exam.php" class="btn btn-primary btn-sm">+ Tambah</a>
         </div>
       </div>
@@ -253,9 +244,7 @@ $activePage = 'dashboard';
 
     <!-- Recent Violations -->
     <div class="card mt-3">
-      <div
-        class="page-title"
-        style="font-size: 1.1rem; margin-bottom: 16px">
+      <div class="page-title text-[1.1rem] mb-4">
         ⚠️ Pelanggaran Terbaru
       </div>
       <div class="table-wrapper">
@@ -280,7 +269,7 @@ $activePage = 'dashboard';
 
   <!-- Monitor Modal -->
   <div class="modal-overlay" id="monitor-modal">
-    <div class="modal" style="max-width: 100%">
+    <div class="modal" style="max-width: 100%;">
       <div class="modal-header">
         <div class="modal-title">👁️ Monitor Ujian</div>
         <button
@@ -289,54 +278,34 @@ $activePage = 'dashboard';
           ✕
         </button>
       </div>
-      <div
-        class="stats-grid"
-        style="grid-template-columns: repeat(4, 1fr); margin-bottom: 16px">
-        <div class="stat-card" style="padding: 14px">
+      <div class="grid grid-cols-4 gap-4 mb-4">
+        <div class="stat-card p-3.5">
           <div>
-            <div
-              class="stat-value"
-              style="font-size: 1.4rem"
-              id="monitor-total">
+            <div class="stat-value text-[1.4rem]" id="monitor-total">
               0
             </div>
             <div class="stat-label">Total</div>
           </div>
         </div>
-        <div
-          class="stat-card"
-          style="padding: 14px; border-left-color: var(--success)">
+        <div class="stat-card p-3.5" style="border-left-color: var(--success)">
           <div>
-            <div
-              class="stat-value"
-              style="font-size: 1.4rem; color: var(--success)"
-              id="monitor-active">
+            <div class="stat-value text-[1.4rem]" style="color: var(--success)" id="monitor-active">
               0
             </div>
             <div class="stat-label">Aktif</div>
           </div>
         </div>
-        <div
-          class="stat-card"
-          style="padding: 14px; border-left-color: var(--warning)">
+        <div class="stat-card p-3.5" style="border-left-color: var(--warning)">
           <div>
-            <div
-              class="stat-value"
-              style="font-size: 1.4rem; color: var(--warning)"
-              id="monitor-finished">
+            <div class="stat-value text-[1.4rem]" style="color: var(--warning)" id="monitor-finished">
               0
             </div>
             <div class="stat-label">Selesai</div>
           </div>
         </div>
-        <div
-          class="stat-card"
-          style="padding: 14px; border-left-color: var(--danger)">
+        <div class="stat-card p-3.5" style="border-left-color: var(--danger)">
           <div>
-            <div
-              class="stat-value"
-              style="font-size: 1.4rem; color: var(--danger)"
-              id="monitor-violations">
+            <div class="stat-value text-[1.4rem]" style="color: var(--danger)" id="monitor-violations">
               0
             </div>
             <div class="stat-label">Pelanggaran</div>
