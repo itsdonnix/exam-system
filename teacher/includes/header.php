@@ -16,10 +16,6 @@
     </div>
   </div>
   <div class="navbar-nav">
-    <div class="nav-user">
-      <div class="nav-avatar"><?= htmlspecialchars($teacherData['avatar_initial']) ?></div>
-      <span><?= htmlspecialchars($teacherData['full_name_with_gelar']) ?></span>
-    </div>
     <a
       href="../php/logout.php"
       class="btn btn-sm btn-outline">Keluar</a>
