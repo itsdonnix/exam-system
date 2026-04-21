@@ -128,6 +128,15 @@ $activePage = 'dashboard';
         background-position: -200% 0;
       }
     }
+
+    /* Draft count sub-label */
+    .draft-count-label {
+      font-size: 0.7rem;
+      color: #f59e0b;
+      font-weight: 600;
+      display: block;
+      margin-top: 2px;
+    }
   </style>
 </head>
 
@@ -151,7 +160,7 @@ $activePage = 'dashboard';
         <div class="stat-icon">📝</div>
         <div>
           <div class="stat-value">-</div>
-          <div class="stat-label">Total Ujian</div>
+          <div class="stat-label">Total Ujian <span class="draft-count-label" id="draft-count-label"></span></div>
         </div>
       </div>
       <div class="stat-card" style="border-left-color: var(--success)">
@@ -405,6 +414,13 @@ $activePage = 'dashboard';
       // Update stats with fetched exams
       if (examManager.allExams) {
         TeacherDashboard.updateStatsFromExams(examManager.allExams);
+
+        // Update draft count label
+        const draftCount = examManager.allExams.filter(e => e.status === 'draft').length;
+        const draftLabel = document.getElementById('draft-count-label');
+        if (draftLabel && draftCount > 0) {
+          draftLabel.textContent = `(${draftCount} draft)`;
+        }
       }
     });
   </script>

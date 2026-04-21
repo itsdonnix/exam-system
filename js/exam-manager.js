@@ -2,6 +2,7 @@
  * ExamManager - Shared module for exam management
  * Handles exam CRUD, monitoring, and filtering for both teacher and admin dashboards
  * ENHANCED: Removed Toleransi, added search, simplified UI, kept Aktif stat
+ * UPDATED: Draft cards show "Lanjutkan Edit" button instead of "Aktifkan"
  */
 
 class ExamManager {
@@ -152,14 +153,17 @@ class ExamManager {
   }
 
   renderExamCard(exam) {
-    const statusClass =
-      exam.status === "active"
-        ? "badge-success"
-        : exam.status === "ended"
-        ? "badge-secondary"
-        : "badge-warning";
-    const statusText =
-      exam.status.charAt(0).toUpperCase() + exam.status.slice(1);
+    const isDraft = exam.status === "draft";
+    const statusClass = isDraft
+      ? "badge-warning"
+      : exam.status === "active"
+      ? "badge-success"
+      : "badge-secondary";
+    const statusText = isDraft
+      ? "📝 Draft"
+      : exam.status === "ended"
+      ? "Ended"
+      : "Active";
     const examDate = new Date(exam.start_time).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
@@ -170,32 +174,48 @@ class ExamManager {
       minute: "2-digit",
     });
 
-    let actionButtons = `
-      ${
-        exam.status === "draft" || exam.status === "ended"
-          ? `<button class="btn btn-sm btn-success" onclick="window.examManager.activateExam(${exam.id})">▶️ Aktifkan</button>`
-          : `<button class="btn btn-sm btn-danger" onclick="window.examManager.deactivateExam(${exam.id})">⏹ Berhentikan</button>`
-      }
-      ${
-        exam.status === "active"
-          ? `<button class="btn btn-sm btn-secondary" onclick="window.examManager.showMonitor(${
-              exam.id
-            }, '${exam.name.replace(/'/g, "\\'")}')">👁️ Monitor</button>`
-          : `<button class="btn btn-sm btn-outline" onclick="window.examManager.deleteExam(${exam.id})">🗑️ Hapus</button>`
-      }
-      <button class="btn btn-sm btn-outline" onclick="window.examManager.duplicateExam(${
-        exam.id
-      })">👯 Duplikat</button>
-    `;
+    const borderLeftColor = isDraft
+      ? "#f59e0b"
+      : exam.status === "active"
+      ? "var(--success)"
+      : "#94a3b8";
 
-    if (this.role === "teacher") {
+    let actionButtons = "";
+
+    if (isDraft) {
+      // Draft: show "Lanjutkan Edit" + "Hapus" + "Duplikat"
+      actionButtons = `
+        <a href="create-exam.php?edit=${exam.id}" class="btn btn-sm btn-primary">✏️ Lanjutkan Edit</a>
+        <button class="btn btn-sm btn-outline" onclick="window.examManager.deleteExam(${exam.id})">🗑️ Hapus</button>
+        <button class="btn btn-sm btn-outline" onclick="window.examManager.duplicateExam(${exam.id})">👯 Duplikat</button>
+      `;
+    } else {
+      // Active or ended
+      actionButtons = `
+        ${
+          exam.status === "ended"
+            ? `<button class="btn btn-sm btn-success" onclick="window.examManager.activateExam(${exam.id})">▶️ Aktifkan</button>`
+            : `<button class="btn btn-sm btn-danger" onclick="window.examManager.deactivateExam(${exam.id})">⏹ Berhentikan</button>`
+        }
+        ${
+          exam.status === "active"
+            ? `<button class="btn btn-sm btn-secondary" onclick="window.examManager.showMonitor(${
+                exam.id
+              }, '${exam.name.replace(/'/g, "\\'")}')">👁️ Monitor</button>`
+            : `<button class="btn btn-sm btn-outline" onclick="window.examManager.deleteExam(${exam.id})">🗑️ Hapus</button>`
+        }
+        <button class="btn btn-sm btn-outline" onclick="window.examManager.duplicateExam(${
+          exam.id
+        })">👯 Duplikat</button>
+      `;
+    }
+
+    if (this.role === "teacher" && !isDraft) {
       actionButtons += `<a href="results.html?exam_id=${exam.id}" class="btn btn-sm btn-outline">📊 Hasil</a>`;
     }
 
     return `
-      <div class="exam-card" style="border-left-color: ${
-        exam.status === "active" ? "var(--success)" : "#94a3b8"
-      }">
+      <div class="exam-card" style="border-left-color: ${borderLeftColor}">
         <div class="exam-card-info">
           <div style="display:flex; align-items:center; gap:10px; margin-bottom:4px; flex-wrap:wrap;">
             <span class="badge badge-info" style="font-size:0.7rem">📅 ${examDate}</span>
@@ -436,7 +456,6 @@ class ExamManager {
         const violationsEl = document.getElementById("monitor-violations");
 
         if (totalEl) totalEl.textContent = data.stats.total || 0;
-        // FIXED: Use data.stats.active instead of participants length
         if (activeEl) activeEl.textContent = data.stats.active || 0;
         if (finishedEl) finishedEl.textContent = data.stats.finished || 0;
         if (violationsEl) violationsEl.textContent = data.stats.violation || 0;

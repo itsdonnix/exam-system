@@ -166,6 +166,67 @@ const TeacherAPI = {
       throw error.message || error;
     }
   },
+
+  /**
+   * Save exam draft to server (create or update)
+   * @param {Object} formData - All exam form data including questions
+   * @returns {Promise<Object>} { success, exam_id, exam_code, csrf_token }
+   * @throws {string} Error message
+   */
+  async saveDraft(formData) {
+    try {
+      const payload = {
+        ...formData,
+        action: "save_draft",
+        csrf_token: formData.csrf_token || "",
+      };
+      const result = await ApiClient.post("../php/exam_api.php", payload);
+      if (!result.success) throw result.message || "Gagal menyimpan draft";
+      return result;
+    } catch (error) {
+      throw error.message || error;
+    }
+  },
+
+  /**
+   * Get draft exam data for editing
+   * @param {number} examId
+   * @returns {Promise<Object>} { success, exam, questions }
+   * @throws {string} Error message
+   */
+  async getDraft(examId) {
+    try {
+      const result = await ApiClient.get(
+        `../php/exam_api.php?action=get_draft&exam_id=${examId}`
+      );
+      if (!result.success) throw result.message || "Gagal memuat draft";
+      return result;
+    } catch (error) {
+      throw error.message || error;
+    }
+  },
+
+  /**
+   * Publish draft exam (change status to active)
+   * @param {Object} formData - All exam form data including questions
+   * @returns {Promise<Object>} { success, exam_id, exam_code, csrf_token }
+   * @throws {string} Error message
+   */
+  async publishDraft(formData) {
+    try {
+      const payload = {
+        ...formData,
+        action: "publish_draft",
+        csrf_token: formData.csrf_token || "",
+      };
+      const result = await ApiClient.post("../php/exam_api.php", payload);
+      if (!result.success)
+        throw result.message || "Gagal mempublikasikan ujian";
+      return result;
+    } catch (error) {
+      throw error.message || error;
+    }
+  },
 };
 
 // Make globally available

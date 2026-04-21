@@ -21,7 +21,7 @@ ExamSafe/
 │ ├── settings.php # Settings with API calls (pattern example)
 │ ├── students.php # Student list, server-side data (pattern example)
 │ ├── results.php # Results with API calls + chart.js (pattern example)
-│ ├── create-exam.php # Exam creation with uploads + Quill.js rich text
+│ ├── create-exam.php # Exam creation/editing with uploads + Quill.js + draft support
 │ └── \*.html # DEPRECATED - Redirect to .php versions
 ├── student/
 │ ├── dashboard.php # Exam list with POST forms
@@ -37,7 +37,9 @@ ExamSafe/
 │ ├── teacher-api.js # ★ Teacher API layer (all teacher endpoints)
 │ ├── teacher-dashboard.js # Dashboard controller
 │ ├── teacher-layout.js # Sidebar toggle (include on all teacher pages)
-│ ├── exam-manager.js # Exam management
+│ ├── draft-autosave.js # Auto-save to localStorage (30s debounce, Ctrl+S, beforeunload)
+│ ├── draft-manager.js # Draft orchestrator (server save, recovery, dirty tracking)
+│ ├── exam-manager.js # Exam management (renders draft cards with "Lanjutkan Edit")
 │ ├── exam.js # Exam engine (timer, submission)
 │ ├── security.js # Anti-cheat monitoring
 │ └── register-common.js # Registration utilities
@@ -260,6 +262,29 @@ Teacher types question text in Quill editor
 
 **Where Quill is used**: Exam description (Step 1), question text (Step 2), essay answer key (Step 2).
 
+### Exam Draft Workflow
+
+```
+Teacher creates/edits exam on create-exam.php
+  ↓ DraftAutoSave: auto-saves to localStorage every 30s + on Ctrl+S/beforeunload
+  ↓ "Simpan Draft" button → DraftManager.saveDraftToServer() → TeacherAPI.saveDraft()
+  ↓ POST exam_api.php?action=save_draft (CSRF required)
+  ↓ Server: INSERT (new) or UPDATE (existing draft with status='draft')
+  ↓ Returns exam_id → URL updates to ?edit=ID via pushState
+  ↓ "Publikasikan" button → DraftManager.publishExam() → TeacherAPI.publishDraft()
+  ↓ POST exam_api.php?action=publish_draft (CSRF required)
+  ↓ Server: sets status='active', validates required fields + questions
+
+Draft recovery on page load:
+  ↓ If ?edit=ID: load from server via get_draft, then check localStorage
+  ↓ If no ?edit: check localStorage for auto-save data
+  ↓ If newer auto-save found: show recovery banner ("Pulihkan?" / "Abaikan")
+
+Dashboard draft cards:
+  ↓ ExamManager renders status='draft' with "✏️ Lanjutkan Edit" button
+  ↓ Links to create-exam.php?edit=ID
+```
+
 ---
 
 ## API Endpoints (exam_api.php)
@@ -282,8 +307,11 @@ Teacher types question text in Quill editor
 | `get_student_violations` | guru, admin, siswa | No      | Fetch violations per student             |
 | `get_submission_detail`  | guru               | No      | Fetch submission with answers            |
 | `save_manual_grade`      | guru               | **Yes** | Save essay manual grading                |
+| `save_draft`             | guru               | **Yes** | Create or update exam draft              |
+| `get_draft`              | guru               | No      | Fetch draft exam + questions for editing |
+| `publish_draft`          | guru               | **Yes** | Publish draft (status → active)          |
 
-**Note**: All state-changing endpoints should require CSRF (create, update, delete). Currently `update_profile`, `delete_bank_question`, and `save_manual_grade` have it. TODO: Add CSRF to remaining endpoints.
+**Note**: All state-changing endpoints should require CSRF (create, update, delete). Currently `update_profile`, `delete_bank_question`, `save_manual_grade`, `save_draft`, and `publish_draft` have it. TODO: Add CSRF to remaining endpoints.
 
 ---
 
@@ -375,10 +403,18 @@ Teacher JS modules:
   teacher-results.js (if exists) → teacher-api.js
   teacher-dashboard.js → teacher-api.js
 
-create-exam.php Quill integration:
+Draft module chain:
+  draft-manager.js → draft-autosave.js, teacher-api.js, toast.js
+  draft-autosave.js → (standalone, zero app dependencies)
+
+create-exam.php depends on:
   → Quill CDN (quilljs.com 1.3.7)
   → quillInstances Map for lifecycle management
   → syncAllQuills() before publish/draft/preview
+  → draft-autosave.js + draft-manager.js
+  → collectAllFormData() gathers Step 1 + Step 3 + questions
+  → populateFormFromDraft() restores form from server/auto-save data
+  → ?edit=ID query param loads existing draft via get_draft API
 ```
 
 ---
@@ -396,17 +432,21 @@ When resuming work, review in this order:
 7. **`js/toast.js`** - User notification system
 8. **`js/api-client.js`** - Base API wrapper
 9. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
-10. **`js/exam.js`** - Renders question text via innerHTML (not escapeHtml)
-11. **`teacher/create-exam.php`** - Quill.js integration (3 editor types)
-12. **`teacher/students.php`** - Server-side data pattern
-13. **`teacher/settings.php`** - API-based pattern with CSRF
-14. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
-15. **`student/exam.php`** - POST-only access pattern
-16. **`student/dashboard.php`** - POST form pattern for exam access
+10. **`js/draft-autosave.js`** - Auto-save to localStorage (standalone)
+11. **`js/draft-manager.js`** - Draft orchestrator (server save, recovery, dirty tracking)
+12. **`js/exam.js`** - Renders question text via innerHTML (not escapeHtml)
+13. **`teacher/create-exam.php`** - Quill.js + draft integration (?edit=ID mode)
+14. **`teacher/students.php`** - Server-side data pattern
+15. **`teacher/settings.php`** - API-based pattern with CSRF
+16. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
+17. **`student/exam.php`** - POST-only access pattern
+18. **`student/dashboard.php`** - POST form pattern for exam access
 
 ---
 
 ## Recent Changes
+
+**2026-04-23**: Implemented complete exam draft feature. Added `save_draft`, `get_draft`, `publish_draft` API endpoints with CSRF. Created `draft-autosave.js` (localStorage auto-save, 30s debounce, Ctrl+S) and `draft-manager.js` (orchestrator with server save, recovery banner, dirty tracking, URL pushState). Updated `create-exam.php` with `?edit=ID` mode, `collectAllFormData()`, `populateFormFromDraft()`, recovery banner, last-saved indicator. Fixed `createExam()` and `duplicateExam()` to save `shuffle_questions`, `shuffle_options`, `passing_score`, `max_violations`, `security_settings`. Updated `exam-manager.js` to render draft cards with "✏️ Lanjutkan Edit" button. Added `sql/migration_draft.sql` for `security_settings` column.
 
 **2026-04-22**: Integrated Quill.js rich text editor into create-exam.php, updated sanitizeHTML() to protect against XSS when rendering rich text content, and updated student/exam.js to safely render pre-sanitized question content via innerHTML.
 
@@ -422,6 +462,6 @@ When resuming work, review in this order:
 
 ## Last Updated
 
-**Date**: 2026-04-21  
-**Focus**: Modular API client integration for results page, consistent error handling  
+**Date**: 2026-04-23  
+**Focus**: Complete exam draft feature (server-side storage, auto-save, recovery, edit mode)  
 **Status**: Active development

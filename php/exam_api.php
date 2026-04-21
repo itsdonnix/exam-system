@@ -122,6 +122,15 @@ try {
         case 'create_exam':
             createExam();
             break;
+        case 'save_draft':
+            saveDraft();
+            break;
+        case 'get_draft':
+            getDraft();
+            break;
+        case 'publish_draft':
+            publishDraft();
+            break;
         case 'get_exams':
             getExams();
             break;
@@ -207,6 +216,385 @@ try {
     error_log("[API Exception] " . $e->getMessage() . " in " . $e->getFile() . ":" . $e->getLine());
     jsonResponse(['success' => false, 'message' => 'Server Error: ' . $e->getMessage()], 500);
 }
+
+// ============================================================
+// DRAFT ENDPOINTS
+// ============================================================
+
+function saveDraft()
+{
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $data = getInput();
+
+    // CSRF validation
+    if (!isset($data['csrf_token']) || !verifyCSRFToken($data['csrf_token'], $_SESSION['csrf_token'])) {
+        logExamAction('WARNING', 'CSRF token validation failed for save_draft', ['ip' => $_SERVER['REMOTE_ADDR']]);
+        jsonResponse(['success' => false, 'message' => 'Token keamanan tidak valid. Silakan refresh halaman.'], 403);
+    }
+
+    $db = getDB();
+    $examId = (int)($data['exam_id'] ?? 0);
+
+    // Prepare common data
+    $name = sanitize($data['name'] ?? '');
+    $subject = sanitize($data['subject'] ?? '');
+    $class = sanitize($data['class'] ?? '');
+    $examCode = sanitize($data['exam_code'] ?? '');
+    $startTime = $data['start_time'] ?? null;
+    $endTime = $data['end_time'] ?? date('Y-m-d') . ' 23:59:59';
+    $duration = (int)($data['duration'] ?? 90);
+    $questionCount = (int)($data['question_count'] ?? 0);
+    $description = sanitizeHTML($data['description'] ?? '');
+    $shuffleQuestions = (int)($data['shuffle_questions'] ?? 1);
+    $shuffleOptions = (int)($data['shuffle_options'] ?? 1);
+    $passingScore = (int)($data['passing_score'] ?? 75);
+    $maxViolations = (int)($data['max_violations'] ?? 3);
+    $showResultsSetting = sanitize($data['show_results_setting'] ?? 'direct_submit');
+    $securitySettings = isset($data['security_settings']) ? json_encode($data['security_settings']) : null;
+
+    // Ensure exam code is unique
+    if (empty($examCode)) {
+        $examCode = strtoupper(bin2hex(random_bytes(4)));
+    }
+    for ($i = 0; $i < 5; $i++) {
+        $check = $db->prepare("SELECT id FROM exams WHERE exam_code = ? AND id != ?");
+        $check->execute([$examCode, $examId]);
+        if (!$check->fetch()) break;
+        $examCode = strtoupper(bin2hex(random_bytes(4)));
+    }
+
+    if ($examId > 0) {
+        // UPDATE existing draft
+        $stmt = $db->prepare("SELECT id, status FROM exams WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+        $existing = $stmt->fetch();
+
+        if (!$existing) {
+            jsonResponse(['success' => false, 'message' => 'Draft tidak ditemukan'], 404);
+        }
+
+        if ($existing['status'] !== 'draft') {
+            jsonResponse(['success' => false, 'message' => 'Hanya draft yang dapat diedit'], 400);
+        }
+
+        $stmt = $db->prepare("
+            UPDATE exams SET 
+                name = ?, subject = ?, class = ?, exam_code = ?,
+                start_time = ?, end_time = ?, duration_minutes = ?,
+                question_count = ?, description = ?,
+                shuffle_questions = ?, shuffle_options = ?,
+                passing_score = ?, max_violations = ?,
+                show_results_setting = ?, security_settings = ?
+            WHERE id = ? AND teacher_id = ?
+        ");
+        $stmt->execute([
+            $name,
+            $subject,
+            $class,
+            $examCode,
+            $startTime,
+            $endTime,
+            $duration,
+            $questionCount,
+            $description,
+            $shuffleQuestions,
+            $shuffleOptions,
+            $passingScore,
+            $maxViolations,
+            $showResultsSetting,
+            $securitySettings,
+            $examId,
+            $_SESSION['user_id']
+        ]);
+    } else {
+        // INSERT new draft
+        $stmt = $db->prepare("
+            INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, 
+                duration_minutes, question_count, description, status, 
+                shuffle_questions, shuffle_options, passing_score, max_violations,
+                show_results_setting, security_settings, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([
+            $_SESSION['user_id'],
+            $name,
+            $subject,
+            $class,
+            $examCode,
+            $startTime,
+            $endTime,
+            $duration,
+            $questionCount,
+            $description,
+            $shuffleQuestions,
+            $shuffleOptions,
+            $passingScore,
+            $maxViolations,
+            $showResultsSetting,
+            $securitySettings
+        ]);
+        $examId = $db->lastInsertId();
+    }
+
+    // Upsert questions: delete old, insert new
+    $stmtDel = $db->prepare("DELETE FROM questions WHERE exam_id = ?");
+    $stmtDel->execute([$examId]);
+
+    if (!empty($data['questions'])) {
+        $qStmt = $db->prepare("
+            INSERT INTO questions (exam_id, question_text, question_type, options, correct_answer, points, difficulty, media_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        foreach ($data['questions'] as $q) {
+            $points = (int)($q['points'] ?? 1);
+            if ($points <= 0) $points = 1;
+
+            $qStmt->execute([
+                $examId,
+                sanitizeHTML($q['text'] ?? ''),
+                sanitize($q['type'] ?? 'multiple'),
+                json_encode($q['options'] ?? []),
+                $q['correct_answer'] ?? '',
+                $points,
+                sanitize($q['difficulty'] ?? 'sedang'),
+                $q['media_url'] ?? '[]'
+            ]);
+        }
+    }
+
+    // Regenerate CSRF token after sensitive operation
+    $newToken = generateCSRFToken();
+
+    logExamAction('INFO', 'Draft saved', ['exam_id' => $examId]);
+
+    jsonResponse([
+        'success' => true,
+        'exam_id' => $examId,
+        'exam_code' => $examCode,
+        'csrf_token' => $newToken
+    ]);
+}
+
+function getDraft()
+{
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $examId = (int)($_GET['exam_id'] ?? 0);
+    if (!$examId) {
+        jsonResponse(['success' => false, 'message' => 'Exam ID required'], 400);
+    }
+
+    $db = getDB();
+
+    $stmt = $db->prepare("SELECT * FROM exams WHERE id = ? AND teacher_id = ?");
+    $stmt->execute([$examId, $_SESSION['user_id']]);
+    $exam = $stmt->fetch();
+
+    if (!$exam) {
+        jsonResponse(['success' => false, 'message' => 'Draft tidak ditemukan'], 404);
+    }
+
+    if ($exam['status'] !== 'draft') {
+        jsonResponse(['success' => false, 'message' => 'Hanya draft yang dapat diedit'], 400);
+    }
+
+    $stmt = $db->prepare("SELECT * FROM questions WHERE exam_id = ? ORDER BY id ASC");
+    $stmt->execute([$examId]);
+    $questions = $stmt->fetchAll();
+
+    // Decode JSON fields for each question
+    foreach ($questions as &$q) {
+        $decoded = json_decode($q['options'], true);
+        $q['options'] = is_array($decoded) ? $decoded : [];
+
+        $media = json_decode($q['media_url'], true);
+        $q['media_url'] = is_array($media) ? $media : [];
+    }
+
+    // Decode security_settings
+    if ($exam['security_settings']) {
+        $exam['security_settings'] = json_decode($exam['security_settings'], true);
+    }
+
+    jsonResponse(['success' => true, 'exam' => $exam, 'questions' => $questions]);
+}
+
+function publishDraft()
+{
+    if (!isset($_SESSION['user_id']) || $_SESSION['role'] !== 'guru') {
+        jsonResponse(['success' => false, 'message' => 'Unauthorized'], 401);
+    }
+
+    $data = getInput();
+
+    // CSRF validation
+    if (!isset($data['csrf_token']) || !verifyCSRFToken($data['csrf_token'], $_SESSION['csrf_token'])) {
+        logExamAction('WARNING', 'CSRF token validation failed for publish_draft', ['ip' => $_SERVER['REMOTE_ADDR']]);
+        jsonResponse(['success' => false, 'message' => 'Token keamanan tidak valid. Silakan refresh halaman.'], 403);
+    }
+
+    $db = getDB();
+    $examId = (int)($data['exam_id'] ?? 0);
+
+    // Validate required fields
+    $name = sanitize($data['name'] ?? '');
+    $subject = sanitize($data['subject'] ?? '');
+    $class = sanitize($data['class'] ?? '');
+
+    if (!$name || !$subject || !$class) {
+        jsonResponse(['success' => false, 'message' => 'Nama, mata pelajaran, dan kelas wajib diisi'], 400);
+    }
+
+    if (empty($data['questions'])) {
+        jsonResponse(['success' => false, 'message' => 'Tambahkan minimal 1 soal sebelum mempublikasikan'], 400);
+    }
+
+    // Prepare common data
+    $examCode = sanitize($data['exam_code'] ?? '');
+    $startTime = $data['start_time'] ?? null;
+    $endTime = $data['end_time'] ?? date('Y-m-d') . ' 23:59:59';
+    $duration = (int)($data['duration'] ?? 90);
+    $questionCount = count($data['questions']);
+    $description = sanitizeHTML($data['description'] ?? '');
+    $shuffleQuestions = (int)($data['shuffle_questions'] ?? 1);
+    $shuffleOptions = (int)($data['shuffle_options'] ?? 1);
+    $passingScore = (int)($data['passing_score'] ?? 75);
+    $maxViolations = (int)($data['max_violations'] ?? 3);
+    $showResultsSetting = sanitize($data['show_results_setting'] ?? 'direct_submit');
+    $securitySettings = isset($data['security_settings']) ? json_encode($data['security_settings']) : null;
+
+    // Ensure exam code is unique
+    if (empty($examCode)) {
+        $examCode = strtoupper(bin2hex(random_bytes(4)));
+    }
+    for ($i = 0; $i < 5; $i++) {
+        $check = $db->prepare("SELECT id FROM exams WHERE exam_code = ? AND id != ?");
+        $check->execute([$examCode, $examId]);
+        if (!$check->fetch()) break;
+        $examCode = strtoupper(bin2hex(random_bytes(4)));
+    }
+
+    if ($examId > 0) {
+        // Publishing existing draft
+        $stmt = $db->prepare("SELECT id, status FROM exams WHERE id = ? AND teacher_id = ?");
+        $stmt->execute([$examId, $_SESSION['user_id']]);
+        $existing = $stmt->fetch();
+
+        if (!$existing) {
+            jsonResponse(['success' => false, 'message' => 'Ujian tidak ditemukan'], 404);
+        }
+
+        if ($existing['status'] !== 'draft') {
+            jsonResponse(['success' => false, 'message' => 'Ujian ini sudah dipublikasikan'], 400);
+        }
+
+        // Update exam and set status to active
+        $stmt = $db->prepare("
+            UPDATE exams SET 
+                name = ?, subject = ?, class = ?, exam_code = ?,
+                start_time = ?, end_time = ?, duration_minutes = ?,
+                question_count = ?, description = ?, status = 'active',
+                shuffle_questions = ?, shuffle_options = ?,
+                passing_score = ?, max_violations = ?,
+                show_results_setting = ?, security_settings = ?
+            WHERE id = ? AND teacher_id = ?
+        ");
+        $stmt->execute([
+            $name,
+            $subject,
+            $class,
+            $examCode,
+            $startTime,
+            $endTime,
+            $duration,
+            $questionCount,
+            $description,
+            $shuffleQuestions,
+            $shuffleOptions,
+            $passingScore,
+            $maxViolations,
+            $showResultsSetting,
+            $securitySettings,
+            $examId,
+            $_SESSION['user_id']
+        ]);
+    } else {
+        // Publishing new exam directly (no prior draft)
+        $stmt = $db->prepare("
+            INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, 
+                duration_minutes, question_count, description, status, 
+                shuffle_questions, shuffle_options, passing_score, max_violations,
+                show_results_setting, security_settings, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, NOW())
+        ");
+        $stmt->execute([
+            $_SESSION['user_id'],
+            $name,
+            $subject,
+            $class,
+            $examCode,
+            $startTime,
+            $endTime,
+            $duration,
+            $questionCount,
+            $description,
+            $shuffleQuestions,
+            $shuffleOptions,
+            $passingScore,
+            $maxViolations,
+            $showResultsSetting,
+            $securitySettings
+        ]);
+        $examId = $db->lastInsertId();
+    }
+
+    // Upsert questions: delete old, insert new
+    $stmtDel = $db->prepare("DELETE FROM questions WHERE exam_id = ?");
+    $stmtDel->execute([$examId]);
+
+    if (!empty($data['questions'])) {
+        $qStmt = $db->prepare("
+            INSERT INTO questions (exam_id, question_text, question_type, options, correct_answer, points, difficulty, media_url)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+        ");
+        foreach ($data['questions'] as $q) {
+            $points = (int)($q['points'] ?? 1);
+            if ($points <= 0) $points = 1;
+
+            $qStmt->execute([
+                $examId,
+                sanitizeHTML($q['text'] ?? ''),
+                sanitize($q['type'] ?? 'multiple'),
+                json_encode($q['options'] ?? []),
+                $q['correct_answer'] ?? '',
+                $points,
+                sanitize($q['difficulty'] ?? 'sedang'),
+                $q['media_url'] ?? '[]'
+            ]);
+        }
+    }
+
+    // Regenerate CSRF token after sensitive operation
+    $newToken = generateCSRFToken();
+
+    logExamAction('INFO', 'Exam published', ['exam_id' => $examId]);
+
+    jsonResponse([
+        'success' => true,
+        'exam_id' => $examId,
+        'exam_code' => $examCode,
+        'csrf_token' => $newToken
+    ]);
+}
+
+// ============================================================
+// EXISTING ENDPOINTS
+// ============================================================
 
 function getExamInfo()
 {
@@ -672,8 +1060,8 @@ function duplicateExam()
         $teacherId = ($_SESSION['role'] === 'admin') ? $oldExam['teacher_id'] : $_SESSION['user_id'];
 
         $stmtInsert = $db->prepare("
-            INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())
+            INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, shuffle_questions, shuffle_options, passing_score, max_violations, show_results_setting, security_settings, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'draft', NOW())
         ");
         $stmtInsert->execute([
             $teacherId,
@@ -685,7 +1073,13 @@ function duplicateExam()
             $oldExam['end_time'],
             $oldExam['duration_minutes'],
             $oldExam['question_count'],
-            $oldExam['description']
+            $oldExam['description'],
+            $oldExam['shuffle_questions'] ?? 1,
+            $oldExam['shuffle_options'] ?? 1,
+            $oldExam['passing_score'] ?? 75,
+            $oldExam['max_violations'] ?? 3,
+            $oldExam['show_results_setting'] ?? 'direct_submit',
+            $oldExam['security_settings'] ?? null
         ]);
         $newExamId = $db->lastInsertId();
 
@@ -949,7 +1343,7 @@ function startExam()
         }
     }
 
-    // Insert new record - removed created_at column
+    // Insert new record
     $stmt = $db->prepare("
         INSERT INTO exam_submissions (exam_id, student_id, started_at, status)
         VALUES (?, ?, NOW(), 'in_progress')
@@ -1353,10 +1747,15 @@ function createExam()
     }
 
     $showResultsSetting = sanitize($data['show_results_setting'] ?? 'direct_submit');
+    $shuffleQuestions = (int)($data['shuffle_questions'] ?? 1);
+    $shuffleOptions = (int)($data['shuffle_options'] ?? 1);
+    $passingScore = (int)($data['passing_grade'] ?? $data['passing_score'] ?? 75);
+    $maxViolations = (int)($data['max_violations'] ?? 3);
+    $securitySettings = isset($data['security']) ? json_encode($data['security']) : null;
 
     $stmt = $db->prepare("
-        INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, show_results_setting, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, NOW())
+        INSERT INTO exams (teacher_id, name, subject, class, exam_code, start_time, end_time, duration_minutes, question_count, description, status, shuffle_questions, shuffle_options, passing_score, max_violations, show_results_setting, security_settings, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'active', ?, ?, ?, ?, ?, ?, NOW())
     ");
     $stmt->execute([
         $_SESSION['user_id'],
@@ -1369,7 +1768,12 @@ function createExam()
         $duration,
         $questionCount,
         sanitizeHTML($data['description'] ?? ''),
+        $shuffleQuestions,
+        $shuffleOptions,
+        $passingScore,
+        $maxViolations,
         $showResultsSetting,
+        $securitySettings,
     ]);
 
     $examId = $db->lastInsertId();

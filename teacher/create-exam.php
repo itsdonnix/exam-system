@@ -6,6 +6,9 @@ $activePage = 'create-exam';
 require_once '../includes/csrf.php';
 $csrf_token = generateCSRFToken();
 
+// Check if editing an existing draft
+$editingDraftId = isset($_GET['edit']) ? (int)$_GET['edit'] : 0;
+
 // Fetch subjects and classes server-side (reduce API calls)
 $subjects = [];
 $classes = [];
@@ -28,7 +31,7 @@ try {
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Buat Ujian — ExamSafe</title>
+    <title><?php echo $editingDraftId ? 'Edit Draft' : 'Buat Ujian Baru'; ?> — ExamSafe</title>
     <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css" />
     <style>
@@ -154,7 +157,7 @@ try {
         }
         .empty-state-builder-icon { font-size: 3.5rem; margin-bottom: 1em; }
         .step-nav { display: flex; justify-content: space-between; margin-top: 1.25em; }
-        .header-actions { display: flex; gap: 0.5em; }
+        .header-actions { display: flex; gap: 0.5em; align-items: center; }
         .exam-code-row { display: flex; gap: 0.5em; }
 
         /* === STICKY SIDEBAR === */
@@ -430,6 +433,78 @@ try {
             min-height: 90px;
         }
 
+        /* === DRAFT RECOVERY BANNER === */
+        .draft-recovery-banner {
+            display: none;
+            align-items: center;
+            gap: 1em;
+            padding: 0.875em 1.25em;
+            background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+            border: 1px solid #f59e0b;
+            border-radius: 12px;
+            margin-bottom: 1.25em;
+            font-size: 0.88rem;
+            color: #92400e;
+            flex-wrap: wrap;
+        }
+        .draft-recovery-banner .recovery-icon {
+            font-size: 1.5rem;
+            flex-shrink: 0;
+        }
+        .draft-recovery-banner .recovery-text {
+            flex: 1;
+            min-width: 200px;
+        }
+        .draft-recovery-banner .recovery-text strong {
+            display: block;
+            margin-bottom: 0.25em;
+        }
+        .draft-recovery-banner .recovery-actions {
+            display: flex;
+            gap: 0.5em;
+            flex-shrink: 0;
+        }
+
+        /* === LAST SAVED INDICATOR === */
+        .last-saved-indicator {
+            display: none;
+            align-items: center;
+            gap: 0.375em;
+            font-size: 0.78rem;
+            color: #64748b;
+            white-space: nowrap;
+        }
+        .last-saved-indicator .save-dot {
+            width: 6px;
+            height: 6px;
+            border-radius: 50%;
+            background: #10b981;
+        }
+
+        /* === DRAFT LOADING OVERLAY === */
+        .draft-loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(255,255,255,0.85);
+            z-index: 2000;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            gap: 1em;
+        }
+        .draft-loading-overlay .loading-spinner {
+            width: 40px;
+            height: 40px;
+            border: 4px solid #e2e8f0;
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
         /* === RESPONSIVE === */
         @media (max-width: 992px) {
             .page-row { flex-direction: column; }
@@ -459,7 +534,8 @@ try {
             .step-indicator, .step-nav, .header-actions,
             .sticky-sidebar, .q-header-actions, .type-selector,
             .empty-state-builder, .add-option-btn, .upload-area,
-            .form-group:has(.upload-area), #bankSoalModal { display: none !important; }
+            .form-group:has(.upload-area), #bankSoalModal,
+            .draft-recovery-banner, .last-saved-indicator { display: none !important; }
             .question-builder { break-inside: avoid; box-shadow: none; border: 1px solid #ddd; }
             .main-content { padding: 0 !important; }
         }
@@ -472,16 +548,35 @@ try {
     <main class="main-content">
         <div class="page-header">
             <div>
-                <div class="page-title">➕ Buat Ujian Baru</div>
-                <div class="page-subtitle">Isi informasi ujian dan tambahkan soal</div>
+                <div class="page-title" id="page-title-text"><?php echo $editingDraftId ? '✏️ Edit Draft Ujian' : '➕ Buat Ujian Baru'; ?></div>
+                <div class="page-subtitle" id="page-subtitle-text">Isi informasi ujian dan tambahkan soal</div>
             </div>
             <div class="header-actions">
-                <button class="btn btn-outline" onclick="saveDraft()">💾 Simpan Draft</button>
-                <button class="btn btn-success" id="publishBtn" onclick="publishExam()">🚀 Publikasikan</button>
+                <span class="last-saved-indicator" id="last-saved-indicator">
+                    <span class="save-dot"></span>
+                    <span id="last-saved-icon" style="display:inline">💾</span>
+                    <span id="last-saved-text"></span>
+                </span>
+                <button class="btn btn-outline" id="saveDraftBtn" onclick="DraftManager.saveDraftToServer()">💾 Simpan Draft</button>
+                <button class="btn btn-success" id="publishBtn" onclick="DraftManager.publishExam()">🚀 Publikasikan</button>
+            </div>
+        </div>
+
+        <!-- Draft Recovery Banner -->
+        <div class="draft-recovery-banner" id="draft-recovery-banner">
+            <span class="recovery-icon">📄</span>
+            <div class="recovery-text">
+                <strong>Auto-save ditemukan <span id="recovery-time-label"></span></strong>
+                <span>Ada perubahan yang belum disimpan ke server. Pulihkan atau abaikan?</span>
+            </div>
+            <div class="recovery-actions">
+                <button class="btn btn-sm btn-primary" onclick="DraftManager.recoverAutoSave()">📋 Pulihkan</button>
+                <button class="btn btn-sm btn-outline" onclick="DraftManager.dismissAutoSave()">✕ Abaikan</button>
             </div>
         </div>
 
         <input type="hidden" id="csrf-token" value="<?php echo htmlspecialchars($csrf_token); ?>">
+        <input type="hidden" id="exam-id" value="<?php echo $editingDraftId; ?>">
         <input type="hidden" id="subjects-data" value='<?php echo htmlspecialchars(json_encode($subjects)); ?>'>
         <input type="hidden" id="classes-data" value='<?php echo htmlspecialchars(json_encode($classes)); ?>'>
 
@@ -498,13 +593,13 @@ try {
                 <div class="page-title" style="font-size: 1.1rem; margin-bottom: 1.25em">📋 Informasi Ujian</div>
                 <div class="form-group">
                     <label>Nama Ujian *</label>
-                    <input type="text" class="form-control" id="exam-name" placeholder="Contoh: Matematika — Bab 5: Integral" />
+                    <input type="text" class="form-control" id="exam-name" placeholder="Contoh: Matematika — Bab 5: Integral" oninput="DraftManager.markDirty()" />
                     <div class="field-error-msg" id="err-exam-name">Nama ujian wajib diisi</div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Target Jenjang *</label>
-                        <select class="form-control" id="exam-class">
+                        <select class="form-control" id="exam-class" onchange="DraftManager.markDirty()">
                             <?php foreach ($classes as $class): ?>
                                 <option value="<?php echo htmlspecialchars($class['name']); ?>">
                                     <?php echo htmlspecialchars($class['name']); ?>
@@ -514,7 +609,7 @@ try {
                     </div>
                     <div class="form-group">
                         <label>Kategori Mapel *</label>
-                        <select class="form-control" id="exam-category" onchange="filterSubjects()">
+                        <select class="form-control" id="exam-category" onchange="filterSubjects(); DraftManager.markDirty()">
                             <option value="Umum">Mapel Umum</option>
                             <option value="IPA">Mapel Pilihan (IPA)</option>
                             <option value="IPS">Mapel Pilihan (IPS)</option>
@@ -524,31 +619,31 @@ try {
                 <div class="form-row">
                     <div class="form-group">
                         <label>Mata Pelajaran *</label>
-                        <select class="form-control" id="exam-subject">
+                        <select class="form-control" id="exam-subject" onchange="DraftManager.markDirty()">
                             <option value="">-- Pilih Mata Pelajaran --</option>
                         </select>
                         <div class="field-error-msg" id="err-exam-subject">Pilih mata pelajaran</div>
                     </div>
                     <div class="form-group">
                         <label>Tanggal Ujian *</label>
-                        <input type="date" class="form-control" id="exam-date" />
+                        <input type="date" class="form-control" id="exam-date" onchange="DraftManager.markDirty()" />
                         <div class="field-error-msg" id="err-exam-date">Tanggal ujian wajib diisi</div>
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Waktu Mulai *</label>
-                        <input type="time" class="form-control" id="exam-start" value="08:00" />
+                        <input type="time" class="form-control" id="exam-start" value="08:00" onchange="DraftManager.markDirty()" />
                     </div>
                     <div class="form-group">
                         <label>Durasi (Menit) *</label>
-                        <input type="number" class="form-control" id="exam-duration" value="90" min="10" max="300" />
+                        <input type="number" class="form-control" id="exam-duration" value="90" min="10" max="300" oninput="DraftManager.markDirty()" />
                     </div>
                 </div>
                 <div class="form-row">
                     <div class="form-group">
                         <label>Jumlah Soal Ditampilkan</label>
-                        <input type="number" class="form-control" id="exam-qcount" value="40" min="1" max="100" />
+                        <input type="number" class="form-control" id="exam-qcount" value="40" min="1" max="100" oninput="DraftManager.markDirty()" />
                     </div>
                     <div class="form-group"></div>
                 </div>
@@ -620,6 +715,7 @@ try {
                             <li>Gunakan <b>Duplikat</b> untuk membuat soal serupa.</li>
                             <li>Soal baru selalu muncul di <b>paling atas</b> untuk mempermudah fokus.</li>
                             <li>Gambar soal bisa lebih dari satu (multiple upload).</li>
+                            <li>Tekan <b>Ctrl+S</b> untuk auto-save lokal.</li>
                         </ul>
                         <hr class="sidebar-divider" />
                         <div class="sidebar-section-title">
@@ -641,36 +737,36 @@ try {
                 <div class="form-group">
                     <label>Pengacakan Soal</label>
                     <div style="margin-top: 0.5em;">
-                        <label class="setting-checkbox"><input type="checkbox" id="shuffle-questions" checked /> Acak urutan soal untuk setiap siswa</label>
-                        <label class="setting-checkbox"><input type="checkbox" id="shuffle-options" checked /> Acak urutan pilihan jawaban</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="shuffle-questions" checked onchange="DraftManager.markDirty()" /> Acak urutan soal untuk setiap siswa</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="shuffle-options" checked onchange="DraftManager.markDirty()" /> Acak urutan pilihan jawaban</label>
                     </div>
                 </div>
                 <hr class="divider" />
                 <div class="form-group">
                     <label>Fitur Keamanan Anti-Menyontek</label>
                     <div style="margin-top: 0.5em;">
-                        <label class="setting-checkbox"><input type="checkbox" id="sec-fullscreen" checked /> Wajib mode layar penuh (fullscreen)</label>
-                        <label class="setting-checkbox"><input type="checkbox" id="sec-shortcuts" checked /> Blokir keyboard shortcut (Ctrl+T, Ctrl+N, dll.)</label>
-                        <label class="setting-checkbox"><input type="checkbox" id="sec-copy" checked /> Blokir copy-paste</label>
-                        <label class="setting-checkbox"><input type="checkbox" id="sec-tab" checked /> Deteksi perpindahan tab/jendela</label>
-                        <label class="setting-checkbox"><input type="checkbox" id="sec-notify" checked /> Notifikasi pengawas jika ada pelanggaran</label>
-                        <label class="setting-checkbox"><input type="checkbox" id="sec-autostop" checked /> Hentikan ujian otomatis setelah 3 pelanggaran</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-fullscreen" checked onchange="DraftManager.markDirty()" /> Wajib mode layar penuh (fullscreen)</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-shortcuts" checked onchange="DraftManager.markDirty()" /> Blokir keyboard shortcut (Ctrl+T, Ctrl+N, dll.)</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-copy" checked onchange="DraftManager.markDirty()" /> Blokir copy-paste</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-tab" checked onchange="DraftManager.markDirty()" /> Deteksi perpindahan tab/jendela</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-notify" checked onchange="DraftManager.markDirty()" /> Notifikasi pengawas jika ada pelanggaran</label>
+                        <label class="setting-checkbox"><input type="checkbox" id="sec-autostop" checked onchange="DraftManager.markDirty()" /> Hentikan ujian otomatis setelah 3 pelanggaran</label>
                     </div>
                 </div>
                 <hr class="divider" />
                 <div class="form-row">
                     <div class="form-group">
                         <label>Nilai Kelulusan (KKM)</label>
-                        <input type="number" class="form-control" id="passing-grade" value="75" min="0" max="100" />
+                        <input type="number" class="form-control" id="passing-grade" value="75" min="0" max="100" oninput="DraftManager.markDirty()" />
                     </div>
                     <div class="form-group">
                         <label>Maks. Pelanggaran</label>
-                        <input type="number" class="form-control" id="max-violations" value="3" min="1" max="10" />
+                        <input type="number" class="form-control" id="max-violations" value="3" min="1" max="10" oninput="DraftManager.markDirty()" />
                     </div>
                 </div>
                 <div class="form-group">
                     <label>Tampilkan Hasil Setelah Ujian</label>
-                    <select class="form-control" id="show-results-setting">
+                    <select class="form-control" id="show-results-setting" onchange="DraftManager.markDirty()">
                         <option value="direct_submit">Langsung setelah submit</option>
                         <option value="after_all_students">Setelah semua siswa selesai</option>
                         <option value="manual_by_teacher">Manual oleh guru</option>
@@ -692,8 +788,8 @@ try {
                 <div class="step-nav">
                     <button class="btn btn-outline" onclick="goStep(3)">← Kembali</button>
                     <div class="preview-nav">
-                        <button class="btn btn-outline" onclick="saveDraft()">💾 Simpan Draft</button>
-                        <button class="btn btn-success" id="publishBtn2" onclick="publishExam()">🚀 Publikasikan Ujian</button>
+                        <button class="btn btn-outline" onclick="DraftManager.saveDraftToServer()">💾 Simpan Draft</button>
+                        <button class="btn btn-success" id="publishBtn2" onclick="DraftManager.publishExam()">🚀 Publikasikan Ujian</button>
                     </div>
                 </div>
             </div>
@@ -731,10 +827,20 @@ try {
         </div>
     </div>
 
+    <!-- Draft Loading Overlay -->
+    <div class="draft-loading-overlay" id="draft-loading-overlay" style="display:none;">
+        <div class="loading-spinner"></div>
+        <div style="font-weight:600; color:var(--primary)">Memuat draft...</div>
+    </div>
+
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script src="../js/utils.js"></script>
-    <script src="../js/teacher-layout.js"></script>
+    <script src="../js/api-client.js"></script>
     <script src="../js/toast.js"></script>
+    <script src="../js/teacher-api.js"></script>
+    <script src="../js/draft-autosave.js"></script>
+    <script src="../js/draft-manager.js"></script>
+    <script src="../js/teacher-layout.js"></script>
     <script defer src="js/ai-import.js"></script>
     <script>
         // ============================================================
@@ -769,6 +875,14 @@ try {
             }
 
             quillInstances.set(containerId, quill);
+
+            // Mark draft as dirty on text change
+            quill.on('text-change', function() {
+                if (typeof DraftManager !== 'undefined' && DraftManager.markDirty) {
+                    DraftManager.markDirty();
+                }
+            });
+
             return quill;
         }
 
@@ -809,7 +923,7 @@ try {
         // ============================================================
         // EXISTING VARIABLES
         // ============================================================
-        const csrfToken = document.getElementById('csrf-token').value;
+        let csrfToken = document.getElementById('csrf-token').value;
         const subjectsData = JSON.parse(document.getElementById('subjects-data').value);
         const classesData = JSON.parse(document.getElementById('classes-data').value);
         let allSubjects = subjectsData;
@@ -821,6 +935,255 @@ try {
         let bankDebounceTimer = null;
 
         // ============================================================
+        // COLLECT ALL FORM DATA (for DraftManager)
+        // ============================================================
+        function collectAllFormData() {
+            syncAllQuills();
+            questions.forEach((q) => collectOptionsFromDOM(q.id));
+
+            const processedQuestions = questions.map((q) => {
+                let correctAnswerValue = "";
+                if (q.type === "multiple" || q.type === "truefalse" || q.type === "essay") {
+                    correctAnswerValue = q.correct !== undefined && q.correct !== null ? q.correct.toString() : "";
+                } else if (q.type === "checkbox") {
+                    correctAnswerValue = JSON.stringify(q.correct_answers_checkbox || []);
+                }
+                return { ...q, correct_answer: correctAnswerValue, media_url: JSON.stringify(q.media_url || []) };
+            });
+
+            return {
+                exam_id: document.getElementById('exam-id').value || null,
+                csrf_token: csrfToken,
+                name: document.getElementById('exam-name').value,
+                subject: document.getElementById('exam-subject').value,
+                class: document.getElementById('exam-class').value,
+                duration: parseInt(document.getElementById('exam-duration').value) || 90,
+                question_count: questions.length,
+                description: getQuillHTML('quill-desc'),
+                exam_code: document.getElementById('exam-code').value,
+                start_time: document.getElementById('exam-date').value + " " + document.getElementById('exam-start').value + ":00",
+                end_time: document.getElementById('exam-date').value + " 23:59:59",
+                show_results_setting: document.getElementById('show-results-setting').value,
+                passing_score: parseInt(document.getElementById('passing-grade').value) || 75,
+                max_violations: parseInt(document.getElementById('max-violations').value) || 3,
+                shuffle_questions: document.getElementById('shuffle-questions').checked ? 1 : 0,
+                shuffle_options: document.getElementById('shuffle-options').checked ? 1 : 0,
+                security_settings: {
+                    fullscreen: document.getElementById('sec-fullscreen').checked,
+                    block_shortcuts: document.getElementById('sec-shortcuts').checked,
+                    block_copy: document.getElementById('sec-copy').checked,
+                    tab_detection: document.getElementById('sec-tab').checked,
+                    notify_proctor: document.getElementById('sec-notify').checked,
+                    auto_stop: document.getElementById('sec-autostop').checked,
+                },
+                questions: processedQuestions,
+            };
+        }
+
+        // ============================================================
+        // POPULATE FORM FROM DRAFT DATA (for DraftManager)
+        // ============================================================
+        function populateFormFromDraft(draftData) {
+            const exam = draftData.exam || {};
+            const draftQuestions = draftData.questions || [];
+
+            // Step 1 fields
+            const nameEl = document.getElementById('exam-name');
+            if (nameEl && exam.name) nameEl.value = exam.name;
+
+            const classEl = document.getElementById('exam-class');
+            if (classEl && exam.class) classEl.value = exam.class;
+
+            const subjectEl = document.getElementById('exam-subject');
+            if (subjectEl && exam.subject) {
+                // Ensure subject option exists before setting
+                filterSubjects();
+                setTimeout(() => {
+                    subjectEl.value = exam.subject;
+                }, 100);
+            }
+
+            const categoryEl = document.getElementById('exam-category');
+            if (categoryEl && exam.subject) {
+                // Find the category for this subject
+                const subj = allSubjects.find(s => s.name === exam.subject);
+                if (subj) {
+                    categoryEl.value = subj.category;
+                    filterSubjects();
+                    setTimeout(() => {
+                        if (subjectEl) subjectEl.value = exam.subject;
+                    }, 100);
+                }
+            }
+
+            const dateEl = document.getElementById('exam-date');
+            if (dateEl && exam.start_time) {
+                dateEl.value = exam.start_time.split(' ')[0];
+            }
+
+            const startEl = document.getElementById('exam-start');
+            if (startEl && exam.start_time) {
+                const timePart = exam.start_time.split(' ')[1];
+                if (timePart) startEl.value = timePart.substring(0, 5);
+            }
+
+            const durationEl = document.getElementById('exam-duration');
+            if (durationEl && exam.duration_minutes) durationEl.value = exam.duration_minutes;
+
+            const qcountEl = document.getElementById('exam-qcount');
+            if (qcountEl && exam.question_count) qcountEl.value = exam.question_count;
+
+            const codeEl = document.getElementById('exam-code');
+            if (codeEl && exam.exam_code) codeEl.value = exam.exam_code;
+
+            // Description Quill
+            if (exam.description) {
+                const descQuill = quillInstances.get('quill-desc');
+                if (descQuill) {
+                    descQuill.root.innerHTML = exam.description;
+                }
+            }
+
+            // Step 3 fields
+            const shuffleQ = document.getElementById('shuffle-questions');
+            if (shuffleQ) shuffleQ.checked = exam.shuffle_questions == 1;
+
+            const shuffleO = document.getElementById('shuffle-options');
+            if (shuffleO) shuffleO.checked = exam.shuffle_options == 1;
+
+            const passingEl = document.getElementById('passing-grade');
+            if (passingEl && exam.passing_score) passingEl.value = exam.passing_score;
+
+            const maxViolEl = document.getElementById('max-violations');
+            if (maxViolEl && exam.max_violations) maxViolEl.value = exam.max_violations;
+
+            const showResultsEl = document.getElementById('show-results-setting');
+            if (showResultsEl && exam.show_results_setting) showResultsEl.value = exam.show_results_setting;
+
+            // Security settings
+            const sec = exam.security_settings || {};
+            const secFullscreen = document.getElementById('sec-fullscreen');
+            if (secFullscreen) secFullscreen.checked = sec.fullscreen !== false;
+
+            const secShortcuts = document.getElementById('sec-shortcuts');
+            if (secShortcuts) secShortcuts.checked = sec.block_shortcuts !== false;
+
+            const secCopy = document.getElementById('sec-copy');
+            if (secCopy) secCopy.checked = sec.block_copy !== false;
+
+            const secTab = document.getElementById('sec-tab');
+            if (secTab) secTab.checked = sec.tab_detection !== false;
+
+            const secNotify = document.getElementById('sec-notify');
+            if (secNotify) secNotify.checked = sec.notify_proctor !== false;
+
+            const secAutostop = document.getElementById('sec-autostop');
+            if (secAutostop) secAutostop.checked = sec.auto_stop !== false;
+
+            // Questions — clear existing and rebuild
+            questions = [];
+            questionCount = 0;
+            document.getElementById('questions-builder').innerHTML = '';
+
+            if (draftQuestions && draftQuestions.length > 0) {
+                // Add questions in reverse order so they end up in correct order (addQuestion prepends)
+                // Actually, addQuestion prepends (unshift), so we add in reverse to get correct final order
+                const reversedQuestions = [...draftQuestions].reverse();
+                reversedQuestions.forEach(qData => {
+                    const normalizedQ = normalizeDraftQuestion(qData);
+                    addQuestion(normalizedQ.type, normalizedQ);
+                });
+            }
+
+            reindexQuestions();
+
+            // Update page title
+            const titleEl = document.getElementById('page-title-text');
+            if (titleEl && exam.name) {
+                titleEl.textContent = '✏️ Edit Draft: ' + exam.name;
+            }
+
+            const subtitleEl = document.getElementById('page-subtitle-text');
+            if (subtitleEl) {
+                subtitleEl.textContent = 'Mengedit draft ujian yang tersimpan';
+            }
+
+            // Update save button text
+            const saveBtn = document.getElementById('saveDraftBtn');
+            if (saveBtn) saveBtn.textContent = '💾 Simpan Perubahan';
+        }
+
+        function normalizeDraftQuestion(qData) {
+            // Normalize question data from server format to the format addQuestion expects
+            let parsedOptions = [];
+            if (qData.options) {
+                if (typeof qData.options === 'string') {
+                    try { parsedOptions = JSON.parse(qData.options); } catch (e) { parsedOptions = []; }
+                } else if (Array.isArray(qData.options)) {
+                    parsedOptions = qData.options;
+                }
+            }
+
+            // Normalize options to {text, image} format
+            const normalizedOptions = parsedOptions.map(opt => {
+                if (typeof opt === 'string') return { text: opt, image: '' };
+                if (typeof opt === 'object' && opt !== null) return { text: opt.text || '', image: opt.image || '' };
+                return { text: '', image: '' };
+            }).filter(opt => opt.text.trim() !== '');
+
+            // Parse media_url
+            let mediaUrl = [];
+            if (qData.media_url) {
+                if (typeof qData.media_url === 'string') {
+                    try { mediaUrl = JSON.parse(qData.media_url); } catch (e) { mediaUrl = []; }
+                } else if (Array.isArray(qData.media_url)) {
+                    mediaUrl = qData.media_url;
+                }
+            }
+
+            // Parse correct_answer for checkbox type
+            let correctAnswersCheckbox = [];
+            let correctAnswer = qData.correct_answer || '';
+
+            if (qData.question_type === 'checkbox' && correctAnswer) {
+                if (typeof correctAnswer === 'string') {
+                    try {
+                        const parsed = JSON.parse(correctAnswer);
+                        if (Array.isArray(parsed)) {
+                            correctAnswersCheckbox = parsed.map(String);
+                        } else {
+                            correctAnswersCheckbox = [String(parsed)];
+                        }
+                    } catch (e) {
+                        correctAnswersCheckbox = [String(correctAnswer)];
+                    }
+                } else if (Array.isArray(correctAnswer)) {
+                    correctAnswersCheckbox = correctAnswer.map(String);
+                }
+            }
+
+            // Map difficulty from DB enum values
+            let difficulty = qData.difficulty || 'sedang';
+            if (difficulty === 'easy') difficulty = 'mudah';
+            else if (difficulty === 'medium' || difficulty === 'sedang') difficulty = 'sedang';
+            else if (difficulty === 'hard') difficulty = 'sulit';
+
+            // Map question_type from DB field name
+            const type = qData.question_type || qData.type || 'multiple';
+
+            return {
+                type: type,
+                text: qData.question_text || qData.text || '',
+                media_url: mediaUrl,
+                options: normalizedOptions,
+                correct: correctAnswer,
+                correct_answers_checkbox: correctAnswersCheckbox,
+                points: parseInt(qData.points) || 1,
+                difficulty: difficulty,
+            };
+        }
+
+        // ============================================================
         // GENERATE CODE & FILTER SUBJECTS
         // ============================================================
         function generateCode() {
@@ -828,6 +1191,7 @@ try {
             let code = "";
             for (let i = 0; i < 8; i++) code += chars[Math.floor(Math.random() * chars.length)];
             document.getElementById("exam-code").value = code;
+            DraftManager.markDirty();
         }
 
         function filterSubjects() {
@@ -844,17 +1208,51 @@ try {
         }
 
         // ============================================================
-        // DOM READY — Init description Quill + existing setup
+        // DOM READY — Init everything
         // ============================================================
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             const dateEl = document.getElementById("exam-date");
-            if (dateEl) dateEl.valueAsDate = new Date();
+            if (dateEl && !dateEl.value) dateEl.valueAsDate = new Date();
             document.getElementById("generate-code-btn").addEventListener("click", generateCode);
             generateCode();
             filterSubjects();
 
             // Init description Quill
             initQuill('quill-desc', 'Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.', 'desc');
+
+            // Initialize DraftManager
+            DraftManager.init({
+                autoSaveKey: 'exam_draft_autosave',
+                autoSaveInterval: 30000,
+                formCollector: collectAllFormData,
+                formPopulator: populateFormFromDraft,
+                csrfInput: '#csrf-token',
+                examIdInput: '#exam-id',
+                recoveryBanner: '#draft-recovery-banner',
+                lastSavedIndicator: '#last-saved-indicator',
+                pageTitle: '#page-title-text',
+                onCsrfUpdate: (token) => { csrfToken = token; },
+                onAutoSave: () => {},
+            });
+
+            // Check if editing existing draft
+            const editId = document.getElementById('exam-id').value;
+            if (editId && parseInt(editId) > 0) {
+                // Show loading overlay
+                const overlay = document.getElementById('draft-loading-overlay');
+                if (overlay) overlay.style.display = 'flex';
+
+                try {
+                    await DraftManager.loadDraftForEditing(parseInt(editId));
+                } catch (error) {
+                    showToast("Gagal memuat draft: " + error, "error");
+                } finally {
+                    if (overlay) overlay.style.display = 'none';
+                }
+            } else {
+                // New exam — check for auto-save recovery
+                DraftManager.checkAutoSaveRecovery(null);
+            }
         });
 
         // ============================================================
@@ -1007,17 +1405,10 @@ try {
             // Init question text Quill
             const qQuill = initQuill('quill-' + qId, newQuestion.text || '', 'question');
 
-            // Attach text-change listener to sync data
-            if (qQuill) {
-                qQuill.on('text-change', function() {
-                    updateQuestionData(qId, 'text', qQuill.root.innerHTML);
-                });
-            }
-
-            // Handle existing options for multiple/checkbox from bank soal
+            // Handle existing options for multiple/checkbox from bank soal or draft
             if (existingData && (newQuestion.type === "multiple" || newQuestion.type === "checkbox")) {
                 const optContainer = div.querySelector(".options-container");
-                if (optContainer) {
+                if (optContainer && newQuestion.options && newQuestion.options.length > 0) {
                     optContainer.innerHTML = "";
                     const letters = ["A", "B", "C", "D", "E", "F", "G", "H"];
                     newQuestion.options.forEach((opt, i) => {
@@ -1055,11 +1446,6 @@ try {
             // Init essay Quill if essay type
             if (newQuestion.type === "essay") {
                 const essayQuill = initQuill('quill-essay-' + qId, newQuestion.correct || '', 'essay');
-                if (essayQuill) {
-                    essayQuill.on('text-change', function() {
-                        updateQuestionData(qId, 'correct', essayQuill.root.innerHTML);
-                    });
-                }
             }
 
             renderMediaPreviews(div);
@@ -1159,6 +1545,7 @@ try {
             if (original) {
                 addQuestion(original.type, original);
             }
+            DraftManager.markDirty();
         }
 
         function removeQuestion(qId) {
@@ -1175,6 +1562,7 @@ try {
                 document.getElementById(qId).remove();
                 reindexQuestions();
                 showToast("Soal dihapus");
+                DraftManager.markDirty();
             } else {
                 btn.classList.add('btn-delete-confirm');
                 btn.innerHTML = 'Yakin?';
@@ -1211,6 +1599,7 @@ try {
                 <button class="opt-remove-btn" onclick="this.closest('.option-row').remove()">✕</button>
             `;
             container.appendChild(row);
+            DraftManager.markDirty();
         }
 
         function updateOptionText(qId, optIndex, text) {
@@ -1224,6 +1613,7 @@ try {
             } else {
                 question.options[optIndex].text = text;
             }
+            DraftManager.markDirty();
         }
 
         function updateOptionSelection(qId, optIndex, isChecked) {
@@ -1244,6 +1634,7 @@ try {
                     question.correct = optIndex.toString();
                 }
             }
+            DraftManager.markDirty();
         }
 
         function collectOptionsFromDOM(qId) {
@@ -1344,16 +1735,12 @@ try {
             } else if (newType === "essay") {
                 optContainer.innerHTML = renderEssayOptions(qId, question.correct);
                 // Init essay Quill after DOM is set
-                const essayQuill = initQuill('quill-essay-' + qId, '', 'essay');
-                if (essayQuill) {
-                    essayQuill.on('text-change', function() {
-                        updateQuestionData(qId, 'correct', essayQuill.root.innerHTML);
-                    });
-                }
+                initQuill('quill-essay-' + qId, '', 'essay');
             } else if (newType === "truefalse") {
                 optContainer.innerHTML = renderTrueFalseOptions(qId, question.correct);
             }
             updateQuestionData(qId, "options", question.options);
+            DraftManager.markDirty();
         }
 
         // ============================================================
@@ -1402,6 +1789,7 @@ try {
                 statusEl.style.display = "none";
             }, 2000);
             input.value = "";
+            DraftManager.markDirty();
         }
 
         function renderMediaPreviews(questionCard) {
@@ -1434,6 +1822,7 @@ try {
             questionCard.querySelector(".q-media").value = JSON.stringify(question.media_url);
             renderMediaPreviews(questionCard);
             updateQuestionData(qId, "media_url", question.media_url);
+            DraftManager.markDirty();
         }
 
         async function uploadOptionMedia(input, qId, optIndex) {
@@ -1465,6 +1854,7 @@ try {
                             q.options[optIndex].image = result.url;
                         }
                     }
+                    DraftManager.markDirty();
                 } else {
                     showToast("Gagal mengunggah gambar: " + result.message, "error");
                 }
@@ -1478,6 +1868,7 @@ try {
             const row = btn.closest(".option-row");
             row.querySelector(".opt-image-url").value = "";
             row.querySelector(".opt-image-preview-wrap").style.display = "none";
+            DraftManager.markDirty();
         }
 
         // ============================================================
@@ -1574,107 +1965,6 @@ try {
                     ${optionsHtml}
                 </div>`;
             }).join("");
-        }
-
-        // ============================================================
-        // SAVE DRAFT & PUBLISH
-        // ============================================================
-        function saveDraft() {
-            syncAllQuills();
-            const draft = {
-                name: document.getElementById("exam-name").value,
-                subject: document.getElementById("exam-subject").value,
-                class: document.getElementById("exam-class").value,
-                date: document.getElementById("exam-date").value,
-                start: document.getElementById("exam-start").value,
-                duration: document.getElementById("exam-duration").value,
-                desc: getQuillHTML('quill-desc'),
-                code: document.getElementById("exam-code").value,
-                questions: questions,
-                savedAt: new Date().toISOString(),
-            };
-            try {
-                localStorage.setItem('exam_draft', JSON.stringify(draft));
-                showToast("Draft disimpan secara lokal");
-            } catch (e) {
-                showToast("Gagal menyimpan draft", "error");
-            }
-        }
-
-        async function publishExam() {
-            if (questions.length === 0) {
-                showToast("Tambahkan minimal 1 soal sebelum mempublikasikan", "error");
-                return;
-            }
-            if (!validateStep(2)) { goStep(1); return; }
-
-            syncAllQuills();
-            questions.forEach((q) => collectOptionsFromDOM(q.id));
-
-            const processedQuestions = questions.map((q) => {
-                let correctAnswerValue = "";
-                if (q.type === "multiple" || q.type === "truefalse" || q.type === "essay") {
-                    correctAnswerValue = q.correct !== undefined && q.correct !== null ? q.correct.toString() : "";
-                } else if (q.type === "checkbox") {
-                    correctAnswerValue = JSON.stringify(q.correct_answers_checkbox || []);
-                }
-                return { ...q, correct_answer: correctAnswerValue, media_url: JSON.stringify(q.media_url || []) };
-            });
-
-            const btn1 = document.getElementById("publishBtn");
-            const btn2 = document.getElementById("publishBtn2");
-            if (btn1) btn1.classList.add("btn-loading");
-            if (btn2) btn2.classList.add("btn-loading");
-
-            const examData = {
-                action: "create_exam",
-                csrf_token: csrfToken,
-                name: document.getElementById("exam-name").value,
-                subject: document.getElementById("exam-subject").value,
-                class: document.getElementById("exam-class").value,
-                duration: parseInt(document.getElementById("exam-duration").value),
-                question_count: questions.length,
-                description: getQuillHTML('quill-desc'),
-                exam_code: document.getElementById("exam-code").value,
-                start_time: document.getElementById("exam-date").value + " " + document.getElementById("exam-start").value + ":00",
-                end_time: document.getElementById("exam-date").value + " 23:59:59",
-                show_results_setting: document.getElementById("show-results-setting").value,
-                passing_grade: parseInt(document.getElementById("passing-grade").value) || 75,
-                max_violations: parseInt(document.getElementById("max-violations").value) || 3,
-                shuffle_questions: document.getElementById("shuffle-questions").checked,
-                shuffle_options: document.getElementById("shuffle-options").checked,
-                security: {
-                    fullscreen: document.getElementById("sec-fullscreen").checked,
-                    block_shortcuts: document.getElementById("sec-shortcuts").checked,
-                    block_copy: document.getElementById("sec-copy").checked,
-                    tab_detection: document.getElementById("sec-tab").checked,
-                    notify_proctor: document.getElementById("sec-notify").checked,
-                    auto_stop: document.getElementById("sec-autostop").checked,
-                },
-                questions: processedQuestions,
-            };
-            try {
-                const response = await fetch("../php/exam_api.php", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify(examData),
-                    credentials: "include",
-                });
-                const result = await response.json();
-                if (result.success) {
-                    localStorage.removeItem('exam_draft');
-                    showToast("Ujian berhasil dipublikasikan!");
-                    setTimeout(() => { window.location.href = "dashboard.php"; }, 1000);
-                } else {
-                    showToast("Gagal: " + result.message, "error");
-                }
-            } catch (error) {
-                console.error("Publish error:", error);
-                showToast("Terjadi kesalahan koneksi", "error");
-            } finally {
-                if (btn1) btn1.classList.remove("btn-loading");
-                if (btn2) btn2.classList.remove("btn-loading");
-            }
         }
 
         // ============================================================
@@ -1786,6 +2076,7 @@ try {
                 if (firstQuestion) firstQuestion.scrollIntoView({ behavior: "smooth", block: "start" });
             }, 100);
             showToast("Soal berhasil ditambahkan ke ujian!");
+            DraftManager.markDirty();
         }
 
         // ============================================================
