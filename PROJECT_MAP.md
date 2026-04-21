@@ -3,7 +3,7 @@
 ## Quick Overview
 
 ExamSafe is a secure online exam platform (Admin, Teacher, Student roles).
-**Tech**: PHP 7.4+, MySQL/MariaDB, HTML/CSS/JS, CSRF protection, Rate limiting, Session-based auth.
+**Tech**: PHP 7.4+, MySQL/MariaDB, HTML/CSS/JS, Quill.js (rich text), CSRF protection, Rate limiting, Session-based auth.
 
 ---
 
@@ -11,55 +11,55 @@ ExamSafe is a secure online exam platform (Admin, Teacher, Student roles).
 
 ```
 ExamSafe/
-├── admin/                      # Admin dashboard files
+├── admin/ # Admin dashboard files
 ├── teacher/
-│   ├── includes/               # Shared components (CRITICAL)
-│   │   ├── init.php           # ★ Session + auth + teacher data (required first)
-│   │   ├── header.php         # Navbar (needs init.php)
-│   │   └── sidebar.php        # Menu (needs init.php + $activePage)
-│   ├── dashboard.php          # ★ Main dashboard (pattern example)
-│   ├── settings.php           # Settings with API calls (pattern example)
-│   ├── students.php           # Student list, server-side data (pattern example)
-│   ├── results.php            # Results with API calls + chart.js (pattern example)
-│   ├── create-exam.php        # Exam creation with uploads
-│   └── *.html                 # DEPRECATED - Redirect to .php versions
+│ ├── includes/ # Shared components (CRITICAL)
+│ │ ├── init.php # ★ Session + auth + teacher data (required first)
+│ │ ├── header.php # Navbar (needs init.php)
+│ │ └── sidebar.php # Menu (needs init.php + $activePage)
+│ ├── dashboard.php # ★ Main dashboard (pattern example)
+│ ├── settings.php # Settings with API calls (pattern example)
+│ ├── students.php # Student list, server-side data (pattern example)
+│ ├── results.php # Results with API calls + chart.js (pattern example)
+│ ├── create-exam.php # Exam creation with uploads + Quill.js rich text
+│ └── \*.html # DEPRECATED - Redirect to .php versions
 ├── student/
-│   ├── dashboard.php          # Exam list with POST forms
-│   ├── exam.php               # ★ POST-only exam access (security critical)
-│   └── register.html          # Registration form
+│ ├── dashboard.php # Exam list with POST forms
+│ ├── exam.php # ★ POST-only exam access (security critical)
+│ └── register.html # Registration form
 ├── css/
-│   ├── style.css              # Global styles (modal + sidebar)
-│   └── register.css           # Registration styles
+│ ├── style.css # Global styles (modal + sidebar)
+│ └── register.css # Registration styles
 ├── js/
-│   ├── api-client.js          # ★ API wrapper (use for all AJAX)
-│   ├── toast.js               # ★ Notifications (use showToast())
-│   ├── utils.js               # Shared utilities
-│   ├── teacher-api.js         # ★ Teacher API layer (all teacher endpoints)
-│   ├── teacher-dashboard.js   # Dashboard controller
-│   ├── teacher-layout.js      # Sidebar toggle (include on all teacher pages)
-│   ├── exam-manager.js        # Exam management
-│   ├── exam.js                # Exam engine (timer, submission)
-│   ├── security.js            # Anti-cheat monitoring
-│   └── register-common.js     # Registration utilities
+│ ├── api-client.js # ★ API wrapper (use for all AJAX)
+│ ├── toast.js # ★ Notifications (use showToast())
+│ ├── utils.js # Shared utilities
+│ ├── teacher-api.js # ★ Teacher API layer (all teacher endpoints)
+│ ├── teacher-dashboard.js # Dashboard controller
+│ ├── teacher-layout.js # Sidebar toggle (include on all teacher pages)
+│ ├── exam-manager.js # Exam management
+│ ├── exam.js # Exam engine (timer, submission)
+│ ├── security.js # Anti-cheat monitoring
+│ └── register-common.js # Registration utilities
 ├── php/
-│   ├── db.php                 # Database connection
-│   ├── exam_api.php           # ★ Main API (all roles)
-│   ├── auth.php               # Auth helpers + rate limiting
-│   ├── upload_media.php       # ★ Media upload with CSRF + rate limiting
-│   ├── save_ai_settings.php   # AI settings (CSRF protected)
-│   ├── get_ai_settings.php    # Fetch AI settings
-│   ├── ai_import.php          # AI extraction (Gemini)
-│   ├── student_register.php   # Student registration API
-│   ├── register.php           # Teacher registration API
-│   ├── admin_api.php          # Admin API
-│   ├── logout.php             # Logout handler
-│   └── logs/                  # exam_actions.log, ai_import.log
+│ ├── db.php # Database connection + sanitizeHTML()
+│ ├── exam_api.php # ★ Main API (all roles)
+│ ├── auth.php # Auth helpers + rate limiting
+│ ├── upload_media.php # ★ Media upload with CSRF + rate limiting
+│ ├── save_ai_settings.php # AI settings (CSRF protected)
+│ ├── get_ai_settings.php # Fetch AI settings
+│ ├── ai_import.php # AI extraction (Gemini)
+│ ├── student_register.php # Student registration API
+│ ├── register.php # Teacher registration API
+│ ├── admin_api.php # Admin API
+│ ├── logout.php # Logout handler
+│ └── logs/ # exam_actions.log, ai_import.log
 ├── includes/
-│   ├── csrf.php               # ★ CSRF validation (2-arg function)
-│   └── auth.php               # Authentication + session helpers
+│ ├── csrf.php # ★ CSRF validation (2-arg function)
+│ └── auth.php # Authentication + session helpers
 ├── uploads/
-│   └── .htaccess              # ★ Blocks PHP execution in upload directory
-└── vendor/                    # Composer dependencies
+│ └── .htaccess # ★ Blocks PHP execution in upload directory
+└── vendor/ # Composer dependencies
 ```
 
 **★ = Start here (critical files)**
@@ -77,6 +77,15 @@ echo csrfField($token);                 // Hidden input HTML
 ```
 
 **Key**: Token stored in `$_SESSION['csrf_token']`, regenerated after sensitive operations.
+
+### Sanitization (`php/db.php`)
+
+```php
+sanitize($str);       // htmlspecialchars(strip_tags()) — for plain text (names, emails, types)
+sanitizeHTML($str);   // strip_tags() with safe allowlist — for Quill rich text (question text, descriptions)
+```
+
+**Key**: Use `sanitize()` for plain text fields. Use `sanitizeHTML()` for content from Quill editors. Never use `sanitize()` on rich text — it destroys HTML tags.
 
 ### Authentication (`includes/auth.php`)
 
@@ -237,6 +246,20 @@ Select file on exam creation form
   ↓ JavaScript: showToast() with result
 ```
 
+### Rich Text (Quill.js) in create-exam.php
+
+```
+Teacher types question text in Quill editor
+  ↓ Quill stores content as HTML in memory
+  ↓ On publish/save: syncAllQuills() reads root.innerHTML from each instance
+  ↓ POST to exam_api.php?action=create_exam with HTML in question text
+  ↓ Server: sanitizeHTML() strips dangerous tags, keeps safe formatting
+  ↓ Stored as HTML in DB (question_text, description)
+  ↓ Student side: exam.js renders via innerHTML (pre-sanitized by server)
+```
+
+**Where Quill is used**: Exam description (Step 1), question text (Step 2), essay answer key (Step 2).
+
 ---
 
 ## API Endpoints (exam_api.php)
@@ -291,6 +314,7 @@ showToast("FYI", "info"); // Blue
 - ❌ Hardcode navbar/sidebar HTML (use includes)
 - ❌ Call `get_profile` on dashboard (use server-side data)
 - ❌ Use toleransi function (removed, obsolete)
+- ❌ Use `sanitize()` on Quill rich text content (destroys HTML; use `sanitizeHTML()`)
 
 **Must Always Do**:
 
@@ -298,6 +322,7 @@ showToast("FYI", "info"); // Blue
 - ✅ Use `verifyCSRFToken($posted, $_SESSION['csrf_token'])` (2 args)
 - ✅ Include CSRF token in all state-changing forms/API calls
 - ✅ Use `htmlspecialchars()` when outputting user data
+- ✅ Use `sanitizeHTML()` for Quill-sourced content (question text, descriptions)
 - ✅ Use `mb_*` functions for UTF-8 text
 - ✅ Include `teacher-layout.js` on all teacher pages
 - ✅ Use `showToast()` for all user feedback
@@ -328,7 +353,7 @@ Teacher pages depend on:
 
 API endpoints depend on:
   php/exam_api.php
-    → includes/db.php
+    → includes/db.php (sanitize + sanitizeHTML)
     → includes/auth.php
     → includes/csrf.php
 
@@ -342,11 +367,18 @@ Student exam depends on:
   student/exam.php
     → includes/csrf.php
     → includes/auth.php
+  js/exam.js
+    → Renders question_text as innerHTML (server pre-sanitized)
 
 Teacher JS modules:
   teacher-api.js → api-client.js
   teacher-results.js (if exists) → teacher-api.js
   teacher-dashboard.js → teacher-api.js
+
+create-exam.php Quill integration:
+  → Quill CDN (quilljs.com 1.3.7)
+  → quillInstances Map for lifecycle management
+  → syncAllQuills() before publish/draft/preview
 ```
 
 ---
@@ -358,20 +390,25 @@ When resuming work, review in this order:
 1. **`includes/csrf.php`** - CSRF token functions (2-arg verify)
 2. **`includes/auth.php`** - Rate limiting + auth helpers
 3. **`teacher/includes/init.php`** - Shared teacher initialization
-4. **`php/exam_api.php`** - Main API endpoints
-5. **`php/upload_media.php`** - Media upload with CSRF
-6. **`js/toast.js`** - User notification system
-7. **`js/api-client.js`** - Base API wrapper
-8. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
-9. **`teacher/students.php`** - Server-side data pattern
-10. **`teacher/settings.php`** - API-based pattern with CSRF
-11. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
-12. **`student/exam.php`** - POST-only access pattern
-13. **`student/dashboard.php`** - POST form pattern for exam access
+4. **`php/db.php`** - DB connection, `sanitize()`, `sanitizeHTML()`
+5. **`php/exam_api.php`** - Main API endpoints (uses `sanitizeHTML` for rich text)
+6. **`php/upload_media.php`** - Media upload with CSRF
+7. **`js/toast.js`** - User notification system
+8. **`js/api-client.js`** - Base API wrapper
+9. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
+10. **`js/exam.js`** - Renders question text via innerHTML (not escapeHtml)
+11. **`teacher/create-exam.php`** - Quill.js integration (3 editor types)
+12. **`teacher/students.php`** - Server-side data pattern
+13. **`teacher/settings.php`** - API-based pattern with CSRF
+14. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
+15. **`student/exam.php`** - POST-only access pattern
+16. **`student/dashboard.php`** - POST form pattern for exam access
 
 ---
 
 ## Recent Changes
+
+**2026-04-22**: Integrated Quill.js rich text editor into create-exam.php, updated sanitizeHTML() to protect against XSS when rendering rich text content, and updated student/exam.js to safely render pre-sanitized question content via innerHTML.
 
 **2026-04-21**: Refactored results.php to use TeacherAPI modular methods. Added getExamInfo, getResults, getStudentViolations, getSubmissionDetail, saveManualGrade to teacher-api.js. All TeacherAPI methods now throw errors for caller to handle with toast notifications.
 
