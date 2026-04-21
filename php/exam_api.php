@@ -1368,7 +1368,7 @@ function createExam()
         $data['end_time'] ?? null,
         $duration,
         $questionCount,
-        sanitize($data['description'] ?? ''),
+        sanitizeHTML($data['description'] ?? ''),
         $showResultsSetting,
     ]);
 
@@ -1388,7 +1388,7 @@ function createExam()
 
             $qStmt->execute([
                 $examId,
-                sanitize($q['text'] ?? ''),
+                sanitizeHTML($q['text'] ?? ''),
                 sanitize($q['type'] ?? 'multiple'),
                 json_encode($q['options'] ?? []),
                 $correctAnswer,

@@ -519,6 +519,10 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       word-break: break-word;
     }
 
+    .q-text ol, .q-text ul {
+      margin-left: 2rem;
+    }
+
     .options-list {
       list-style: none;
       display: flex;

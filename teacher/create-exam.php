@@ -29,6 +29,7 @@ try {
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Buat Ujian — ExamSafe</title>
+    <link href="https://cdn.quilljs.com/1.3.7/quill.snow.css" rel="stylesheet">
     <link rel="stylesheet" href="../css/style.css" />
     <style>
         /* === STEP INDICATOR === */
@@ -248,9 +249,14 @@ try {
             font-weight: 500;
             margin-bottom: 0.9375em;
             color: #1e293b;
-            white-space: pre-wrap;
             word-break: break-word;
         }
+
+        .preview-q-text :is(ol, ul),
+        .preview-essay-box :is(ol, ul) {
+            margin-left: 2rem;
+        }
+
         .preview-opt-item {
             padding: 0.625em 0.9375em;
             background: #fff;
@@ -386,6 +392,44 @@ try {
             overflow-y: auto;
         }
 
+        /* === QUILL OVERRIDES === */
+        .quill-wrapper {
+            position: relative;
+        }
+        .quill-wrapper .ql-toolbar.ql-snow {
+            border: 2px solid #e2e8f0;
+            border-radius: 10px 10px 0 0;
+            background: #f8fafc;
+        }
+        .quill-wrapper .ql-container.ql-snow {
+            border: 2px solid #e2e8f0;
+            border-top: none;
+            border-radius: 0 0 10px 10px;
+            font-family: "Poppins", sans-serif;
+            font-size: 0.95rem;
+            min-height: 80px;
+        }
+        .quill-wrapper .ql-editor {
+            min-height: 80px;
+            padding: 0.75em 1em;
+        }
+        .quill-wrapper .ql-editor.ql-blank::before {
+            font-style: normal;
+            color: #94a3b8;
+        }
+        .quill-wrapper.ql-desc .ql-container.ql-snow {
+            min-height: 100px;
+        }
+        .quill-wrapper.ql-desc .ql-editor {
+            min-height: 100px;
+        }
+        .quill-wrapper.ql-essay .ql-container.ql-snow {
+            min-height: 90px;
+        }
+        .quill-wrapper.ql-essay .ql-editor {
+            min-height: 90px;
+        }
+
         /* === RESPONSIVE === */
         @media (max-width: 992px) {
             .page-row { flex-direction: column; }
@@ -510,7 +554,9 @@ try {
                 </div>
                 <div class="form-group">
                     <label>Deskripsi / Petunjuk Ujian</label>
-                    <textarea class="form-control" id="exam-desc" rows="3" placeholder="Petunjuk pengerjaan ujian untuk siswa...">Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</textarea>
+                    <div class="quill-wrapper ql-desc" id="quill-desc-wrapper">
+                        <div id="quill-desc">Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Kode Ujian (otomatis)</label>
@@ -685,10 +731,83 @@ try {
         </div>
     </div>
 
+    <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
     <script src="../js/teacher-layout.js"></script>
     <script src="../js/toast.js"></script>
     <script defer src="js/ai-import.js"></script>
     <script>
+        // ============================================================
+        // QUILL CONFIGURATION
+        // ============================================================
+        const QUILL_TOOLBAR = [
+            ['bold', 'italic', 'underline'],
+            [{ 'list': 'ordered' }, { 'list': 'bullet' }],
+            ['subscript', 'superscript']
+        ];
+
+        const quillInstances = new Map();
+
+        function initQuill(containerId, initialHTML, variant) {
+            const container = document.getElementById(containerId);
+            if (!container) return null;
+
+            // Destroy existing if any
+            destroyQuill(containerId);
+
+            const quill = new Quill('#' + containerId, {
+                theme: 'snow',
+                placeholder: 'Tulis di sini...',
+                modules: {
+                    toolbar: QUILL_TOOLBAR
+                }
+            });
+
+            // Set initial content if provided
+            if (initialHTML && initialHTML.trim() !== '') {
+                quill.root.innerHTML = initialHTML;
+            }
+
+            quillInstances.set(containerId, quill);
+            return quill;
+        }
+
+        function destroyQuill(containerId) {
+            if (quillInstances.has(containerId)) {
+                const quill = quillInstances.get(containerId);
+                quill.disable();
+                // Remove Quill's internal tooltip to prevent leaks
+                const tooltip = quill.theme?.tooltip;
+                if (tooltip && tooltip.root && tooltip.root.parentNode) {
+                    tooltip.root.parentNode.removeChild(tooltip.root);
+                }
+                quillInstances.delete(containerId);
+            }
+        }
+
+        function getQuillHTML(containerId) {
+            if (quillInstances.has(containerId)) {
+                return quillInstances.get(containerId).root.innerHTML;
+            }
+            return '';
+        }
+
+        function syncAllQuills() {
+            // Ensure all question data objects reflect current Quill content
+            questions.forEach(q => {
+                const qQuillId = 'quill-' + q.id;
+                if (quillInstances.has(qQuillId)) {
+                    q.text = quillInstances.get(qQuillId).root.innerHTML;
+                }
+                const essayQuillId = 'quill-essay-' + q.id;
+                if (quillInstances.has(essayQuillId)) {
+                    q.correct = quillInstances.get(essayQuillId).root.innerHTML;
+                }
+            });
+        }
+
+        // ============================================================
+        // EXISTING VARIABLES
+        // ============================================================
         const csrfToken = document.getElementById('csrf-token').value;
         const subjectsData = JSON.parse(document.getElementById('subjects-data').value);
         const classesData = JSON.parse(document.getElementById('classes-data').value);
@@ -700,7 +819,9 @@ try {
         let deleteTimers = {};
         let bankDebounceTimer = null;
 
-        // === GENERATE CODE ===
+        // ============================================================
+        // GENERATE CODE & FILTER SUBJECTS
+        // ============================================================
         function generateCode() {
             const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
             let code = "";
@@ -721,15 +842,23 @@ try {
             }
         }
 
+        // ============================================================
+        // DOM READY — Init description Quill + existing setup
+        // ============================================================
         document.addEventListener("DOMContentLoaded", () => {
             const dateEl = document.getElementById("exam-date");
             if (dateEl) dateEl.valueAsDate = new Date();
             document.getElementById("generate-code-btn").addEventListener("click", generateCode);
             generateCode();
             filterSubjects();
+
+            // Init description Quill
+            initQuill('quill-desc', 'Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.', 'desc');
         });
 
-        // === STEP NAVIGATION WITH VALIDATION ===
+        // ============================================================
+        // STEP NAVIGATION WITH VALIDATION
+        // ============================================================
         function validateStep(n) {
             if (n <= 1) return true;
             const fields = [
@@ -776,6 +905,9 @@ try {
             window.scrollTo({ top: 0, behavior: 'smooth' });
         }
 
+        // ============================================================
+        // QUESTION MANAGEMENT
+        // ============================================================
         function reindexQuestions() {
             const cards = document.querySelectorAll(".question-builder");
             cards.forEach((card, index) => {
@@ -831,7 +963,9 @@ try {
 
                 <div class="form-group">
                     <label>Teks Soal *</label>
-                    <textarea class="form-control" placeholder="Tulis pertanyaan di sini..." rows="3" oninput="updateQuestionData('${qId}', 'text', this.value)">${newQuestion.text || ''}</textarea>
+                    <div class="quill-wrapper" id="quill-${qId}-wrapper">
+                        <div id="quill-${qId}"></div>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -869,6 +1003,17 @@ try {
             const builder = document.getElementById("questions-builder");
             builder.prepend(div);
 
+            // Init question text Quill
+            const qQuill = initQuill('quill-' + qId, newQuestion.text || '', 'question');
+
+            // Attach text-change listener to sync data
+            if (qQuill) {
+                qQuill.on('text-change', function() {
+                    updateQuestionData(qId, 'text', qQuill.root.innerHTML);
+                });
+            }
+
+            // Handle existing options for multiple/checkbox from bank soal
             if (existingData && (newQuestion.type === "multiple" || newQuestion.type === "checkbox")) {
                 const optContainer = div.querySelector(".options-container");
                 if (optContainer) {
@@ -906,9 +1051,19 @@ try {
                 }
             }
 
+            // Init essay Quill if essay type
+            if (newQuestion.type === "essay") {
+                const essayQuill = initQuill('quill-essay-' + qId, newQuestion.correct || '', 'essay');
+                if (essayQuill) {
+                    essayQuill.on('text-change', function() {
+                        updateQuestionData(qId, 'correct', essayQuill.root.innerHTML);
+                    });
+                }
+            }
+
             renderMediaPreviews(div);
             reindexQuestions();
-            if (div.querySelector("textarea")) div.querySelector("textarea").focus();
+            if (qQuill) qQuill.focus();
         }
 
         function renderMultipleOptions(qId, type = "multiple", existingOptions = [], correctAnswer = "", correctAnswersCheckbox = []) {
@@ -959,7 +1114,9 @@ try {
             return `
                 <div class="form-group">
                     <label>Kunci Jawaban / Rubrik Penilaian</label>
-                    <textarea class="form-control essay-answer" placeholder="Tulis kunci jawaban atau rubrik penilaian..." rows="3" oninput="updateQuestionData('${qId}', 'correct', this.value)">${currentAnswer}</textarea>
+                    <div class="quill-wrapper ql-essay" id="quill-essay-${qId}-wrapper">
+                        <div id="quill-essay-${qId}"></div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Panjang Jawaban Minimum (kata)</label>
@@ -987,7 +1144,16 @@ try {
         }
 
         function duplicateQuestion(qId) {
-            collectOptionsFromDOM(qId);
+            // Sync Quill content before reading
+            const sourceQQuillId = 'quill-' + qId;
+            const sourceEssayQuillId = 'quill-essay-' + qId;
+            if (quillInstances.has(sourceQQuillId)) {
+                updateQuestionData(qId, 'text', quillInstances.get(sourceQQuillId).root.innerHTML);
+            }
+            if (quillInstances.has(sourceEssayQuillId)) {
+                updateQuestionData(qId, 'correct', quillInstances.get(sourceEssayQuillId).root.innerHTML);
+            }
+
             const original = getQuestionById(qId);
             if (original) {
                 addQuestion(original.type, original);
@@ -1002,6 +1168,9 @@ try {
                 delete deleteTimers[qId];
                 const index = questions.findIndex((q) => q.id === qId);
                 if (index > -1) questions.splice(index, 1);
+                // Destroy Quill instances for this question
+                destroyQuill('quill-' + qId);
+                destroyQuill('quill-essay-' + qId);
                 document.getElementById(qId).remove();
                 reindexQuestions();
                 showToast("Soal dihapus");
@@ -1080,6 +1249,13 @@ try {
             const card = document.getElementById(qId);
             const question = getQuestionById(qId);
             if (!card || !question) return;
+
+            // Sync Quill text content
+            const qQuillId = 'quill-' + qId;
+            if (quillInstances.has(qQuillId)) {
+                question.text = quillInstances.get(qQuillId).root.innerHTML;
+            }
+
             const mediaInput = card.querySelector(".q-media");
             if (mediaInput) {
                 try {
@@ -1093,9 +1269,10 @@ try {
                 question.correct_answers_checkbox = [];
             }
             if (question.type === "essay") {
-                const essayTextarea = card.querySelector(".essay-answer");
-                if (essayTextarea) {
-                    question.correct = essayTextarea.value;
+                // Sync essay Quill content
+                const essayQuillId = 'quill-essay-' + qId;
+                if (quillInstances.has(essayQuillId)) {
+                    question.correct = quillInstances.get(essayQuillId).root.innerHTML;
                 }
                 return;
             }
@@ -1131,6 +1308,56 @@ try {
             });
         }
 
+        function changeType(qId, newType) {
+            const card = document.getElementById(qId);
+            const question = getQuestionById(qId);
+
+            // Sync current Quill content before changing
+            const qQuillId = 'quill-' + qId;
+            const essayQuillId = 'quill-essay-' + qId;
+            if (quillInstances.has(qQuillId)) {
+                question.text = quillInstances.get(qQuillId).root.innerHTML;
+            }
+            if (quillInstances.has(essayQuillId)) {
+                question.correct = quillInstances.get(essayQuillId).root.innerHTML;
+            }
+
+            if (!question) return;
+            question.type = newType;
+            question.correct = "";
+            question.correct_answers_checkbox = [];
+            question.options = [];
+            card.querySelectorAll(".type-btn").forEach((b) => {
+                b.classList.remove("active");
+                if (b.dataset.type === newType) {
+                    b.classList.add("active");
+                }
+            });
+
+            // Destroy old essay Quill if exists
+            destroyQuill(essayQuillId);
+
+            const optContainer = document.getElementById(qId + "-options");
+            if (newType === "multiple" || newType === "checkbox") {
+                optContainer.innerHTML = renderMultipleOptions(qId, newType, question.options, question.correct, question.correct_answers_checkbox);
+            } else if (newType === "essay") {
+                optContainer.innerHTML = renderEssayOptions(qId, question.correct);
+                // Init essay Quill after DOM is set
+                const essayQuill = initQuill('quill-essay-' + qId, '', 'essay');
+                if (essayQuill) {
+                    essayQuill.on('text-change', function() {
+                        updateQuestionData(qId, 'correct', essayQuill.root.innerHTML);
+                    });
+                }
+            } else if (newType === "truefalse") {
+                optContainer.innerHTML = renderTrueFalseOptions(qId, question.correct);
+            }
+            updateQuestionData(qId, "options", question.options);
+        }
+
+        // ============================================================
+        // MEDIA UPLOADS
+        // ============================================================
         async function uploadQuestionMedia(input, questionIndex) {
             if (!input.files || !input.files[0]) return;
             const files = input.files;
@@ -1208,42 +1435,6 @@ try {
             updateQuestionData(qId, "media_url", question.media_url);
         }
 
-        function getQuestionById(qId) {
-            return questions.find((q) => q.id === qId);
-        }
-
-        function updateQuestionData(qId, field, value) {
-            const question = getQuestionById(qId);
-            if (question) {
-                question[field] = value;
-            }
-        }
-
-        function changeType(qId, newType) {
-            const card = document.getElementById(qId);
-            const question = getQuestionById(qId);
-            if (!question) return;
-            question.type = newType;
-            question.correct = "";
-            question.correct_answers_checkbox = [];
-            question.options = [];
-            card.querySelectorAll(".type-btn").forEach((b) => {
-                b.classList.remove("active");
-                if (b.dataset.type === newType) {
-                    b.classList.add("active");
-                }
-            });
-            const optContainer = document.getElementById(qId + "-options");
-            if (newType === "multiple" || newType === "checkbox") {
-                optContainer.innerHTML = renderMultipleOptions(qId, newType, question.options, question.correct, question.correct_answers_checkbox);
-            } else if (newType === "essay") {
-                optContainer.innerHTML = renderEssayOptions(qId, question.correct);
-            } else if (newType === "truefalse") {
-                optContainer.innerHTML = renderTrueFalseOptions(qId, question.correct);
-            }
-            updateQuestionData(qId, "options", question.options);
-        }
-
         async function uploadOptionMedia(input, qId, optIndex) {
             if (!input.files || !input.files[0]) return;
             const file = input.files[0];
@@ -1288,6 +1479,23 @@ try {
             row.querySelector(".opt-image-preview-wrap").style.display = "none";
         }
 
+        // ============================================================
+        // HELPERS
+        // ============================================================
+        function getQuestionById(qId) {
+            return questions.find((q) => q.id === qId);
+        }
+
+        function updateQuestionData(qId, field, value) {
+            const question = getQuestionById(qId);
+            if (question) {
+                question[field] = value;
+            }
+        }
+
+        // ============================================================
+        // PREVIEW
+        // ============================================================
         function renderPreview() {
             const preview = document.getElementById("preview-content");
             if (questions.length === 0) {
@@ -1296,7 +1504,18 @@ try {
             }
             questions.forEach((q) => { collectOptionsFromDOM(q.id); });
             const letters = ["A", "B", "C", "D", "E", "F"];
-            preview.innerHTML = questions.map((q, idx) => {
+
+            // Get description from Quill
+            const descHTML = getQuillHTML('quill-desc');
+            let descPreviewHtml = '';
+            if (descHTML && descHTML !== '<p><br></p>') {
+                descPreviewHtml = `<div class="preview-q-card" style="background: #f8fafc; border-left: 4px solid var(--primary-light);">
+                    <div class="preview-q-number">PETUNJUK UJIAN</div>
+                    <div class="preview-q-text">${descHTML}</div>
+                </div>`;
+            }
+
+            preview.innerHTML = descPreviewHtml + questions.map((q, idx) => {
                 const qText = q.text || "(Teks soal tidak tersedia)";
                 const qType = q.type || "multiple";
                 let mediaHtml = "";
@@ -1340,22 +1559,27 @@ try {
                         }).filter(html => html !== "").join("")}
                     </ul>`;
                 } else if (qType === "essay") {
+                    const essayKey = q.correct || "";
+                    const essayDisplay = (essayKey && essayKey !== '<p><br></p>') ? essayKey : "(Belum ada kunci jawaban)";
                     optionsHtml = `<div class="preview-essay-box">
                         <p style="font-size:0.9rem; color:#64748b; margin-bottom:8px"><em>Ini adalah soal esai. Siswa akan mengetik jawaban di sini.</em></p>
-                        <p style="font-size:0.85rem; color:#475569; font-weight:600; white-space: pre-wrap; word-break: break-word;">Kunci Jawaban/Rubrik: ${q.correct || "(Belum ada kunci jawaban)"}</p>
+                        <p style="font-size:0.85rem; color:#475569; font-weight:600;">Kunci Jawaban/Rubrik: ${essayDisplay}</p>
                     </div>`;
                 }
                 return `<div class="preview-q-card">
                     <div class="preview-q-number">Soal ${idx + 1}${qType === "checkbox" ? " (PG Kompleks)" : ""}</div>
                     ${mediaHtml}
-                    <div class="preview-q-text">${escapeHtml(qText)}</div>
+                    <div class="preview-q-text">${qText}</div>
                     ${optionsHtml}
                 </div>`;
             }).join("");
         }
 
+        // ============================================================
+        // SAVE DRAFT & PUBLISH
+        // ============================================================
         function saveDraft() {
-            questions.forEach((q) => collectOptionsFromDOM(q.id));
+            syncAllQuills();
             const draft = {
                 name: document.getElementById("exam-name").value,
                 subject: document.getElementById("exam-subject").value,
@@ -1363,7 +1587,7 @@ try {
                 date: document.getElementById("exam-date").value,
                 start: document.getElementById("exam-start").value,
                 duration: document.getElementById("exam-duration").value,
-                desc: document.getElementById("exam-desc").value,
+                desc: getQuillHTML('quill-desc'),
                 code: document.getElementById("exam-code").value,
                 questions: questions,
                 savedAt: new Date().toISOString(),
@@ -1383,7 +1607,9 @@ try {
             }
             if (!validateStep(2)) { goStep(1); return; }
 
+            syncAllQuills();
             questions.forEach((q) => collectOptionsFromDOM(q.id));
+
             const processedQuestions = questions.map((q) => {
                 let correctAnswerValue = "";
                 if (q.type === "multiple" || q.type === "truefalse" || q.type === "essay") {
@@ -1407,7 +1633,7 @@ try {
                 class: document.getElementById("exam-class").value,
                 duration: parseInt(document.getElementById("exam-duration").value),
                 question_count: questions.length,
-                description: document.getElementById("exam-desc").value,
+                description: getQuillHTML('quill-desc'),
                 exam_code: document.getElementById("exam-code").value,
                 start_time: document.getElementById("exam-date").value + " " + document.getElementById("exam-start").value + ":00",
                 end_time: document.getElementById("exam-date").value + " 23:59:59",
@@ -1450,7 +1676,9 @@ try {
             }
         }
 
-        // === BANK SOAL ===
+        // ============================================================
+        // BANK SOAL
+        // ============================================================
         function openBankSoalModal() {
             document.getElementById("bankSoalModal").classList.add("active");
             loadBankQuestions();
@@ -1559,7 +1787,9 @@ try {
             showToast("Soal berhasil ditambahkan ke ujian!");
         }
 
-        // === AI IMPORT ===
+        // ============================================================
+        // AI IMPORT
+        // ============================================================
         function handleAIImportClick() {
             if (typeof window.openAIImportModal === 'function' && window.openAIImportModal !== handleAIImportClick) {
                 window.openAIImportModal();
@@ -1568,12 +1798,16 @@ try {
             }
         }
 
+        // ============================================================
+        // UTILITY
+        // ============================================================
         function escapeHtml(str) {
             if (!str) return "";
-            return str.replace(/[&<>]/g, function(m) {
+            return str.replace(/[&<>"]/g, function(m) {
                 if (m === "&") return "&amp;";
                 if (m === "<") return "&lt;";
                 if (m === ">") return "&gt;";
+                if (m === '"') return "&quot;";
                 return m;
             });
         }
