@@ -1,0 +1,16 @@
+{
+  "name": "exam-system",
+  "version": "1.0.0",
+  "description": "Website ujian online yang aman dan anti-menyontek untuk SMA.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "clean-css-cli": "^5.6.3",
+    "html-minifier-terser": "^7.2.0",
+    "terser": "^5.46.1"
+  }
+}

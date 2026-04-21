@@ -1,7 +1,11 @@
-# Uploads directory - ignore all files except .htaccess
+# ============================================
+# UPLOADS DIRECTORY
+# ============================================
+# Ignore all files in uploads except .htaccess
+uploads/*
 !uploads/.htaccess
 
-# But also explicitly ignore common image files in uploads (redundant but clear)
+# Uploads - Image files (explicit exclusions)
 uploads/*.jpg
 uploads/*.JPG
 uploads/*.jpeg
@@ -13,11 +17,20 @@ uploads/*.GIF
 uploads/*.webp
 uploads/*.WEBP
 
-# Database files
+# ============================================
+# DATABASE FILES
+# ============================================
 *.sql
 
-# Log files
+# ============================================
+# LOG FILES
+# ============================================
 *.log
 
-# Composer dependencies
+# ============================================
+# DEPENDENCIES & BUILD DIRECTORIES
+# ============================================
 /vendor/
+node_modules
+dist_temp
+package-lock.json
