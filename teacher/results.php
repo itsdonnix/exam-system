@@ -468,6 +468,10 @@ $csrf_token = generateCSRFToken();
                 transform: none !important;
                 box-shadow: none !important;
             }
+
+        }
+        .q-text :is(ol, ul) {
+            margin-left: 2rem;
         }
     </style>
 </head>
@@ -976,7 +980,9 @@ $csrf_token = generateCSRFToken();
                         const ans = sub.answers.find((a) => a.question_id == q.id)?.student_answer || "Tidak menjawab";
                         html += `
                             <div class="card" style="margin-bottom:0.625rem">
-                                <p><strong>Soal ${idx + 1}:</strong> ${escapeHtml(q.question_text)}</p>
+                                <div><strong>Soal ${idx + 1}:</strong>
+                                    <div class="q-text">${q.question_text}</div>
+                                </div>
                                 <div style="background:#f1f5f9; padding:0.625rem; border-radius:5px; margin:0.625rem 0">${escapeHtml(ans)}</div>
                                 <label>Nilai (Maks ${q.points}):</label>
                                 <input type="number" class="form-control essay-point" data-max="${q.points}" style="width:6.25rem">

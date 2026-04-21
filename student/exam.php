@@ -519,7 +519,7 @@ $full_name = $_SESSION['full_name'] ?? 'Siswa';
       word-break: break-word;
     }
 
-    .q-text ol, .q-text ul {
+    .q-text :is(ol, ul) {
       margin-left: 2rem;
     }
 
