@@ -1298,7 +1298,7 @@ function getResults()
     $db = getDB();
 
     $query = "
-        SELECT es.id as submission_id, s.full_name, s.nisn, s.class, 
+        SELECT es.id as submission_id, s.id as student_id, s.full_name, s.nisn, s.class, 
                es.score as auto_score, es.manual_score, es.total_score, 
                es.status, es.time_taken_seconds, es.is_forced, es.submitted_at,
                (SELECT COUNT(*) FROM violations WHERE exam_id = es.exam_id AND student_id = es.student_id) as violation_count
