@@ -37,21 +37,6 @@ function jsonResponse($data, $code = 200)
 {
     http_response_code($code);
     header('Content-Type: application/json');
-
-    // CORS headers - support credentials
-    if (isset($_SERVER['HTTP_ORIGIN'])) {
-        header('Access-Control-Allow-Origin: ' . $_SERVER['HTTP_ORIGIN']);
-        header('Access-Control-Allow-Credentials: true');
-    }
-
-    header('Access-Control-Allow-Methods: GET, POST, PUT, DELETE, OPTIONS');
-    header('Access-Control-Allow-Headers: Content-Type, Authorization');
-
-    // Handle CORS preflight requests
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
-        exit;
-    }
-
     echo json_encode($data);
     exit;
 }
