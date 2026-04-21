@@ -732,6 +732,7 @@ try {
     </div>
 
     <script src="https://cdn.quilljs.com/1.3.7/quill.min.js"></script>
+    <script src="../js/utils.js"></script>
     <script src="../js/teacher-layout.js"></script>
     <script src="../js/toast.js"></script>
     <script defer src="js/ai-import.js"></script>
@@ -1796,20 +1797,6 @@ try {
             } else {
                 showToast("Fitur AI Import akan segera hadir", "info");
             }
-        }
-
-        // ============================================================
-        // UTILITY
-        // ============================================================
-        function escapeHtml(str) {
-            if (!str) return "";
-            return str.replace(/[&<>"]/g, function(m) {
-                if (m === "&") return "&amp;";
-                if (m === "<") return "&lt;";
-                if (m === ">") return "&gt;";
-                if (m === '"') return "&quot;";
-                return m;
-            });
         }
     </script>
 </body>
