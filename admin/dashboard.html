@@ -862,10 +862,6 @@
 
       async function refreshViolations() {
         const btn = document.getElementById("refresh-violations-btn");
-        if (btn) {
-          btn.classList.add("rotating");
-          setTimeout(() => btn.classList.remove("rotating"), 500);
-        }
         await fetchSecurityLogs();
       }
 
@@ -882,19 +878,6 @@
           violationsRefreshInterval = null;
         }
       }
-
-      // Add rotation animation CSS
-      const rotationStyle = document.createElement("style");
-      rotationStyle.textContent = `
-        .rotating {
-          animation: rotateBtn 0.5s ease;
-        }
-        @keyframes rotateBtn {
-          from { transform: rotate(0deg); }
-          to { transform: rotate(360deg); }
-        }
-      `;
-      document.head.appendChild(rotationStyle);
 
       function renderPendingTeachers(teachers) {
         const container = document.getElementById("pending-teachers-list");
