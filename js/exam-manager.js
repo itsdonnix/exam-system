@@ -162,8 +162,8 @@ class ExamManager {
     const statusText = isDraft
       ? "📝 Draft"
       : exam.status === "ended"
-      ? "Ended"
-      : "Active";
+      ? "Selesai"
+      : "Aktif";
     const examDate = new Date(exam.start_time).toLocaleDateString("id-ID", {
       day: "numeric",
       month: "short",
