@@ -692,7 +692,7 @@ try {
                 <div class="form-group">
                     <label>Deskripsi / Petunjuk Ujian</label>
                     <div class="quill-wrapper ql-desc" id="quill-desc-wrapper">
-                        <div id="quill-desc">Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</div>
+                        <div id="quill-desc"></div>
                     </div>
                 </div>
                 <div class="step-nav">
@@ -1253,7 +1253,7 @@ try {
             filterSubjects();
 
             // Init description Quill
-            initQuill('quill-desc', 'Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.', 'desc');
+            initQuill('quill-desc', 'Kerjakan ujian dengan jujur dan teliti. Baca setiap soal dengan seksama dan pilih jawaban terbaik. Periksa kembali jawaban Anda sebelum mengirimkan.', 'desc');
 
             // Initialize DraftManager
             DraftManager.init({
