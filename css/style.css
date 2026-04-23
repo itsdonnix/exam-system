@@ -328,8 +328,9 @@ textarea.form-control {
   overflow-y: auto;
   max-height: calc(100vh - 6.5rem);
   border-radius: 14px;
-  padding-right: 1rem;
-  padding-top: 0.5rem;
+  background-color: var(--card);
+  box-shadow: var(--shadow);
+  padding: 2rem;
 }
 
 /* ===== PAGE HEADER ===== */
