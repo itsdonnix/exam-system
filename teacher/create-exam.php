@@ -627,7 +627,7 @@ try {
 
         <!-- STEP 1 -->
         <div class="step-content active" id="step-1">
-            <div class="card">
+            <div>
                 <div class="page-title" style="font-size: 1.1rem; margin-bottom: 1.25em">📋 Informasi Ujian</div>
                 <div class="form-group">
                     <label>Nama Ujian *</label>
@@ -767,7 +767,7 @@ try {
 
         <!-- STEP 3 -->
         <div class="step-content" id="step-3">
-            <div class="card">
+            <div>
                 <div class="page-title" style="font-size: 1.1rem; margin-bottom: 1.25em">⚙️ Pengaturan Keamanan & Ujian</div>
                 <div class="form-group">
                     <label>Pengacakan Soal</label>
