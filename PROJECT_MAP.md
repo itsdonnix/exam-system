@@ -3,7 +3,7 @@
 ## Quick Overview
 
 ExamSafe is a secure online exam platform (Admin, Teacher, Student roles).
-**Tech**: PHP 7.4+, MySQL/MariaDB, HTML/CSS/JS, Quill.js (rich text), CSRF protection, Rate limiting, Session-based auth.
+**Tech**: PHP 7.4+, MySQL/MariaDB, HTML/CSS/JS, Vue 3 (CDN, student exam), Quill.js (rich text), CSRF protection, Rate limiting, Session-based auth.
 
 ---
 
@@ -25,23 +25,26 @@ ExamSafe/
 │ └── \*.html # DEPRECATED - Redirect to .php versions
 ├── student/
 │ ├── dashboard.php # Exam list with POST forms
-│ ├── exam.php # ★ POST-only exam access (security critical)
+│ ├── exam.php # ★ POST-only exam access (now Vue 3 bootstrap)
 │ └── register.html # Registration form
 ├── css/
 │ ├── style.css # Global styles (modal + sidebar)
+│ ├── exam.css # ★ Exam page styles (extracted from exam.php)
 │ └── register.css # Registration styles
 ├── js/
 │ ├── api-client.js # ★ API wrapper (use for all AJAX)
 │ ├── toast.js # ★ Notifications (use showToast())
 │ ├── utils.js # Shared utilities
 │ ├── teacher-api.js # ★ Teacher API layer (all teacher endpoints)
+│ ├── student-api.js # ★ Student API layer (get_exam, start_exam, submit_answers, etc.)
 │ ├── teacher-dashboard.js # Dashboard controller
 │ ├── teacher-layout.js # Sidebar toggle (include on all teacher pages)
 │ ├── draft-autosave.js # Auto-save to localStorage (30s debounce, Ctrl+S, beforeunload)
 │ ├── draft-manager.js # Draft orchestrator (server save, recovery, dirty tracking)
 │ ├── exam-manager.js # Exam management (renders draft cards with "Lanjutkan Edit")
-│ ├── exam.js # Exam engine (timer, submission)
-│ ├── security.js # Anti-cheat monitoring
+│ ├── exam-app.js # ★ Vue 3 exam SPA (replaces exam.js)
+│ ├── confirm-dialog.js # ★ Reusable Vue confirm dialog
+│ ├── security.js # Anti-cheat monitoring (per-exam settings)
 │ └── register-common.js # Registration utilities
 ├── php/
 │ ├── db.php # Database connection
@@ -218,7 +221,7 @@ Click "Mulai Ujian" on student dashboard
   ↓ 302 redirect to exam.php (GET)
   ↓ GET exam.php retrieves exam_id from session
   ↓ Clears session variable (single-use)
-  ↓ Shows exam (agreement → security → questions)
+  ↓ Shows exam (Vue phases: agreement → fullscreen → exam → result)
 ```
 
 **Why**: Direct GET to exam.php is blocked. POST validates, then redirect ensures clean state.
@@ -258,7 +261,7 @@ Teacher types question text in Quill editor
   ↓ POST to exam_api.php?action=create_exam with HTML in question text
   ↓ Server: sanitizeHTML() strips dangerous tags, keeps safe formatting
   ↓ Stored as HTML in DB (question_text, description)
-  ↓ Student side: exam.js renders via innerHTML (pre-sanitized by server)
+  ↓ Student side: exam-app.js renders via v-html (pre-sanitized by server)
 ```
 
 **Where Quill is used**: Exam description (Step 1), question text (Step 2), essay answer key (Step 2).
@@ -286,6 +289,21 @@ Dashboard draft cards:
   ↓ Links to create-exam.php?edit=ID
 ```
 
+### Student Exam Flow (Vue 3)
+
+```
+exam.php loads → exam-app.js mounts
+  ↓ Phase 'agreement': show AgreementModal (14 checkboxes + countdown)
+  ↓ Phase 'fullscreen': log_agreement API, show prompt
+  ↓ Phase 'exam':
+    - StudentAPI.getExam() → returns exam.security_settings, max_violations
+    - ExamSecurity.configure(settings, maxViolations)
+    - ExamSecurity.start() attaches listeners per settings
+    - Timer starts, questions render via QuestionCard components
+  ↓ Violation → security.js increments counter → Vue overlay → optional auto-submit
+  ↓ Submit → StudentAPI.submitAnswers() → phase 'result'
+```
+
 ---
 
 ## API Endpoints (exam_api.php)
@@ -301,6 +319,9 @@ Dashboard draft cards:
 | `report_violation`       | siswa              | No      | Log security violation                   |
 | `join_exam`              | siswa              | No      | Validate exam code                       |
 | `start_exam`             | siswa              | No      | Initialize exam session                  |
+| `get_exam`               | siswa              | No      | Fetch exam details + questions           |
+| `submit_answers`         | siswa              | No      | Submit exam answers                      |
+| `log_agreement`          | siswa              | No      | Log agreement acceptance                 |
 | `get_teacher_stats`      | guru               | No      | Fetch total students + avg score         |
 | `get_recent_violations`  | guru               | No      | Fetch latest violations                  |
 | `get_exam_info`          | guru               | No      | Fetch exam details by ID                 |
@@ -344,6 +365,7 @@ showToast("FYI", "info"); // Blue
 - ❌ Call `get_profile` on dashboard (use server-side data)
 - ❌ Use toleransi function (removed, obsolete)
 - ❌ Use `sanitize()` on Quill rich text content (destroys HTML; use `sanitizeHTML()`)
+- ❌ Edit exam styles in exam.php (use css/exam.css)
 
 **Must Always Do**:
 
@@ -355,7 +377,7 @@ showToast("FYI", "info"); // Blue
 - ✅ Use `mb_*` functions for UTF-8 text
 - ✅ Include `teacher-layout.js` on all teacher pages
 - ✅ Use `showToast()` for all user feedback
-- ✅ Use `TeacherAPI` methods instead of direct `fetch()` calls
+- ✅ Use `TeacherAPI` or `StudentAPI` methods instead of direct `fetch()` calls
 - ✅ Handle API errors with try/catch and `showToast(error, 'error')`
 - ✅ Set session cookie params before `session_start()`:
 
@@ -396,12 +418,15 @@ Student exam depends on:
   student/exam.php
     → includes/csrf.php
     → includes/auth.php
-  js/exam.js
-    → Renders question_text as innerHTML (server pre-sanitized)
+    → Outputs EXAM_ID, STUDENT_NAME globals
+  js/exam-app.js # Vue 3 SPA
+    → js/student-api.js, js/confirm-dialog.js, js/security.js, js/toast.js, js/api-client.js, Vue 3 CDN
+    → Renders question_text via v-html (server pre-sanitized)
+  css/exam.css # Exam-specific styles
 
 Teacher JS modules:
   teacher-api.js → api-client.js
-  teacher-results.js (if exists) → teacher-api.js
+  student-api.js → api-client.js
   teacher-dashboard.js → teacher-api.js
 
 Draft module chain:
@@ -434,21 +459,25 @@ When resuming work, review in this order:
 8. **`js/toast.js`** - User notification system
 9. **`js/api-client.js`** - Base API wrapper
 10. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
-11. **`js/draft-autosave.js`** - Auto-save to localStorage (standalone)
-12. **`js/draft-manager.js`** - Draft orchestrator (server save, recovery, dirty tracking)
-13. **`js/exam.js`** - Renders question text via innerHTML (not escapeHtml)
-14. **`teacher/create-exam.php`** - Quill.js + draft integration (?edit=ID mode)
-15. **`teacher/students.php`** - Server-side data pattern
-16. **`teacher/settings.php`** - API-based pattern with CSRF
-17. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
-18. **`student/exam.php`** - POST-only access pattern
-19. **`student/dashboard.php`** - POST form pattern for exam access
+11. **`js/student-api.js`** - Student API layer
+12. **`js/draft-autosave.js`** - Auto-save to localStorage (standalone)
+13. **`js/draft-manager.js`** - Draft orchestrator (server save, recovery, dirty tracking)
+14. **`js/exam-app.js`** - Vue 3 exam SPA (replaces exam.js)
+15. **`js/confirm-dialog.js`** - Reusable confirm dialog
+16. **`js/security.js`** - Anti-cheat with per-exam settings
+17. **`css/exam.css`** - Exam page styles
+18. **`teacher/create-exam.php`** - Quill.js + draft integration (?edit=ID mode)
+19. **`teacher/students.php`** - Server-side data pattern
+20. **`teacher/settings.php`** - API-based pattern with CSRF
+21. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
+22. **`student/exam.php`** - POST-only access pattern (now Vue bootstrap)
+23. **`student/dashboard.php`** - POST form pattern for exam access
 
 ---
 
 ## Recent Changes
 
-**2026-04-24**: Refactored sanitization functions into separate module. Created `includes/sanitize.php` with `sanitize()` and `sanitizeHTML()`. Removed functions from `php/db.php` and added `require_once` for backward compatibility. Improves separation of concerns — db.php now handles only database connections.
+**2026-04-24**: Refactored sanitization into `includes/sanitize.php` and migrated student exam to Vue 3 SPA. Created `sanitize.php` with `sanitize()` and `sanitizeHTML()`, removed from `db.php` (now requires it for BC). Extracted exam styles to `css/exam.css`, replaced `js/exam.js` with `js/exam-app.js`, added `js/student-api.js` and `js/confirm-dialog.js`. Upgraded `security.js` to support per-exam settings via `configure()`. Added API endpoints: `get_exam`, `submit_answers`, `log_agreement`.
 
 **2026-04-23**: Implemented complete exam draft feature. Added `save_draft`, `get_draft`, `publish_draft` API endpoints with CSRF. Created `draft-autosave.js` (localStorage auto-save, 30s debounce, Ctrl+S) and `draft-manager.js` (orchestrator with server save, recovery banner, dirty tracking, URL pushState). Updated `create-exam.php` with `?edit=ID` mode, `collectAllFormData()`, `populateFormFromDraft()`, recovery banner, last-saved indicator. Fixed `createExam()` and `duplicateExam()` to save `shuffle_questions`, `shuffle_options`, `passing_score`, `max_violations`, `security_settings`. Updated `exam-manager.js` to render draft cards with "✏️ Lanjutkan Edit" button. Added `sql/migration_draft.sql` for `security_settings` column.
 
@@ -457,5 +486,5 @@ When resuming work, review in this order:
 ## Last Updated
 
 **Date**: 2026-04-24  
-**Focus**: Sanitization refactor — separation of concerns  
+**Focus**: Sanitization refactor + Student exam Vue 3 migration  
 **Status**: Active development

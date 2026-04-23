@@ -1,7 +1,10 @@
 /**
  * ExamSafe Security Module
  * Anti-cheat system for online exams
- * MODIFIED: Only attaches listeners when exam officially starts
+ *
+ * NEW: Per-exam security_settings support
+ * NEW: Violation counter + auto-stop + Vue callback bridge
+ * NEW: Toast.warning() integration (falls back to own toast)
  */
 
 const ExamSecurity = {
@@ -9,6 +12,23 @@ const ExamSecurity = {
   isActive: false,
   examId: null,
   listenersAttached: false,
+
+  // NEW: Per-exam security settings (defaults = all enabled for backward compat)
+  settings: {
+    fullscreen: true,
+    block_shortcuts: true,
+    block_copy: true,
+    tab_detection: true,
+    notify_proctor: true,
+    auto_stop: true,
+  },
+
+  // NEW: Violation tracking
+  maxViolations: 3,
+  violationCount: 0,
+  onViolationCallback: null,
+
+  // ===== INITIALIZATION =====
 
   // Basic initialization - does NOT attach any security listeners
   init(debugFlag = false) {
@@ -28,7 +48,59 @@ const ExamSecurity = {
     );
   },
 
-  // Start security - attaches all listeners and begins monitoring
+  /**
+   * NEW: Configure per-exam security settings.
+   * Call this BEFORE start() with data from exam.security_settings.
+   * If never called, defaults match original behavior (all enabled).
+   *
+   * @param {string|object} securitySettingsJson - JSON string or parsed object from exams.security_settings
+   * @param {number} maxViolations - From exams.max_violations column
+   */
+  configure(securitySettingsJson, maxViolations) {
+    // Reset to defaults first (in case of re-configuration)
+    this.settings = {
+      fullscreen: true,
+      block_shortcuts: true,
+      block_copy: true,
+      tab_detection: true,
+      notify_proctor: true,
+      auto_stop: true,
+    };
+
+    // Parse security_settings
+    if (securitySettingsJson) {
+      try {
+        const parsed =
+          typeof securitySettingsJson === "string"
+            ? JSON.parse(securitySettingsJson)
+            : securitySettingsJson;
+        // Merge — only known keys, ignore garbage
+        Object.keys(this.settings).forEach((key) => {
+          if (key in parsed) {
+            this.settings[key] = Boolean(parsed[key]);
+          }
+        });
+      } catch (e) {
+        console.warn(
+          "[ExamSafe] Failed to parse security_settings, using defaults"
+        );
+      }
+    }
+
+    // Set max violations
+    if (typeof maxViolations === "number" && maxViolations > 0) {
+      this.maxViolations = maxViolations;
+    }
+
+    console.log(
+      "[ExamSafe] Configured — settings:",
+      this.settings,
+      "maxViolations:",
+      this.maxViolations
+    );
+  },
+
+  // Start security - attaches listeners based on configured settings
   start() {
     if (this.debugMode) {
       console.log("[ExamSafe] Security would start here (debug mode)");
@@ -51,25 +123,48 @@ const ExamSecurity = {
       this.tryGetExamIdFromUrl();
     }
 
+    // NEW: Reset violation count for this session
+    this.violationCount = 0;
+
     this.isActive = true;
     this.attachAllListeners();
-    this.requestFullscreen();
+
+    // MODIFIED: Only request fullscreen if setting is enabled
+    if (this.settings.fullscreen) {
+      this.requestFullscreen();
+    }
   },
 
-  // Attach all security listeners at once
+  // MODIFIED: Attach listeners based on per-exam settings
   attachAllListeners() {
     if (this.listenersAttached) return;
 
-    this.attachKeyboardShortcuts();
-    this.attachCopyPaste();
-    this.attachContextMenu();
-    this.attachTabSwitch();
-    this.attachFullscreen();
-    this.attachDevTools();
+    // Always protect against accidental page close/navigation
     this.attachNavigation();
 
+    if (this.settings.tab_detection) {
+      this.attachTabSwitch();
+      this.attachDevTools();
+    }
+
+    if (this.settings.block_shortcuts) {
+      this.attachKeyboardShortcuts();
+    }
+
+    if (this.settings.block_copy) {
+      this.attachCopyPaste();
+      this.attachContextMenu();
+    }
+
+    if (this.settings.fullscreen) {
+      this.attachFullscreen();
+    }
+
     this.listenersAttached = true;
-    console.log("[ExamSafe] All security listeners attached");
+    console.log(
+      "[ExamSafe] Security listeners attached (settings-aware)",
+      this.settings
+    );
   },
 
   tryGetExamIdFromUrl() {
@@ -320,6 +415,9 @@ const ExamSecurity = {
     }
   },
 
+  // ===== VIOLATION LOGGING =====
+
+  // MODIFIED: Increment counter, call Vue callback, respect notify_proctor
   async logViolation(reason) {
     if (!this.isActive) {
       console.log(`[ExamSafe] Violation ignored (exam not started): ${reason}`);
@@ -333,12 +431,30 @@ const ExamSecurity = {
       }
     }
 
-    if (!this.examId) {
-      console.warn("[ExamSafe] Cannot log violation: No exam ID");
-      return;
+    // NEW: Increment client-side counter
+    this.violationCount++;
+    console.log(
+      `[ExamSafe] Violation #${this.violationCount}/${this.maxViolations}: ${reason}`
+    );
+
+    // NEW: Notify Vue app via callback (for overlay + auto-stop)
+    if (typeof this.onViolationCallback === "function") {
+      this.onViolationCallback({
+        reason,
+        count: this.violationCount,
+        maxViolations: this.maxViolations,
+        autoStop: this.settings.auto_stop,
+      });
     }
 
-    await this.sendViolationToServer(reason);
+    // MODIFIED: Only send to server if notify_proctor is enabled
+    if (this.settings.notify_proctor) {
+      await this.sendViolationToServer(reason);
+    } else {
+      console.log(
+        "[ExamSafe] Violation not reported to server (notify_proctor disabled)"
+      );
+    }
   },
 
   async sendViolationToServer(reason) {
@@ -365,9 +481,17 @@ const ExamSecurity = {
     }
   },
 
+  // MODIFIED: Use Toast.warning() if available, fall back to own implementation
   showBlockedToast(msg) {
     if (!this.isActive) return;
 
+    // NEW: Use shared Toast system when available
+    if (typeof window.Toast !== "undefined" && typeof window.Toast.warning === "function") {
+      window.Toast.warning("🚫 " + msg, 3000);
+      return;
+    }
+
+    // Legacy fallback (for pages without toast.js loaded)
     let toast = document.getElementById("blocked-toast");
     if (!toast) {
       toast = document.createElement("div");
