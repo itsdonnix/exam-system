@@ -44,7 +44,7 @@ ExamSafe/
 │ ├── security.js # Anti-cheat monitoring
 │ └── register-common.js # Registration utilities
 ├── php/
-│ ├── db.php # Database connection + sanitizeHTML()
+│ ├── db.php # Database connection
 │ ├── exam_api.php # ★ Main API (all roles)
 │ ├── auth.php # Auth helpers + rate limiting
 │ ├── upload_media.php # ★ Media upload with CSRF + rate limiting
@@ -58,7 +58,8 @@ ExamSafe/
 │ └── logs/ # exam_actions.log, ai_import.log
 ├── includes/
 │ ├── csrf.php # ★ CSRF validation (2-arg function)
-│ └── auth.php # Authentication + session helpers
+│ ├── auth.php # Authentication + session helpers
+│ └── sanitize.php # ★ Input sanitization (sanitize, sanitizeHTML)
 ├── uploads/
 │ └── .htaccess # ★ Blocks PHP execution in upload directory
 └── vendor/ # Composer dependencies
@@ -80,14 +81,14 @@ echo csrfField($token);                 // Hidden input HTML
 
 **Key**: Token stored in `$_SESSION['csrf_token']`, regenerated after sensitive operations.
 
-### Sanitization (`php/db.php`)
+### Sanitization (`includes/sanitize.php`)
 
 ```php
 sanitize($str);       // htmlspecialchars(strip_tags()) — for plain text (names, emails, types)
 sanitizeHTML($str);   // strip_tags() with safe allowlist — for Quill rich text (question text, descriptions)
 ```
 
-**Key**: Use `sanitize()` for plain text fields. Use `sanitizeHTML()` for content from Quill editors. Never use `sanitize()` on rich text — it destroys HTML tags.
+**Key**: Use `sanitize()` for plain text fields. Use `sanitizeHTML()` for content from Quill editors. Never use `sanitize()` on rich text — it destroys HTML tags. Loaded via `require_once` in `db.php` for backward compatibility.
 
 ### Authentication (`includes/auth.php`)
 
@@ -381,7 +382,7 @@ Teacher pages depend on:
 
 API endpoints depend on:
   php/exam_api.php
-    → includes/db.php (sanitize + sanitizeHTML)
+    → includes/sanitize.php (via db.php)
     → includes/auth.php
     → includes/csrf.php
 
@@ -426,42 +427,35 @@ When resuming work, review in this order:
 1. **`includes/csrf.php`** - CSRF token functions (2-arg verify)
 2. **`includes/auth.php`** - Rate limiting + auth helpers
 3. **`teacher/includes/init.php`** - Shared teacher initialization
-4. **`php/db.php`** - DB connection, `sanitize()`, `sanitizeHTML()`
-5. **`php/exam_api.php`** - Main API endpoints (uses `sanitizeHTML` for rich text)
-6. **`php/upload_media.php`** - Media upload with CSRF
-7. **`js/toast.js`** - User notification system
-8. **`js/api-client.js`** - Base API wrapper
-9. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
-10. **`js/draft-autosave.js`** - Auto-save to localStorage (standalone)
-11. **`js/draft-manager.js`** - Draft orchestrator (server save, recovery, dirty tracking)
-12. **`js/exam.js`** - Renders question text via innerHTML (not escapeHtml)
-13. **`teacher/create-exam.php`** - Quill.js + draft integration (?edit=ID mode)
-14. **`teacher/students.php`** - Server-side data pattern
-15. **`teacher/settings.php`** - API-based pattern with CSRF
-16. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
-17. **`student/exam.php`** - POST-only access pattern
-18. **`student/dashboard.php`** - POST form pattern for exam access
+4. **`includes/sanitize.php`** - `sanitize()`, `sanitizeHTML()` input filtering
+5. **`php/db.php`** - DB connection (requires sanitize.php)
+6. **`php/exam_api.php`** - Main API endpoints (uses `sanitizeHTML` for rich text)
+7. **`php/upload_media.php`** - Media upload with CSRF
+8. **`js/toast.js`** - User notification system
+9. **`js/api-client.js`** - Base API wrapper
+10. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
+11. **`js/draft-autosave.js`** - Auto-save to localStorage (standalone)
+12. **`js/draft-manager.js`** - Draft orchestrator (server save, recovery, dirty tracking)
+13. **`js/exam.js`** - Renders question text via innerHTML (not escapeHtml)
+14. **`teacher/create-exam.php`** - Quill.js + draft integration (?edit=ID mode)
+15. **`teacher/students.php`** - Server-side data pattern
+16. **`teacher/settings.php`** - API-based pattern with CSRF
+17. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
+18. **`student/exam.php`** - POST-only access pattern
+19. **`student/dashboard.php`** - POST form pattern for exam access
 
 ---
 
 ## Recent Changes
 
+**2026-04-24**: Refactored sanitization functions into separate module. Created `includes/sanitize.php` with `sanitize()` and `sanitizeHTML()`. Removed functions from `php/db.php` and added `require_once` for backward compatibility. Improves separation of concerns — db.php now handles only database connections.
+
 **2026-04-23**: Implemented complete exam draft feature. Added `save_draft`, `get_draft`, `publish_draft` API endpoints with CSRF. Created `draft-autosave.js` (localStorage auto-save, 30s debounce, Ctrl+S) and `draft-manager.js` (orchestrator with server save, recovery banner, dirty tracking, URL pushState). Updated `create-exam.php` with `?edit=ID` mode, `collectAllFormData()`, `populateFormFromDraft()`, recovery banner, last-saved indicator. Fixed `createExam()` and `duplicateExam()` to save `shuffle_questions`, `shuffle_options`, `passing_score`, `max_violations`, `security_settings`. Updated `exam-manager.js` to render draft cards with "✏️ Lanjutkan Edit" button. Added `sql/migration_draft.sql` for `security_settings` column.
-
-**2026-04-22**: Integrated Quill.js rich text editor into create-exam.php, updated sanitizeHTML() to protect against XSS when rendering rich text content, and updated student/exam.js to safely render pre-sanitized question content via innerHTML.
-
-**2026-04-21**: Refactored results.php to use TeacherAPI modular methods. Added getExamInfo, getResults, getStudentViolations, getSubmissionDetail, saveManualGrade to teacher-api.js. All TeacherAPI methods now throw errors for caller to handle with toast notifications.
-
-**2026-04-20**: Fixed deleteBankQuestion ID retrieval + CSRF validation. Added media upload security. Extracted dashboard JS modules (toast, teacher-api, teacher-dashboard).
-
-**2026-04-19**: Migrated students.php and settings.php to PHP with shared components. Added toast system. Refactored teacher layout.
-
-**2026-04-18**: Security hardening - POST-only exam.php, CSRF tokens, rate limiting.
 
 ---
 
 ## Last Updated
 
-**Date**: 2026-04-23  
-**Focus**: Complete exam draft feature (server-side storage, auto-save, recovery, edit mode)  
+**Date**: 2026-04-24  
+**Focus**: Sanitization refactor — separation of concerns  
 **Status**: Active development
