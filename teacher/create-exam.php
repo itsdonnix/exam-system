@@ -160,6 +160,39 @@ try {
         .header-actions { display: flex; gap: 0.5em; align-items: center; }
         .exam-code-row { display: flex; gap: 0.5em; }
 
+        /* === INPUT WITH EMBEDDED BUTTON === */
+        .input-with-action {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        .input-with-action .form-control {
+            padding-right: 5.5em;
+        }
+        .input-with-action .input-action-btn {
+            position: absolute;
+            right: 0.375em;
+            top: 50%;
+            transform: translateY(-50%);
+            padding: 0.3em 0.75em;
+            font-size: 0.75rem;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: #f8fafc;
+            color: var(--primary-light);
+            cursor: pointer;
+            font-family: "Poppins", sans-serif;
+            font-weight: 600;
+            transition: all 0.2s;
+            white-space: nowrap;
+            line-height: 1.4;
+        }
+        .input-with-action .input-action-btn:hover {
+            background: var(--primary-light);
+            color: #fff;
+            border-color: var(--primary-light);
+        }
+
         /* === STICKY SIDEBAR === */
         .sticky-sidebar {
             position: sticky;
@@ -217,6 +250,10 @@ try {
         .form-control.field-error { border-color: var(--danger); }
         .field-error-msg { color: var(--danger); font-size: 0.75rem; margin-top: 0.25em; display: none; }
         .field-error-msg.visible { display: block; }
+
+        /* === FORM ROW GRIDS === */
+        .form-row.cols-2 { display: grid; grid-template-columns: repeat(2, 1fr); gap: 1em; }
+        .form-row.cols-3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1em; }
 
         /* === UPLOAD AREA === */
         .upload-area {
@@ -511,6 +548,7 @@ try {
             .sticky-sidebar { position: static; width: 100%; margin-bottom: 1.25em; }
             .sticky-add-btns { flex-direction: row; flex-wrap: wrap; }
             .sticky-add-btns button { flex: 1; min-width: 8.75rem; }
+            .form-row.cols-3 { grid-template-columns: repeat(2, 1fr); }
         }
         @media (max-width: 768px) {
             .type-selector { gap: 0.375em; }
@@ -596,7 +634,7 @@ try {
                     <input type="text" class="form-control" id="exam-name" placeholder="Contoh: Matematika — Bab 5: Integral" oninput="DraftManager.markDirty()" />
                     <div class="field-error-msg" id="err-exam-name">Nama ujian wajib diisi</div>
                 </div>
-                <div class="form-row">
+                <div class="form-row cols-3">
                     <div class="form-group">
                         <label>Target Jenjang *</label>
                         <select class="form-control" id="exam-class" onchange="DraftManager.markDirty()">
@@ -615,8 +653,6 @@ try {
                             <option value="IPS">Mapel Pilihan (IPS)</option>
                         </select>
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>Mata Pelajaran *</label>
                         <select class="form-control" id="exam-subject" onchange="DraftManager.markDirty()">
@@ -624,13 +660,13 @@ try {
                         </select>
                         <div class="field-error-msg" id="err-exam-subject">Pilih mata pelajaran</div>
                     </div>
+                </div>
+                <div class="form-row cols-3">
                     <div class="form-group">
                         <label>Tanggal Ujian *</label>
                         <input type="date" class="form-control" id="exam-date" onchange="DraftManager.markDirty()" />
                         <div class="field-error-msg" id="err-exam-date">Tanggal ujian wajib diisi</div>
                     </div>
-                </div>
-                <div class="form-row">
                     <div class="form-group">
                         <label>Waktu Mulai *</label>
                         <input type="time" class="form-control" id="exam-start" value="08:00" onchange="DraftManager.markDirty()" />
@@ -640,24 +676,23 @@ try {
                         <input type="number" class="form-control" id="exam-duration" value="90" min="10" max="300" oninput="DraftManager.markDirty()" />
                     </div>
                 </div>
-                <div class="form-row">
+                <div class="form-row cols-2">
                     <div class="form-group">
                         <label>Jumlah Soal Ditampilkan</label>
                         <input type="number" class="form-control" id="exam-qcount" value="40" min="1" max="100" oninput="DraftManager.markDirty()" />
                     </div>
-                    <div class="form-group"></div>
+                    <div class="form-group">
+                        <label>Kode Ujian (otomatis)</label>
+                        <div class="input-with-action">
+                            <input type="text" class="form-control" id="exam-code" readonly style="background: #f1f5f9; font-weight: 700; letter-spacing: 2px;" />
+                            <button type="button" class="input-action-btn" id="generate-code-btn">🔄 Generate</button>
+                        </div>
+                    </div>
                 </div>
                 <div class="form-group">
                     <label>Deskripsi / Petunjuk Ujian</label>
                     <div class="quill-wrapper ql-desc" id="quill-desc-wrapper">
                         <div id="quill-desc">Kerjakan soal berikut dengan teliti. Pilih jawaban yang paling tepat. Dilarang menggunakan kalkulator.</div>
-                    </div>
-                </div>
-                <div class="form-group">
-                    <label>Kode Ujian (otomatis)</label>
-                    <div class="exam-code-row">
-                        <input type="text" class="form-control" id="exam-code" readonly style="background: #f1f5f9; font-weight: 700; letter-spacing: 2px;" />
-                        <button class="btn btn-outline" id="generate-code-btn">🔄 Generate</button>
                     </div>
                 </div>
                 <div class="step-nav">
