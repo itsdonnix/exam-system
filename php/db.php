@@ -11,6 +11,8 @@ define('DB_USER', 'root');
 define('DB_PASS', '123xanders456');
 define('DB_NAME', 'examsafe');
 
+require_once __DIR__ . '/../includes/sanitize.php';
+
 function getDB()
 {
     static $pdo = null;
@@ -47,17 +49,4 @@ function getInput()
     $data = json_decode($raw, true);
     if (!$data) $data = $_POST;
     return $data;
-}
-
-function sanitize($str)
-{
-    return htmlspecialchars(strip_tags(trim($str)));
-}
-
-function sanitizeHTML($str)
-{
-    $str = trim($str ?? '');
-    // Allow only safe formatting tags, strip everything else (scripts, iframes, etc.)
-    $allowed = '<p><br><strong><b><em><i><u><ul><ol><li><sub><sup><h1><h2><h3><span>';
-    return strip_tags($str, $allowed);
 }
