@@ -21,6 +21,7 @@ ExamSafe/
 │ ├── settings.php # Settings with API calls (pattern example)
 │ ├── students.php # Student list, server-side data (pattern example)
 │ ├── results.php # Results with API calls + chart.js (pattern example)
+│ ├── question-bank.php # Question bank management
 │ ├── create-exam.php # Exam creation/editing with uploads + Quill.js + draft support
 │ ├── js/
 │ │   ├── ai-import.js # ★ AI question import (Gemini API, depends on utils.js)
