@@ -641,10 +641,3 @@ function importQuestionsToExam() {
   closePreviewEditor();
   alert(`✅ ${extractedQuestions.length} soal berhasil ditambahkan ke ujian!`);
 }
-
-function escapeHtml(text) {
-  if (!text) return "";
-  const div = document.createElement("div");
-  div.appendChild(document.createTextNode(text));
-  return div.innerHTML;
-}

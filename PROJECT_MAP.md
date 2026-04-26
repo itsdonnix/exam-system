@@ -22,7 +22,10 @@ ExamSafe/
 │ ├── students.php # Student list, server-side data (pattern example)
 │ ├── results.php # Results with API calls + chart.js (pattern example)
 │ ├── create-exam.php # Exam creation/editing with uploads + Quill.js + draft support
-│ └── \*.html # DEPRECATED - Redirect to .php versions
+│ ├── js/
+│ │   ├── ai-import.js # ★ AI question import (Gemini API, depends on utils.js)
+│ │   └── ... (other JS files)
+│ └── *.html # DEPRECATED - Redirect to .php versions
 ├── student/
 │ ├── dashboard.php # Exam list with POST forms
 │ ├── exam.php # ★ POST-only exam access (now Vue 3 bootstrap)
@@ -34,7 +37,7 @@ ExamSafe/
 ├── js/
 │ ├── api-client.js # ★ API wrapper (use for all AJAX)
 │ ├── toast.js # ★ Notifications (use showToast())
-│ ├── utils.js # Shared utilities
+│ ├── utils.js # ★ Shared utilities (escapeHtml, formatDate, formatTime)
 │ ├── teacher-api.js # ★ Teacher API layer (all teacher endpoints)
 │ ├── student-api.js # ★ Student API layer (get_exam, start_exam, submit_answers, etc.)
 │ ├── teacher-dashboard.js # Dashboard controller
@@ -266,6 +269,21 @@ Teacher types question text in Quill editor
 
 **Where Quill is used**: Exam description (Step 1), question text (Step 2), essay answer key (Step 2).
 
+### AI Import Workflow
+
+```
+Teacher clicks "Impor Soal dengan AI" in create-exam.php sidebar
+  ↓ window.openAIImportModal() called (from ai-import.js)
+  ↓ Modal opens with Paste/Upload tabs
+  ↓ User provides text or uploads PDF/DOCX/TXT (max 10MB)
+  ↓ POST to php/ai_import.php?action=extract
+  ↓ Server calls Gemini API, returns parsed questions
+  ↓ showPreviewEditor() displays extracted questions for editing
+  ↓ Teacher edits if needed, clicks "Tambah ke Ujian"
+  ↓ importQuestionsToExam() calls window.addQuestion() for each
+  ↓ Questions added to current exam draft
+```
+
 ### Exam Draft Workflow
 
 ```
@@ -428,6 +446,7 @@ Teacher JS modules:
   teacher-api.js → api-client.js
   student-api.js → api-client.js
   teacher-dashboard.js → teacher-api.js
+  ai-import.js → utils.js (escapeHtml), create-exam.php globals (addQuestion)
 
 Draft module chain:
   draft-manager.js → draft-autosave.js, teacher-api.js, toast.js
@@ -441,6 +460,7 @@ create-exam.php depends on:
   → collectAllFormData() gathers Step 1 + Step 3 + questions
   → populateFormFromDraft() restores form from server/auto-save data
   → ?edit=ID query param loads existing draft via get_draft API
+  → js/ai-import.js (AI import modal, depends on utils.js escapeHtml)
 ```
 
 ---
@@ -456,35 +476,39 @@ When resuming work, review in this order:
 5. **`php/db.php`** - DB connection (requires sanitize.php)
 6. **`php/exam_api.php`** - Main API endpoints (uses `sanitizeHTML` for rich text)
 7. **`php/upload_media.php`** - Media upload with CSRF
-8. **`js/toast.js`** - User notification system
-9. **`js/api-client.js`** - Base API wrapper
-10. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
-11. **`js/student-api.js`** - Student API layer
-12. **`js/draft-autosave.js`** - Auto-save to localStorage (standalone)
-13. **`js/draft-manager.js`** - Draft orchestrator (server save, recovery, dirty tracking)
-14. **`js/exam-app.js`** - Vue 3 exam SPA (replaces exam.js)
-15. **`js/confirm-dialog.js`** - Reusable confirm dialog
-16. **`js/security.js`** - Anti-cheat with per-exam settings
-17. **`css/exam.css`** - Exam page styles
-18. **`teacher/create-exam.php`** - Quill.js + draft integration (?edit=ID mode)
-19. **`teacher/students.php`** - Server-side data pattern
-20. **`teacher/settings.php`** - API-based pattern with CSRF
-21. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
-22. **`student/exam.php`** - POST-only access pattern (now Vue bootstrap)
-23. **`student/dashboard.php`** - POST form pattern for exam access
+8. **`js/utils.js`** - Shared utilities (escapeHtml, formatDate, formatTime)
+9. **`js/toast.js`** - User notification system
+10. **`js/api-client.js`** - Base API wrapper
+11. **`js/teacher-api.js`** - Teacher API layer (all teacher endpoints)
+12. **`js/student-api.js`** - Student API layer
+13. **`js/draft-autosave.js`** - Auto-save to localStorage (standalone)
+14. **`js/draft-manager.js`** - Draft orchestrator (server save, recovery, dirty tracking)
+15. **`js/exam-app.js`** - Vue 3 exam SPA (replaces exam.js)
+16. **`js/confirm-dialog.js`** - Reusable confirm dialog
+17. **`js/security.js`** - Anti-cheat with per-exam settings
+18. **`css/exam.css`** - Exam page styles
+19. **`teacher/create-exam.php`** - Quill.js + draft integration (?edit=ID mode) + AI import
+20. **`teacher/js/ai-import.js`** - AI question import (depends on utils.js)
+21. **`teacher/students.php`** - Server-side data pattern
+22. **`teacher/settings.php`** - API-based pattern with CSRF
+23. **`teacher/results.php`** - API-based pattern with chart.js + manual grading
+24. **`student/exam.php`** - POST-only access pattern (now Vue bootstrap)
+25. **`student/dashboard.php`** - POST form pattern for exam access
 
 ---
 
 ## Recent Changes
 
+**2026-04-27**: AI Import module dependency cleanup. Removed duplicate `escapeHtml()` from `ai-import.js` and now uses shared `escapeHtml()` from `js/utils.js`. This centralizes XSS prevention logic and ensures consistency across modules.
+
 **2026-04-24**: Refactored sanitization into `includes/sanitize.php` and migrated student exam to Vue 3 SPA. Created `sanitize.php` with `sanitize()` and `sanitizeHTML()`, removed from `db.php` (now requires it for BC). Extracted exam styles to `css/exam.css`, replaced `js/exam.js` with `js/exam-app.js`, added `js/student-api.js` and `js/confirm-dialog.js`. Upgraded `security.js` to support per-exam settings via `configure()`. Added API endpoints: `get_exam`, `submit_answers`, `log_agreement`.
 
-**2026-04-23**: Implemented complete exam draft feature. Added `save_draft`, `get_draft`, `publish_draft` API endpoints with CSRF. Created `draft-autosave.js` (localStorage auto-save, 30s debounce, Ctrl+S) and `draft-manager.js` (orchestrator with server save, recovery banner, dirty tracking, URL pushState). Updated `create-exam.php` with `?edit=ID` mode, `collectAllFormData()`, `populateFormFromDraft()`, recovery banner, last-saved indicator. Fixed `createExam()` and `duplicateExam()` to save `shuffle_questions`, `shuffle_options`, `passing_score`, `max_violations`, `security_settings`. Updated `exam-manager.js` to render draft cards with "✏️ Lanjutkan Edit" button. Added `sql/migration_draft.sql` for `security_settings` column.
+**Previous**: 2026-04-23: Implemented complete exam draft feature. Added `save_draft`, `get_draft`, `publish_draft` API endpoints with CSRF. Created `draft-autosave.js` and `draft-manager.js`. Updated `create-exam.php` with `?edit=ID` mode. Added `sql/migration_draft.sql` for `security_settings` column.
 
 ---
 
 ## Last Updated
 
-**Date**: 2026-04-24  
-**Focus**: Sanitization refactor + Student exam Vue 3 migration  
+**Date**: 2026-04-27  
+**Focus**: AI import dependency cleanup (utils.js integration)  
 **Status**: Active development
