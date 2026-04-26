@@ -715,6 +715,7 @@ $csrf_token = generateCSRFToken();
         </div>
     </div>
 
+    <script src="../js/utils.js"></script>
     <script src="../js/teacher-layout.js"></script>
     <script src="../js/toast.js"></script>
     <script>
@@ -1283,16 +1284,6 @@ $csrf_token = generateCSRFToken();
                         showToast("Error: " + d.message, "error");
                     }
                 });
-        }
-
-        function escapeHtml(str) {
-            if (!str) return "";
-            return str.replace(/[&<>]/g, function(m) {
-                if (m === "&") return "&amp;";
-                if (m === "<") return "&lt;";
-                if (m === ">") return "&gt;";
-                return m;
-            });
         }
     </script>
 </body>

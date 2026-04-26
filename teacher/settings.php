@@ -331,6 +331,7 @@ $_SESSION['csrf_token_ai'] = $csrf_token_ai;
         </div>
     </main>
 
+    <script src="../js/utils.js"></script>
     <script src="../js/teacher-layout.js"></script>
     <script>
         // CSRF tokens injected from PHP
@@ -575,13 +576,6 @@ $_SESSION['csrf_token_ai'] = $csrf_token_ai;
             }
             if (data.sample_response) report += `\n--- SAMPLE RESPONSE ---\n${data.sample_response}\n`;
             navigator.clipboard.writeText(report).then(() => alert("✅ Laporan diagnostik telah disalin ke clipboard"));
-        }
-
-        function escapeHtml(text) {
-            if (!text) return "";
-            const div = document.createElement("div");
-            div.appendChild(document.createTextNode(text));
-            return div.innerHTML;
         }
     </script>
 </body>
