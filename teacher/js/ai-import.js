@@ -8,6 +8,21 @@ let extractedQuestions = [];
 let currentEditIndex = null;
 let currentTab = "paste";
 
+// Helper to get CSRF token from page
+function getCsrfToken() {
+  const tokenInput = document.getElementById("csrf-token");
+  if (tokenInput) {
+    return tokenInput.value;
+  }
+  // Fallback: try to find any CSRF token on page
+  const anyCsrf = document.querySelector('input[name="csrf_token"]');
+  if (anyCsrf) {
+    return anyCsrf.value;
+  }
+  console.error("CSRF token not found on page");
+  return "";
+}
+
 // Initialize modal when DOM is ready
 document.addEventListener("DOMContentLoaded", function () {
   createAIImportModal();
@@ -201,6 +216,13 @@ async function processWithAI() {
   const loadingDiv = document.getElementById("ai-loading");
   const errorDiv = document.getElementById("ai-error");
 
+  // Get CSRF token
+  const csrfToken = getCsrfToken();
+  if (!csrfToken) {
+    Toast.error("Token keamanan tidak ditemukan. Silakan refresh halaman.");
+    return;
+  }
+
   // Disable button and show loading
   processBtn.disabled = true;
   processBtn.textContent = "⏳ Memproses...";
@@ -209,6 +231,7 @@ async function processWithAI() {
 
   let formData = new FormData();
   formData.append("action", "extract");
+  formData.append("csrf_token", csrfToken);
 
   if (currentTab === "paste") {
     const text = document.getElementById("ai-paste-text").value.trim();

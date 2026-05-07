@@ -8,6 +8,7 @@
  *   - action: 'extract' (required)
  *   - text: string (optional, for pasted text)
  *   - file: uploaded file (optional, for PDF/DOCX/TXT)
+ *   - csrf_token: string (required for all actions)
  *   - action: 'test' - Test connection with detailed diagnostics
  * 
  * Returns JSON with extracted questions or error
@@ -15,6 +16,9 @@
 
 session_start();
 require_once 'db.php';
+
+// Load CSRF protection
+require_once '../includes/csrf.php';
 
 // Load Composer autoloader
 require_once __DIR__ . '/../vendor/autoload.php';
@@ -39,10 +43,93 @@ function logAIMessage($level, $message, $context = [])
 
     $logFile = $logDir . '/ai_import.log';
     $timestamp = date('Y-m-d H:i:s');
-    $contextStr = !empty($context) ? ' ' . json_encode($context) : '';
+    // Sanitize context to prevent log injection
+    $sanitizedContext = [];
+    foreach ($context as $key => $value) {
+        if (is_string($value) && strlen($value) > 500) {
+            $sanitizedContext[$key] = substr($value, 0, 500) . '...[truncated]';
+        } else {
+            $sanitizedContext[$key] = $value;
+        }
+    }
+    $contextStr = !empty($sanitizedContext) ? ' ' . json_encode($sanitizedContext) : '';
     $logEntry = "[{$timestamp}] [{$level}] {$message}{$contextStr}" . PHP_EOL;
 
     file_put_contents($logFile, $logEntry, FILE_APPEND);
+}
+
+// Helper function to validate CSRF token from request
+function validateCSRFTokenFromRequest()
+{
+    // Check JSON input first
+    $input = json_decode(file_get_contents('php://input'), true);
+    $token = $input['csrf_token'] ?? $_POST['csrf_token'] ?? $_GET['csrf_token'] ?? '';
+
+    if (empty($token)) {
+        logAIMessage('WARNING', 'CSRF token missing in request');
+        return false;
+    }
+
+    if (!verifyCSRFToken($token, $_SESSION['csrf_token'])) {
+        logAIMessage('WARNING', 'CSRF token validation failed');
+        return false;
+    }
+
+    return true;
+}
+
+// Enhanced file validation with MIME type checking
+function validateUploadedFile($file)
+{
+    $maxSize = 10 * 1024 * 1024; // 10MB
+
+    if ($file['size'] > $maxSize) {
+        return ['success' => false, 'message' => 'File terlalu besar. Maksimal 10MB.'];
+    }
+
+    $allowedExtensions = ['pdf', 'docx', 'txt'];
+    $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+    if (!in_array($extension, $allowedExtensions)) {
+        return ['success' => false, 'message' => 'Tipe file tidak didukung. Gunakan PDF, DOCX, atau TXT.'];
+    }
+
+    // MIME type validation using finfo
+    if (function_exists('finfo_open')) {
+        $finfo = finfo_open(FILEINFO_MIME_TYPE);
+        $mimeType = finfo_file($finfo, $file['tmp_name']);
+        finfo_close($finfo);
+
+        $allowedMimeTypes = [
+            'pdf' => 'application/pdf',
+            'docx' => 'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            'txt' => 'text/plain'
+        ];
+
+        $expectedMime = $allowedMimeTypes[$extension] ?? null;
+        if ($expectedMime && $mimeType !== $expectedMime) {
+            logAIMessage('WARNING', 'MIME type mismatch', [
+                'expected' => $expectedMime,
+                'actual' => $mimeType,
+                'filename' => $file['name']
+            ]);
+            return ['success' => false, 'message' => 'Tipe file tidak valid. File mungkin rusak atau bukan format yang benar.'];
+        }
+    }
+
+    // Additional safety: Check for PHP execution prevention
+    $dangerousContent = ['<?php', '<?=', '<%', '<script', '<?xml'];
+    $content = file_get_contents($file['tmp_name'], false, null, 0, 1024); // Read first 1KB only
+    if ($content !== false) {
+        foreach ($dangerousContent as $pattern) {
+            if (stripos($content, $pattern) !== false && $extension !== 'txt') {
+                logAIMessage('WARNING', 'Suspicious content detected in file', ['filename' => $file['name']]);
+                return ['success' => false, 'message' => 'File mengandung konten yang tidak diizinkan.'];
+            }
+        }
+    }
+
+    return ['success' => true];
 }
 
 // Check authentication
@@ -658,12 +745,22 @@ function testGeminiConnection()
 }
 
 // ============================================================================
-// MAIN HANDLER - FIXED: Now properly reads JSON input for test action
+// MAIN HANDLER - WITH CSRF PROTECTION
 // ============================================================================
 
-// First check if JSON input was sent (for test action from settings.html)
+// First check if JSON input was sent
 $input = json_decode(file_get_contents('php://input'), true);
 $action = $input['action'] ?? $_POST['action'] ?? $_GET['action'] ?? '';
+
+// Validate CSRF for all actions
+if (!validateCSRFTokenFromRequest()) {
+    echo json_encode([
+        'success' => false,
+        'message' => 'Validasi keamanan gagal. Silakan refresh halaman dan coba lagi.',
+        'csrf_error' => true
+    ]);
+    exit;
+}
 
 switch ($action) {
     case 'extract':
@@ -684,26 +781,24 @@ switch ($action) {
         // Check for file upload
         if (isset($_FILES['file']) && $_FILES['file']['error'] === UPLOAD_ERR_OK) {
             $file = $_FILES['file'];
-            $maxSize = 10 * 1024 * 1024; // 10MB
 
-            if ($file['size'] > $maxSize) {
-                echo json_encode(['success' => false, 'message' => 'File terlalu besar. Maksimal 10MB.']);
+            // Validate file with enhanced checks
+            $validation = validateUploadedFile($file);
+            if (!$validation['success']) {
+                echo json_encode(['success' => false, 'message' => $validation['message']]);
                 exit;
             }
 
-            $allowedExtensions = ['pdf', 'docx', 'txt'];
-            $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
-
-            if (!in_array($extension, $allowedExtensions)) {
-                echo json_encode(['success' => false, 'message' => 'Tipe file tidak didukung. Gunakan PDF, DOCX, atau TXT.']);
-                exit;
+            // Save to temp directory with sanitized name (prevent path traversal)
+            $safeFilename = preg_replace('/[^a-zA-Z0-9._-]/', '', $file['name']);
+            if (empty($safeFilename)) {
+                $safeFilename = 'upload_' . uniqid();
             }
+            $tempFile = sys_get_temp_dir() . '/ai_import_' . uniqid() . '_' . $safeFilename;
 
-            // Save to temp directory
-            $tempFile = sys_get_temp_dir() . '/ai_import_' . uniqid() . '_' . $file['name'];
             if (move_uploaded_file($file['tmp_name'], $tempFile)) {
                 $inputText = extractTextFromFile($tempFile, $file['name']);
-                unlink($tempFile); // Clean up
+                unlink($tempFile);
                 $source = 'file';
                 logAIMessage('INFO', 'File uploaded and processed', ['filename' => $file['name'], 'size' => $file['size']]);
             } else {
