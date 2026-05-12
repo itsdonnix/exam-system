@@ -301,52 +301,40 @@ function callGeminiAPI($text, $apiKey, $model)
 
     // Build prompt in Indonesian
     $prompt = "
-Anda adalah asisten AI yang membantu guru membuat soal ujian. Ekstrak soal-soal dari teks berikut dan format sebagai JSON.
+Ekstrak semua soal dari teks berikut dan return HANYA JSON valid (tanpa markdown, tanpa teks lain).
 
 TEKS:
 \"\"\"
 {$text}
 \"\"\"
 
-INSTRUKSI:
-1. Identifikasi semua soal dalam teks di atas.
-2. Untuk setiap soal, tentukan tipe soal:
-   - 'multiple' untuk pilihan ganda (satu jawaban benar)
-   - 'checkbox' untuk pilihan ganda kompleks (bisa lebih dari satu jawaban benar)
-   - 'truefalse' untuk benar/salah
-   - 'essay' untuk esai/uraian
+TIPE SOAL:
+- multiple: pilihan ganda, 1 jawaban benar
+- checkbox: pilihan ganda, >1 jawaban benar
+- truefalse: benar/salah
+- essay: uraian
 
-3. Untuk tipe multiple/checkbox:
-   - Ekstrak semua pilihan jawaban (A., B., C., dst.)
-   - Identifikasi jawaban yang benar (biasanya ditandai dengan *, ✓, atau kata 'kunci'/'jawaban')
-   - Simpan pilihan sebagai array of objects: [{\"text\": \"Pilihan A\", \"image\": null}, ...]
-
-4. Untuk tipe truefalse:
-   - Tentukan apakah jawaban benar adalah '0' (Benar) atau '1' (Salah)
-
-5. Untuk tipe essay:
-   - Ekstrak kunci jawaban atau rubrik penilaian jika ada
-
-6. Format output HARUS JSON valid dengan struktur berikut:
+OUTPUT SCHEMA:
 {
   \"questions\": [
     {
       \"type\": \"multiple|checkbox|truefalse|essay\",
-      \"text\": \"Teks soal\",
-      \"options\": [{\"text\": \"Pilihan 1\", \"image\": null}, ...],
-      \"correct\": \"0\" (untuk multiple/truefalse) atau [\"0\", \"2\"] (untuk checkbox),
-      \"correct_answers_checkbox\": [\"0\", \"2\"] (khusus checkbox),
+      \"text\": \"<teks soal>\",
+      \"options\": [{\"text\": \"<teks pilihan>\", \"image\": null}],
+      \"correct\": \"0\" | [\"0\",\"2\"],
+      \"correct_answers_checkbox\": [\"0\",\"2\"],
       \"difficulty\": \"mudah|sedang|sulit\",
       \"points\": 1
     }
   ]
 }
 
-CATATAN:
-- Jika tidak bisa menentukan tipe, gunakan 'multiple' sebagai default
-- Jika tidak bisa menentukan jawaban benar, set correct = \"0\"
-- Hanya output JSON, tidak ada teks lain di luar JSON
-- Jangan tambahkan markdown formatting seperti ```json
+ATURAN:
+- options: isi untuk multiple/checkbox/truefalse, kosong [] untuk essay
+- correct: index string (\"0\"=A/Benar, \"1\"=B/Salah, dst); array untuk checkbox
+- correct_answers_checkbox: hanya untuk tipe checkbox, sama nilainya dengan correct
+- Jawaban benar ditandai *, ✓, atau tanda unik lain, atau kata kunci/jawaban di teks asli
+- Default jika tidak diketahui: type=multiple, correct=\"0\", difficulty=sedang, points=1
 ";
 
     try {
